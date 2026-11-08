@@ -34,9 +34,3 @@ Quando alguém topar, a linha ganha o código definitivo da entrevista (E01, E02
 
 - Mais 10 escritórios de contabilidade pelo Instagram e Google Maps.
 - Escritórios de advocacia no lugar dos donos que faltarem (o Portão 1 já prevê isso).
-
-## Já ouvidos (antes do roteiro)
-
-| Quem | Data | O que disse |
-|---|---|---|
-| Pai (vende ERP) | 07/11/2026 | Leu o resumo: o problema "acontece de verdade" e o projeto é "realmente legal". Não indica entrevistas. |
