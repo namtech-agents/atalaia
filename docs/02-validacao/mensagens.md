@@ -2,30 +2,32 @@
 
 Mandar na segunda, 09/11, a partir das 8h30. Fim de semana não se manda mensagem de trabalho. Trocar o que está entre colchetes.
 
-## 1. Contador da NAM Tech (C1)
+Todo contato é a frio (a pessoa não conhece a NAM Tech), menos a indicação em cadeia, que vem de quem já conversou. Por isso as mensagens são curtas, dizem logo quem é e o que quer, e deixam claro que não é venda.
 
-> Bom dia, [nome]! Tudo bem? Aqui é a Nicolly, da NAM Tech. Duas coisas: queria confirmar com você se o CNAE da empresa cobre desenvolvimento de software, e queria 20 minutinhos da sua experiência para um projeto que estou fazendo, sobre as caixas de mensagem do governo (e-CAC, DTE, Domicílio Judicial). Não é venda, quero entender como o escritório lida com isso. Tem um horário entre segunda e quarta?
+## 1. Escritório de contabilidade (Instagram ou LinkedIn)
 
-## 2. Contador ou advogado indicado por alguém
+> Olá! Me chamo Nicolly, sou desenvolvedora aqui em Teresina (NAM Tech) e estudante de Engenharia. Estou pesquisando como os escritórios de contabilidade acompanham as caixas de mensagem do governo dos clientes: e-CAC, DTE do Simples, Domicílio Judicial. Posso fazer umas perguntas a quem cuida disso no escritório? Uns 20 minutos, no horário de vocês. Não é venda, é para entender o dia a dia.
 
-> Bom dia, [nome]! Me chamo Nicolly, sou da NAM Tech, aqui de Teresina. O [quem indicou] me passou seu contato. Estou estudando como os escritórios acompanham as comunicações que chegam nas caixas eletrônicas do governo (e-CAC, DTE do Simples, Domicílio Judicial) e queria ouvir sua experiência. São uns 20 minutos, por ligação ou como for melhor para você. Não estou vendendo nada. Teria um horário essa semana?
+## 2. Escritório de contabilidade (WhatsApp comercial do Google Maps)
 
-## 3. Escritório sem indicação (Instagram ou LinkedIn)
+> Bom dia! Me chamo Nicolly, sou da NAM Tech, aqui de Teresina. Estou fazendo uma pesquisa com escritórios de contabilidade sobre as comunicações que chegam nas caixas eletrônicas do governo (e-CAC, DTE, Domicílio Judicial). Teria alguém no escritório que pudesse conversar comigo uns 20 minutos essa semana? Não estou vendendo nada.
 
-> Olá! Me chamo Nicolly, sou desenvolvedora aqui em Teresina (NAM Tech) e estudante de Engenharia. Estou pesquisando como os escritórios de contabilidade acompanham as caixas de mensagem do governo dos clientes: e-CAC, DTE, Domicílio Judicial. Posso fazer umas perguntas rápidas a quem cuida disso no escritório? Uns 20 minutos, no horário de vocês. Não é venda, é para entender o dia a dia.
+## 3. Escritório de advocacia (Instagram ou LinkedIn)
 
-## 4. Dono de empresa (conhecido ou indicado)
+> Olá! Me chamo Nicolly, sou desenvolvedora em Teresina (NAM Tech) e estudante de Engenharia. Estou pesquisando como as empresas ficam sabendo das citações que chegam pelo Domicílio Judicial Eletrônico, e queria ouvir a experiência de quem atende empresas. Uns 20 minutos, no horário que for melhor. Não é venda.
 
-> Oi, [nome], tudo bem? Aqui é a Nicolly. Estou fazendo uma pesquisa com donos de empresa sobre os avisos que o governo manda pelas caixas eletrônicas (Receita, Justiça do Trabalho, esse tipo de coisa) e queria saber como é aí na [empresa]. Uns 15 a 20 minutos, sem compromisso nenhum. Pode ser essa semana?
+## 4. Dono de empresa (Instagram, LinkedIn ou WhatsApp comercial)
 
-## 5. Para a mãe (pedir indicação)
+> Olá! Me chamo Nicolly, sou desenvolvedora aqui em Teresina (NAM Tech). Estou fazendo uma pesquisa com donos de empresa sobre os avisos que o governo manda pelas caixas eletrônicas (Receita, Justiça do Trabalho) e queria saber como funciona na [empresa]. Uns 15 a 20 minutos com quem cuida dessa parte, sem compromisso. Pode ser essa semana?
 
-> Mãe, estou fazendo as entrevistas do Atalaia essa semana. Você conhece alguém (contador, advogado, dono de empresa) que topa conversar comigo uns 20 minutos? Se puder, manda meu contato ou me passa o dele, e eu explico que foi você que indicou.
+## 5. Indicação em cadeia (alguém que já conversou indicou)
+
+> Bom dia, [nome]! Me chamo Nicolly, sou da NAM Tech, aqui de Teresina. O(a) [quem indicou] me passou seu contato. Estou ouvindo [contadores / advogados / donos de empresa] sobre as caixas eletrônicas do governo (e-CAC, DTE, Domicílio Judicial) e ele(a) achou que sua experiência ia ajudar. São uns 20 minutos. Teria um horário essa semana?
 
 ## 6. Lembrete (se não responder em 2 dias)
 
-> Oi, [nome]! Só passando de novo pela mensagem de segunda. Se essa semana estiver corrida, sem problema. Se tiver 15 minutos em algum momento, me ajuda muito.
+> Oi! Só passando de novo pela mensagem de segunda. Se essa semana estiver corrida, sem problema. Se tiver 15 minutos em algum momento, me ajuda muito.
 
 ## 7. Agradecimento (no mesmo dia da conversa)
 
-> [Nome], muito obrigada pela conversa de hoje, me ajudou demais. [Uma coisa específica que a pessoa disse e que você aprendeu.] Se lembrar de alguém que também poderia conversar comigo, fico agradecida. Quando o piloto estiver de pé, posso te mostrar?
+> [Nome], muito obrigada pela conversa de hoje, me ajudou demais. [Uma coisa específica que a pessoa disse e que você aprendeu.] Conhece mais alguém (contador, advogado ou dono de empresa) que toparia conversar comigo? Quando o piloto estiver de pé, posso te mostrar?
