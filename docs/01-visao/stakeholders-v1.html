@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Atalaia · Stakeholders v1</title>
+<!--
+  Dois slides 16:9 para projetar.
+  Slide 1: quem tem interesse × quem tem influência (matriz da aula).
+  Slide 2: o que cada um quer e o que o Atalaia entrega para ele.
+  Letra mínima de 18 pt. O resto se explica falando.
+-->
+<style>
+@page { size: 338.67mm 190.5mm; margin: 0; }
+:root {
+  --tinta: #1f2328; --apoio: #5b6168; --fio: #d5d9de;
+  --azul: #1d3b5c; --azul-claro: #e8eef5; --hipotese: #a35a12;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; }
+body { font: 18pt/1.25 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--tinta); -webkit-font-smoothing: antialiased; }
+
+.slide {
+  width: 338.67mm; height: 190.5mm; padding: 10mm 12mm 9mm;
+  display: flex; flex-direction: column;
+  break-after: page; overflow: hidden;
+}
+.slide:last-child { break-after: auto; }
+
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6mm; }
+h1 { margin: 0; font-size: 30pt; letter-spacing: -0.02em; color: var(--azul); }
+h1 span { color: var(--apoio); font-weight: 500; }
+header p { margin: 0; font-size: 13pt; color: var(--apoio); }
+.h { color: var(--hipotese); font-weight: 700; }
+
+/* ---------- Slide 1: matriz ---------- */
+.matriz { flex: 1; display: grid; grid-template-columns: 14mm 1fr 1fr; grid-template-rows: minmax(0,1fr) minmax(0,1fr) 10mm; gap: 3mm; min-height: 0; }
+.eixo-y { grid-column: 1; grid-row: 1 / 3; writing-mode: vertical-rl; transform: rotate(180deg);
+  display: flex; justify-content: space-between; align-items: center; font-size: 13pt; color: var(--apoio); }
+.eixo-x { grid-column: 2 / 4; grid-row: 3; display: flex; justify-content: space-between; align-items: center;
+  font-size: 13pt; color: var(--apoio); }
+.eixo-y b, .eixo-x b { color: var(--tinta); text-transform: uppercase; letter-spacing: .05em; }
+
+.q { border: 1px solid var(--fio); border-radius: 6px; padding: 4mm 6mm; }
+.q h2 { margin: 0 0 3.5mm; font-size: 13pt; text-transform: uppercase; letter-spacing: .05em; color: var(--azul); }
+.q .acao { font-size: 14pt; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--apoio); }
+.q ul { margin: 0; padding: 0; list-style: none; font-size: 20pt; font-weight: 600; }
+.q li { margin-bottom: 2mm; }
+.q li small { display: block; font-size: 14pt; font-weight: 400; color: var(--apoio); }
+.q.foco { background: var(--azul-claro); border-color: transparent; }
+
+/* ---------- Slide 2: tabela ---------- */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 13pt; text-transform: uppercase; letter-spacing: .05em; color: var(--azul);
+  padding: 0 4mm 3mm 0; border-bottom: 2px solid var(--azul); }
+td { padding: 3.6mm 4mm 3.6mm 0; border-bottom: 1px solid var(--fio); vertical-align: top; }
+td:first-child { font-weight: 700; width: 25%; }
+td:nth-child(2) { width: 32%; color: var(--apoio); }
+tr.foco td { background: var(--azul-claro); }
+tr.foco td:first-child { padding-left: 3mm; }
+.rodape { margin-top: auto; font-size: 13pt; color: var(--apoio); }
+</style>
+</head>
+<body>
+
+<!-- Slide 1 -->
+<div class="slide">
+  <header>
+    <h1>Atalaia <span>· Quem é afetado</span></h1>
+    <p>Marco 1 · 12/11/2026 · <span class="h">◇</span> hipótese a validar</p>
+  </header>
+
+  <div class="matriz">
+    <div class="eixo-y"><span>baixa</span><b>Influência</b><span>alta</span></div>
+
+    <div class="q">
+      <h2>Manter satisfeito <span class="acao">· Decidem as regras, usam pouco</span></h2>
+      <ul>
+        <li>Receita Federal<small>dona da caixa e da procuração</small></li>
+        <li>Advogado parceiro<small>revisa termos e rascunhos</small></li>
+        <li>ANPD (LGPD)<small>fiscaliza os dados dos clientes</small></li>
+      </ul>
+    </div>
+
+    <div class="q foco">
+      <h2>Gerenciar de perto <span class="acao">· Pagam e decidem a compra</span></h2>
+      <ul>
+        <li>Escritório contábil <span class="h">◇</span><small>responde pelo prazo de vários clientes</small></li>
+        <li>Dono da empresa média<small>tem RH e financeiro, mas não tem jurídico</small></li>
+      </ul>
+    </div>
+
+    <div class="q">
+      <h2>Monitorar <span class="acao">· Fornecem a base técnica</span></h2>
+      <ul>
+        <li>Provedor de IA</li>
+        <li>Telegram e e-mail</li>
+        <li>Hospedagem</li>
+      </ul>
+    </div>
+
+    <div class="q">
+      <h2>Manter informado <span class="acao">· Usam todo dia, recebem os avisos</span></h2>
+      <ul>
+        <li>Equipe do escritório<small>quem abria as caixas na mão</small></li>
+        <li>Dono da pequena empresa<small>compra pelo contador</small></li>
+        <li>RH e financeiro<small>recebem o caso da área deles</small></li>
+      </ul>
+    </div>
+
+    <div class="eixo-x"><span>baixo</span><b>Interesse</b><span>alto</span></div>
+  </div>
+</div>
+
+<!-- Slide 2 -->
+<div class="slide">
+  <header>
+    <h1>Atalaia <span>· O que cada um quer</span></h1>
+    <p>Marco 1 · 12/11/2026</p>
+  </header>
+
+  <table>
+    <thead>
+      <tr><th>Quem</th><th>O que quer</th><th>O que o Atalaia entrega</th></tr>
+    </thead>
+    <tbody>
+      <tr class="foco"><td>Escritório contábil</td><td>Não perder prazo de cliente</td><td>Todas as caixas de todos os CNPJs num painel</td></tr>
+      <tr><td>Equipe do escritório</td><td>Parar de abrir caixa por caixa</td><td>Ronda diária automática e resumo em 3 linhas</td></tr>
+      <tr><td>Dono da empresa</td><td>Não levar multa</td><td>Aviso se ninguém agir até a véspera</td></tr>
+      <tr><td>RH e financeiro</td><td>Saber só o que é deles</td><td>Cada caso vai direto para a área certa</td></tr>
+      <tr><td>Advogado parceiro</td><td>Receber o caso a tempo</td><td>Processo chega com o PDF e o prazo calculado</td></tr>
+      <tr><td>Receita e ANPD</td><td>Acesso legal e dados protegidos</td><td>Procuração eletrônica e LGPD desde o início</td></tr>
+    </tbody>
+  </table>
+
+  <p class="rodape">Versão 1, antes das entrevistas. As linhas com <span class="h">◇</span> no slide anterior mudam conforme o que os contadores disserem.</p>
+</div>
+
+</body>
+</html>

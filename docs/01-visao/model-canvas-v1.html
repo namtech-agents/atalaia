@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Atalaia · Model Canvas v1</title>
+<!--
+  Slide 16:9 para projetar. Letra mínima de 18 pt no texto dos blocos.
+  Poucas palavras: a explicação vai na fala e no model-canvas-v1-detalhado.html.
+-->
+<style>
+@page { size: 338.67mm 190.5mm; margin: 0; }
+:root {
+  --tinta: #1f2328; --apoio: #5b6168; --fio: #d5d9de;
+  --azul: #1d3b5c; --azul-claro: #e8eef5; --hipotese: #a35a12;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; }
+body {
+  width: 338.67mm; height: 190.5mm; padding: 10mm 12mm 9mm;
+  font: 18pt/1.25 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--tinta); -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column;
+}
+
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6mm; }
+h1 { margin: 0; font-size: 30pt; letter-spacing: -0.02em; color: var(--azul); }
+h1 span { color: var(--apoio); font-weight: 500; }
+header p { margin: 0; font-size: 13pt; color: var(--apoio); }
+
+.canvas {
+  flex: 1; display: grid; gap: 3mm;
+  grid-template-columns: repeat(10, 1fr);
+  grid-template-rows: minmax(0,1fr) minmax(0,1fr) auto; min-height: 0;
+}
+section { border: 1px solid var(--fio); border-radius: 6px; padding: 4mm 4.5mm; }
+h2 {
+  margin: 0 0 2.5mm; font-size: 13pt; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--azul);
+}
+ul { margin: 0; padding: 0; list-style: none; }
+li { margin-bottom: 2mm; }
+li:last-child { margin-bottom: 0; }
+
+.parcerias  { grid-column: 1 / 3;  grid-row: 1 / 3; }
+.atividades { grid-column: 3 / 5;  grid-row: 1; }
+.recursos   { grid-column: 3 / 5;  grid-row: 2; }
+.proposta   { grid-column: 5 / 7;  grid-row: 1 / 3; background: var(--azul-claro); border-color: transparent; }
+.relacao    { grid-column: 7 / 9;  grid-row: 1; }
+.canais     { grid-column: 7 / 9;  grid-row: 2; }
+.segmentos  { grid-column: 9 / 11; grid-row: 1 / 3; }
+.custos     { grid-column: 1 / 6;  grid-row: 3; }
+.receitas   { grid-column: 6 / 11; grid-row: 3; }
+
+/* custos e receitas: itens lado a lado, a faixa é baixa */
+.custos ul, .receitas ul { display: flex; gap: 10mm; }
+.custos li, .receitas li { margin: 0; }
+
+.frase { margin: 0 0 3mm; font-size: 20pt; font-weight: 700; line-height: 1.15; color: var(--azul); }
+.sem-ia { margin-top: 3mm; padding-top: 2.5mm; border-top: 1px solid rgba(29,59,92,.25); font-weight: 600; color: var(--azul); }
+
+/* ◇ = hipótese que as entrevistas ainda vão testar */
+.h { color: var(--hipotese); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Atalaia <span>· Model Canvas v1</span></h1>
+  <p>Marco 1 · 12/11/2026 · <span class="h">◇</span> hipótese a validar</p>
+</header>
+
+<div class="canvas">
+  <section class="parcerias">
+    <h2>Parcerias</h2>
+    <ul>
+      <li>Escritórios contábeis <span class="h">◇</span></li>
+      <li>Advogado parceiro</li>
+      <li>Receita Federal (procuração)</li>
+    </ul>
+  </section>
+
+  <section class="atividades">
+    <h2>Atividades</h2>
+    <ul>
+      <li>Olhar as caixas todo dia</li>
+      <li>Calcular o prazo</li>
+      <li>Avisar e cobrar</li>
+    </ul>
+  </section>
+
+  <section class="recursos">
+    <h2>Recursos</h2>
+    <ul>
+      <li>Agentes de IA</li>
+      <li>Cálculo de prazo testado</li>
+      <li>Certificado digital</li>
+    </ul>
+  </section>
+
+  <section class="proposta">
+    <h2>Proposta</h2>
+    <p class="frase">Nada do governo passa despercebido.</p>
+    <ul>
+      <li>Todas as caixas num lugar só</li>
+      <li>Juridiquês em 3 linhas</li>
+      <li>Prazo certo, pessoa certa</li>
+    </ul>
+    <p class="sem-ia">Sem IA, continua avisando.</p>
+  </section>
+
+  <section class="relacao">
+    <h2>Relacionamento</h2>
+    <ul>
+      <li>1ª leitura junto com o cliente</li>
+      <li>Lembretes automáticos</li>
+    </ul>
+  </section>
+
+  <section class="canais">
+    <h2>Canais</h2>
+    <ul>
+      <li>Indicação <span class="h">◇</span></li>
+      <li>Painel, e-mail e Telegram</li>
+    </ul>
+  </section>
+
+  <section class="segmentos">
+    <h2>Clientes</h2>
+    <ul>
+      <li>Escritórios contábeis <span class="h">◇</span></li>
+      <li>Pequenas e médias empresas</li>
+    </ul>
+  </section>
+
+  <section class="custos">
+    <h2>Custos</h2>
+    <ul>
+      <li><b>IA: menos de R$ 1</b> por cliente</li>
+      <li>Hospedagem</li>
+    </ul>
+  </section>
+
+  <section class="receitas">
+    <h2>Receita</h2>
+    <ul>
+      <li><b>Assinatura por CNPJ</b> <span class="h">◇</span></li>
+      <li>1º cliente pago até 27/11</li>
+    </ul>
+  </section>
+</div>
+
+</body>
+</html>
