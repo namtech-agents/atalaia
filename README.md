@@ -48,6 +48,7 @@ As entrevistas com contadores ficaram para depois do protótipo. É mais fácil 
 O que já está pronto:
 - Model Canvas, mapa de stakeholders, pré-mortem e roteiro de funções ([docs/01-visao](docs/01-visao/))
 - Roteiro e mensagens das entrevistas ([docs/02-validacao](docs/02-validacao/))
+- Requisitos funcionais e não funcionais ([docs/03-requisitos](docs/03-requisitos/requisitos.md))
 - Backlog com 36 histórias de usuário nas Issues, organizado no Kanban
 - Projeto Spring Boot criado, com banco PostgreSQL
 
@@ -102,11 +103,11 @@ O endereço, o usuário e a senha do banco podem vir das variáveis `ATALAIA_DB_
 
 ## Como trabalho 
 
-- Scrum adaptado para uma pessoa só, com uma entrega a cada marco do projeto.
+- Scrum adaptado para um time pequeno, com uma entrega a cada marco do projeto.
 - Sprints de uma semana, uma por marco.
 - O backlog com prioridade P1/P2/P3 e o marco de cada história, mais o Kanban.
 - Pesquisar antes de construir (a pesquisa de concorrentes já mudou o Canvas e o backlog uma vez, e as entrevistas podem mudar de novo) e uma revisão toda sexta.
-- O caminho de uma tarefa em 5 passos: Issue → branch → código e teste → PR com "Resolve #N" → merge e card em "Feito".
+- O caminho de uma tarefa em 5 passos: Issue → branch → código e teste → PR com "Resolve #N" → merge e card em "Feito". O combinado completo está no [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Ferramentas usadas
 
@@ -116,8 +117,9 @@ O endereço, o usuário e a senha do banco podem vir das variáveis `ATALAIA_DB_
 - GitHub: código, Issues, Kanban e pull requests
 - Claude Code (IA): uso como professor e revisor. Ele me explica os conceitos, me dá dicas quando eu travo e revisa os meus pull requests. Também me ajuda na pesquisa de concorrentes e na redação dos documentos e das histórias do backlog.
 
-O código Java eu escrevo à mão, e as decisões do projeto são minhas.
+O código Java é escrito à mão pelo time, e as decisões do projeto são nossas.
 
-## Autora
+## Time
 
-Nicolly Adler, NAM Tech (Teresina, PI)
+- Nicolly Adler, NAM Tech (Teresina, PI): produto, backlog e código
+- Itallo Sampaio ([itallo-dev-code](https://github.com/itallo-dev-code)): banco de dados
