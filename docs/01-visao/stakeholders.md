@@ -8,7 +8,7 @@ Professor e banca: dão a nota, e um marco reprovado trava tudo.
 NAM Tech: constrói e opera o Atalaia.
 
 ## Manter satisfeito (influência alta, interesse baixo)
-Receita Federal e CNJ: donos das caixas, ditam as regras.
+Receita Federal, Ministério do Trabalho, prefeitura e CNJ: donos das caixas, ditam as regras.
 ANPD: fiscaliza a LGPD.
 Advogado parceiro.
 Titulares dos dados: as pessoas que aparecem nos documentos (sócios, funcionários).
@@ -20,15 +20,15 @@ RH e financeiro: recebem o caso da área deles.
 
 ## Monitorar (influência baixa, interesse baixo)
 Provedor de IA, Telegram, serviço de e-mail, whatsapp, hospedagem.
-Concorrentes: Dootax, Jettax, Burocrata.
+Concorrentes: Dootax, Jettax, e-Auditoria, Agilizza, Alerte, Burocrata.
 
 ## O que cada um quer
-- Escritório contábil: não perder prazo de nenhum cliente → todas as caixas de todos os CNPJs num painel só.
+- Escritório contábil: não perder prazo de nenhum cliente e ter o registro de que avisou → cada notificação vira um caso com prazo, responsável e confirmação do cliente.
 - Dono da empresa: não levar multa → aviso se ninguém resolver até a véspera do prazo.
-- Equipe do escritório: parar de abrir caixa por caixa → o Atalaia olha todo dia e manda um resumo curto.
+- Equipe do escritório: parar de ler documento inteiro e fazer conta de prazo → envia o PDF e recebe o resumo curto com o prazo calculado.
 - RH e financeiro: saber só o que é da área deles → cada caso vai direto pra pessoa certa.
 - Advogado parceiro: receber o processo a tempo → chega com o PDF e o prazo já calculado.
-- Receita, CNJ e ANPD: acesso pelo caminho legal e dados protegidos → procuração eletrônica e LGPD desde o começo.
+- Receita, CNJ e ANPD: acesso pelo caminho legal e dados protegidos → na prévia só PDF enviado pelo escritório; procuração eletrônica só quando entrar o acesso direto; LGPD desde o começo.
 - Titulares dos dados: que os dados deles não vazem → guardar só o necessário e registrar quem acessou.
 - NAM Tech: ter o primeiro produto e o primeiro cliente pagando → o Atalaia. Pela LGPD, ela é a operadora dos dados (trata em nome do cliente).
 
