@@ -1,8 +1,10 @@
 # Lista de entrevistas
 
-Meta: 3 contadores, 1 advogado e 2 donos antes do Marco 2 (19/11). A meta antiga era 11/11 e não deu: passei esses dias na pesquisa de concorrentes, que mudou o rumo do projeto, e as mensagens precisaram ser refeitas antes de sair.
+Meta: 3 contadores, 1 advogado e 2 donos, depois que o protótipo estiver pronto (Marco 2, 19/11).
 
-Contato a frio pelo Instagram, Google Maps e LinkedIn: 10 contadores, 4 advogados e 6 donos. Sem nomes aqui (repositório público).
+A meta antiga era 11/11. Mudei por dois motivos: a pesquisa de concorrentes trocou o rumo do projeto, e eu consigo marcar conversa com contador mais fácil quando tenho alguma coisa pra mostrar. Então primeiro o protótipo, depois as entrevistas.
+
+Sem nomes aqui (repositório público).
 
 | Código | Perfil | Canal | Situação |
 |---|---|---|---|

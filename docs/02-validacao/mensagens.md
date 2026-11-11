@@ -2,6 +2,8 @@
 
 Refeitas em 11/11, depois da pesquisa de concorrentes. A versão antiga perguntava como o escritório "acompanha as caixas do governo". Isso já tem ferramenta, e o contador ia responder "já uso tal sistema". Agora a pergunta é sobre o que acontece depois que o aviso chega.
 
+Ainda não mandei nenhuma. As entrevistas ficam pra depois do protótipo (Marco 2), então estas mensagens são a reserva pra quando eu precisar chamar alguém a frio.
+
 ## Como eu mando
 
 Em três passos, cada um curto. Mensagem grande explicando o projeto ninguém lê.
