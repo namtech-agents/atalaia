@@ -39,9 +39,11 @@ A lista do que entra na prévia, do que vem depois e do que foi descartado está
 
 ## Situação
 
-O projeto está no **Marco 1 (visão e validação)**. Antes de escrever o sistema, quero confirmar que o problema existe do jeito que eu imagino. Por isso estou procurando contadores, advogados e donos de empresa de Teresina: quais caixas eles olham, com que frequência, se já perderam algum prazo e quanto isso custou.
+O projeto está no **Marco 1 (visão e backlog)**.
 
 Em 10/11 a pesquisa de concorrentes mostrou que só monitorar as caixas já existe. Em 11/11 o rumo mudou para o que vem depois do aviso, e o Canvas, o backlog e este README foram ajustados.
+
+As entrevistas com contadores ficaram para depois do protótipo. É mais fácil marcar a conversa tendo alguma coisa pra mostrar, e a resposta vem melhor quando a pessoa vê funcionando. O roteiro já está pronto.
 
 O que já está pronto:
 - Model Canvas, mapa de stakeholders, pré-mortem e roteiro de funções ([docs/01-visao](docs/01-visao/))
@@ -50,7 +52,7 @@ O que já está pronto:
 - Projeto Spring Boot criado, com banco PostgreSQL
 
 Próximos marcos:
-- 12/11 · Marco 1: canvas, stakeholders, backlog e entrevistas
+- 12/11 · Marco 1: canvas, stakeholders, pré-mortem, roteiro de funções e backlog
 - 19/11 · Marco 2: ler um PDF, conferir os dados, calcular o prazo, telas e diagramas
 - 26/11 · Marco 3: o caminho completo, do PDF até a confirmação do cliente
 - 03/12 · Marco 4: pitch e demonstração
@@ -103,7 +105,7 @@ O endereço, o usuário e a senha do banco podem vir das variáveis `ATALAIA_DB_
 - Scrum adaptado para uma pessoa só, com uma entrega a cada marco do projeto.
 - Sprints de uma semana, uma por marco.
 - O backlog com prioridade P1/P2/P3 e o marco de cada história, mais o Kanban.
-- "Validar antes de construir" (as entrevistas mudam o Canvas e o backlog) e uma revisão toda sexta.
+- Pesquisar antes de construir (a pesquisa de concorrentes já mudou o Canvas e o backlog uma vez, e as entrevistas podem mudar de novo) e uma revisão toda sexta.
 - O caminho de uma tarefa em 5 passos: Issue → branch → código e teste → PR com "Resolve #N" → merge e card em "Feito".
 
 ## Ferramentas usadas
