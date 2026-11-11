@@ -1,55 +1,78 @@
 # Mensagens
 
-Refeitas em 11/11, depois da pesquisa de concorrentes. A versão antiga perguntava como o escritório "acompanha as caixas do governo". Isso já tem ferramenta, e o contador ia responder "já uso tal sistema". Agora a conversa começa no que acontece depois que o aviso chega.
+Refeitas em 11/11, depois da pesquisa de concorrentes. A versão antiga perguntava como o escritório "acompanha as caixas do governo". Isso já tem ferramenta, e o contador ia responder "já uso tal sistema". Agora a pergunta é sobre o que acontece depois que o aviso chega.
 
-## Antes de mandar
+## Como eu mando
 
-O pedido é só uma conversa de 15 minutos. Não ofereço teste, preço nem piloto, porque o Atalaia ainda não existe pra mostrar.
+Em três passos, cada um curto. Mensagem grande explicando o projeto ninguém lê.
 
-Se a conversa for boa, os passos seguintes são:
+1. Puxo assunto: digo que sou estudante e peço pra fazer uma pergunta.
+2. A pessoa disse "pode": faço uma pergunta só, sobre a rotina dela. Não falo do Atalaia.
+3. Ela respondeu: peço os 15 minutos.
 
-1. no fim, perguntar se posso mostrar a prévia em dezembro;
-2. se a pessoa quiser, pedir 3 ou 4 notificações antigas, já resolvidas e com o nome do cliente coberto, pra comparar a leitura do Atalaia com o que o escritório fez;
-3. cobrança só em 2027.
+Do Atalaia eu só falo se perguntarem do que se trata. Não ofereço teste, preço nem piloto, porque ele ainda não existe pra mostrar.
 
-Sempre termino pedindo a indicação de mais uma pessoa.
-
-Advogado eu chamo de Dr. ou Dra. e o sobrenome. Contador e dono, pelo nome.
+No máximo dois lembretes pra quem não responder, depois eu paro.
 
 ## Contador
 
-Boa tarde, [nome]. Sou a Nicolly, estudante da Afya – Uninovafapi, e estou desenvolvendo o Atalaia aqui em Teresina.
+Mensagem 1:
 
-Ferramenta pra avisar que chegou mensagem do governo já tem várias. Pelo que pesquisei, depois do aviso o trabalho continua na mão: abrir o PDF, entender o que ele pede, achar o prazo, avisar o cliente e ainda ter como provar que avisou. E a mensagem do e-CAC conta como lida em 15 dias, aberta ou não.
+> Oi! Sou estudante da Uninovafapi aqui em Teresina e estou estudando a rotina de escritório contábil. Posso te fazer uma pergunta rápida? Não é venda.
 
-O Atalaia cuida dessa parte. O escritório envia o PDF da notificação e recebe o caso montado: o que o documento pede, quais papéis separar, até quando e quem cuida. O cliente recebe um link e confirma que foi avisado.
+Mensagem 2:
 
-Ainda estou construindo, a primeira versão sai em dezembro. Isso é problema aí no escritório? Se for, você me dá 15 minutos esta semana pra me contar como fazem hoje?
+> Valeu! Quando chega uma notificação do governo pra um cliente (DET, malha fiscal, prefeitura), o que acontece depois aí no escritório? Tem alguém fixo pra abrir, ver o prazo e avisar o cliente, ou vai de quem cuida da carteira?
 
-## Advogado
+Mensagem 3:
 
-Boa tarde, Dr(a). [sobrenome]. Sou a Nicolly, estudante da Afya – Uninovafapi, e estou desenvolvendo o Atalaia aqui em Teresina.
-
-O Atalaia ajuda escritórios de contabilidade a tratar as notificações que o governo manda pros clientes deles. Ele lê o PDF, calcula o prazo por regra (com o artigo ao lado) e manda um link pro cliente confirmar que foi avisado.
-
-Tenho duas dúvidas que só advogado responde: o que essa confirmação do cliente vale como prova, e que cuidado eu preciso ter pra contar prazo sem errar. O(a) senhor(a) me daria 15 minutos esta semana?
+> Obrigada, é bem isso que estou estudando. Você toparia me contar mais numa conversa de 15 minutos esta semana? Pode ser ligação ou áudio, no horário que for melhor pra você.
 
 ## Dono de empresa
 
-Boa tarde, [nome]. Sou a Nicolly, estudante da Afya – Uninovafapi, e estou desenvolvendo o Atalaia aqui em Teresina.
+Mensagem 1:
 
-Quando chega uma notificação do governo pra sua empresa (Receita, Ministério do Trabalho, prefeitura), como você fica sabendo? É o contador que avisa?
+> Oi! Sou estudante da Uninovafapi aqui em Teresina e estou fazendo um trabalho sobre a rotina administrativa de empresas. Posso fazer uma pergunta rápida pra quem cuida do administrativo aí?
 
-O Atalaia ajuda o escritório de contabilidade a avisar o cliente de um jeito claro: o que chegou, até quando resolver e o que precisa mandar. Queria ouvir o lado de quem recebe esse aviso. Me dá 10 minutos esta semana?
+Mensagem 2:
 
-## Se a pessoa não responder
+> Obrigada! Quando chega uma notificação do governo pra empresa (Receita, Ministério do Trabalho, prefeitura), como vocês ficam sabendo? É o contador que avisa? E dá pra entender o que precisa fazer, ou tem que ligar pra ele explicar?
 
-No máximo dois lembretes, depois eu paro.
+Mensagem 3:
 
-Depois de 3 dias úteis: "Boa tarde, [nome]. Voltando na mensagem sobre o Atalaia: são só 15 minutos, no horário que for melhor pra você. Se não der agora, tudo bem."
+> Entendi, obrigada! Você teria 10 minutos esta semana pra me contar como funciona aí na prática?
 
-Depois de mais 4 dias: "Última mensagem sobre isso. Se um dia uma notificação der dor de cabeça aí, pode me chamar."
+## Advogado
 
-## De onde tirei a regra dos 15 dias
+Fica por último. O advogado não é quem vai usar o Atalaia, mas é quem pode me dizer o que vale como prova.
 
-Decreto 70.235/72, art. 23, § 2º, III: a intimação eletrônica vale como feita 15 dias depois de chegar na caixa, mesmo sem ninguém abrir. Ainda preciso conferir o texto da lei com um contador ou advogado antes de usar essa regra no código.
+Mensagem 1:
+
+> Boa tarde! Sou estudante da Uninovafapi aqui em Teresina e estou fazendo um trabalho sobre notificações do governo para empresas. Posso fazer uma pergunta rápida pra quem atua com empresas?
+
+Mensagem 2:
+
+> Obrigada! Quando uma empresa perde o prazo de uma notificação e diz que o contador não avisou, o que costuma decidir a história? Um registro com data e hora de que o cliente foi avisado resolve?
+
+Mensagem 3:
+
+> Muito obrigada! O(a) senhor(a) teria 15 minutos esta semana pra me explicar melhor?
+
+## Se perguntarem do que se trata
+
+> É um projeto da faculdade que pode virar produto. O escritório envia o PDF da notificação e o sistema monta o caso: o que o documento pede, o prazo, quem cuida, e um link pro cliente confirmar que foi avisado. Ainda estou construindo, a primeira versão sai em dezembro. Não estou vendendo nada, quero ouvir quem lida com isso antes de avançar.
+
+## Lembretes
+
+Depois de 3 dias úteis:
+
+> Oi! Só pra garantir que a mensagem chegou. É uma dúvida rápida, qualquer resposta curta já me ajuda.
+
+Depois de mais 4 dias:
+
+> Última mensagem, prometo. Se não der agora, sem problema, e obrigada mesmo assim.
+
+## No fim de cada conversa
+
+- Posso te mostrar quando a primeira versão ficar pronta, em dezembro?
+- Você conhece mais alguém que eu deveria ouvir?
