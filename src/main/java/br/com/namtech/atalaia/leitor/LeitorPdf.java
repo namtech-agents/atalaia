@@ -14,4 +14,11 @@ public class LeitorPdf {
             return extrator.getText(documento);
         }
     }
+
+    public ResultadoLeitura ler(byte[] pdf) throws IOException {
+        String texto = extrairTexto(pdf);
+        //Pdf so de imagem volta em branco (so espaços e quebras de linhas)
+        boolean precisaDeRevisao = texto.isBlank();
+        return new ResultadoLeitura(texto, precisaDeRevisao);
+    }
 }

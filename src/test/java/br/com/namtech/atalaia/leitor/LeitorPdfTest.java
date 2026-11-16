@@ -22,4 +22,19 @@ public class LeitorPdfTest {
         //Conferir: a frase do prazo tem que estar no texto 
         assertThat(texto).contains("Prazo: 30 dias a contar da ciencia.");
     }
+
+    @Test
+    void mandaPdfSoDeImagemParaRevisao() throws IOException {
+
+    // Arrumar: abre o PDF que é só imagem e pega os bytes dele
+    InputStream arquivo = getClass().getResourceAsStream("/pdfs/notificacao-escaneada.pdf");
+    byte[] pdf = arquivo.readAllBytes();
+
+    //Agir: pede a leitura completa ao leitor
+    LeitorPdf leitor = new LeitorPdf();
+    ResultadoLeitura resultado = leitor.ler(pdf);
+
+    //Conferir: sem texto legível, tem que ir para revisão humana
+    assertThat(resultado.precisaDeRevisao()).isTrue();
+    }
 }
