@@ -37,4 +37,20 @@ public class LeitorPdfTest {
     //Conferir: sem texto legível, tem que ir para revisão humana
     assertThat(resultado.precisaDeRevisao()).isTrue();
     }
+
+    @Test
+    void mantemOsAcentosDoTexto() throws IOException {
+        //Arrumar: abre o PDF com acento e pega os bytes dele
+        InputStream arquivo = getClass().getResourceAsStream("/pdfs/notificacao-acentuada.pdf");
+        byte[] pdf = arquivo.readAllBytes();
+
+        //Agir: pede a leitura completa ao leitor
+        LeitorPdf leitor = new LeitorPdf();
+        ResultadoLeitura resultado = leitor.ler(pdf);
+
+        //Conferir: os acentos saem inteiros e nao precisa de revisao
+        assertThat(resultado.texto()).contains("Notificação de lançamento");
+        assertThat(resultado.texto()).contains("Prazo: 30 dias a contar da ciência");
+        assertThat(resultado.precisaDeRevisao()).isFalse();
+    }
 }
