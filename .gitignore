@@ -50,3 +50,5 @@ dados-cliente/
 *.log
 logs/
 *.pdf
+# Exceção: PDFs inventados que os testes usam
+!src/test/resources/pdfs/*.pdf
