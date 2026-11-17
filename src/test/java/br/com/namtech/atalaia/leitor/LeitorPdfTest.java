@@ -17,7 +17,8 @@ public class LeitorPdfTest {
 
         //Agir: pede o texto ao leitor
         LeitorPdf leitor = new LeitorPdf();
-        String texto = leitor.extrairTexto(pdf);
+        String texto = leitor.ler(pdf).texto();
+
 
         //Conferir: a frase do prazo tem que estar no texto 
         assertThat(texto).contains("Prazo: 30 dias a contar da ciencia.");
