@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -58,8 +59,13 @@ class ResolverAoMesmoTempoTest {
 
     @AfterEach
     void apagaOQueCriou() {
-        notificacoes.deleteById(id);
-        empresas.delete(empresa);
+        //Só apaga o que chegou a ser criado: se o teste quebrou antes, o erro que aparece é o dele, nao o daqui
+        if (id != null) {
+            notificacoes.deleteById(id);
+        }
+        if (empresa != null) {
+            empresas.delete(empresa);
+        }
     }
 
     @Test
@@ -69,17 +75,23 @@ class ResolverAoMesmoTempoTest {
         id = notificacoes.save(new Notificacao(empresa, "%PDF-teste".getBytes(), "texto",
                 TipoDeDocumento.COBRANCA, List.of(), List.of())).getId();
         ExecutorService outraPessoa = Executors.newSingleThreadExecutor();
+        //Avisa quando a outra pessoa começou de verdade (CompletableFuture: um aviso que alguem da e outro espera)
+        CompletableFuture<Void> outraPessoaComecou = new CompletableFuture<>();
 
         Future<ResultActions> segundoPedido;
         try {
             segundoPedido = conversa.execute(aberta -> {
                 //Agir: a primeira pessoa pega a notificação para alterar e, antes de ela gravar, a segunda manda resolver
                 Notificacao daPrimeira = notificacoes.buscarParaAlterar(id).orElseThrow();
-                Future<ResultActions> pedido = outraPessoa.submit(() -> navegador
-                        .perform(post("/notificacoes/" + id + "/resolver")
-                                .param("desfecho", "MULTA_CHEIA").param("observacao", "Segunda observação.")));
-
-                //Conferir: o segundo pedido fica esperando a primeira pessoa terminar (nao responde nesse tempo)
+                Future<ResultActions> pedido = outraPessoa.submit(() -> {
+                    outraPessoaComecou.complete(null);
+                    return navegador.perform(post("/notificacoes/" + id + "/resolver")
+                            .param("desfecho", "MULTA_CHEIA").param("observacao", "Segunda observação."));
+                });
+                //Espera a outra pessoa começar e da um tempo para o pedido dela chegar no banco.
+                //Sem a tranca, nesse tempo ela gravaria MULTA_CHEIA; com a tranca, fica parada e nao responde.
+                //(Nao aumentar os 300 ms: o banco de teste desiste de esperar uma tranca depois de uns 2 segundos)
+                outraPessoaComecou.orTimeout(5, TimeUnit.SECONDS).join();
                 assertThatThrownBy(() -> pedido.get(300, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
 
                 daPrimeira.resolver(Desfecho.ARQUIVADO, "Primeira observação.");
@@ -91,7 +103,7 @@ class ResolverAoMesmoTempoTest {
             outraPessoa.shutdownNow();
         }
 
-        //Conferir: o segundo encontrou o caso ja resolvido e nao trocou nada
+        //Conferir (é esta a prova da tranca): o segundo encontrou o caso ja resolvido e nao trocou nada
         Notificacao guardada = notificacoes.findById(id).orElseThrow();
         assertThat(guardada.getDesfecho()).isEqualTo(Desfecho.ARQUIVADO);
         assertThat(guardada.getObservacao()).isEqualTo("Primeira observação.");

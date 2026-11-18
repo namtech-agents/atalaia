@@ -19,6 +19,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -352,6 +354,23 @@ class RecepcaoControllerTest {
                     .andExpect(status().isBadRequest());
         }
         assertThat(ultimaGuardadaNoBanco().isResolvida()).isFalse();
+    }
+
+    //Roda uma vez para cada desfecho da lista. O banco tem uma restrição com os mesmos nomes (V5):
+    //quem criar um desfecho novo no Java e esquecer a migração ve este teste falhar, em vez de um erro no ar
+    @ParameterizedTest
+    @EnumSource(Desfecho.class)
+    void bancoAceitaTodosOsDesfechosDaLista(Desfecho desfecho) throws Exception {
+        //Arrumar: uma notificação aberta
+        Notificacao aberta = notificacaoAberta();
+
+        //Agir: marca como resolvida com o desfecho da vez
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", desfecho.name()).param("observacao", "Observação."))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o banco gravou (a busca manda a mudança para o banco, e a restrição é conferida ali)
+        assertThat(ultimaGuardadaNoBanco().getDesfecho()).isEqualTo(desfecho);
     }
 
     @Test

@@ -43,6 +43,8 @@ class MigracaoTest {
                 insert into notificacao (empresa_id, arquivo, texto, precisa_de_revisao, resolvida_em, desfecho, observacao)
                 select id, X'25504446', 'texto', false, current_timestamp, 'INVENTADO', 'Observação.'
                 from empresa where cnpj = '99999009000362'
-                """)).isInstanceOf(DataIntegrityViolationException.class);
+                """)).isInstanceOf(DataIntegrityViolationException.class)
+                //o nome da restrição na mensagem: garante que foi ela que recusou, e nao outra coluna obrigatoria
+                .hasMessageContaining("NOTIFICACAO_DESFECHO_VALIDO");
     }
 }
