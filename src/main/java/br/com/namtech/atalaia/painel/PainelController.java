@@ -1,5 +1,6 @@
 package br.com.namtech.atalaia.painel;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Controller;
@@ -27,7 +28,9 @@ public class PainelController {
         List<NotificacaoNaLista> abertas = todas.stream().filter(linha -> !linha.resolvida()).toList();
         model.addAttribute("precisaDeGente", abertas.stream().filter(NotificacaoNaLista::precisaDeRevisao).toList());
         model.addAttribute("conferidas", abertas.stream().filter(linha -> !linha.precisaDeRevisao()).toList());
-        model.addAttribute("resolvidas", todas.stream().filter(NotificacaoNaLista::resolvida).toList());
+        //As resolvidas mostram a data da resolução, entao a ordem delas segue essa data: a ultima resolvida em cima
+        model.addAttribute("resolvidas", todas.stream().filter(NotificacaoNaLista::resolvida)
+                .sorted(Comparator.comparing(NotificacaoNaLista::resolvidaEm).reversed()).toList());
         return "painel";
     }
 }

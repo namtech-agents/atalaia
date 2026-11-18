@@ -159,7 +159,7 @@ html { scroll-padding-top: 92px; }
 .motivos li + li { margin-top: 4px; }
 /* dados extraídos: nome do campo apagado, valor forte e o trecho do documento embaixo, como citação */
 .dados { margin: 12px 0 0; display: grid; gap: 12px; }
-.dados dt { font-size: 13px; font-weight: 600; color: var(--apagado); text-transform: capitalize; }
+.dados dt { font-size: 13px; font-weight: 600; color: var(--apagado); overflow-wrap: anywhere; }
 .dados dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
 .dados q { display: block; margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--picote); font-weight: 400; font-size: 13.5px; color: var(--apagado); quotes: none; }
 .cartao .aviso-ia { margin-top: 12px; font-size: 13px; }

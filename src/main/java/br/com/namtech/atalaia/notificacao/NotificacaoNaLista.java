@@ -9,9 +9,9 @@ import br.com.namtech.atalaia.analista.TipoDeDocumento;
 public record NotificacaoNaLista(Long id, String empresa, TipoDeDocumento tipo, boolean precisaDeRevisao,
         Instant recebidaEm, Desfecho desfecho, Instant resolvidaEm) {
 
-    //Resolvida é a que ja tem desfecho
+    //Resolvida é a que ja tem a data da resolução, igual na Notificacao
     public boolean resolvida() {
-        return desfecho != null;
+        return resolvidaEm != null;
     }
 
     //A data que a linha mostra, como aparece na tela: a de quando foi resolvida ou, no caso aberto, a de quando chegou
