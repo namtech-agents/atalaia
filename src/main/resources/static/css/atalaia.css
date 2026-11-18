@@ -132,7 +132,7 @@ html { scroll-padding-top: 92px; }
 /* formulário */
 .formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
 /* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
-.formulario select, .formulario input[type="file"] { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
+.formulario select, .formulario input[type="file"], .resolver select, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 .formulario .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
@@ -179,6 +179,13 @@ html { scroll-padding-top: 92px; }
 }
 /* em tela muito estreita o selo fica só com a primeira palavra */
 @media (max-width: 420px) { .topo .previa span { display: none; } }
+
+/* fechar o caso: o mesmo campo do formulário de envio, dentro do cartão */
+.resolver { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.resolver textarea { padding: 10px 12px; font-family: inherit; line-height: 1.45; resize: vertical; }
+.resolver .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
+.resolver .botao { align-self: flex-start; }
+.cartao .observacao { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); }
 
 /* tela inicial: o título com o botão de enviar ao lado, e os grupos de notificações */
 .titulo.com-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

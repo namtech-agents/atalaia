@@ -9,11 +9,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.leitor.LeitorPdfTest;
+import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
@@ -277,6 +280,63 @@ class RecepcaoControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Este PDF tem páginas demais")));
         assertThat(notificacoes.count()).isEqualTo(antes);
+    }
+
+    //Guarda direto no banco uma notificação conferida, para os testes de resolver
+    private Notificacao notificacaoAberta() {
+        return notificacoes.save(new Notificacao(empresa, "%PDF-teste".getBytes(), "texto",
+                TipoDeDocumento.COBRANCA, List.of(), List.of()));
+    }
+
+    @Test
+    void resolverGuardaODesfechoEAObservacao() throws Exception {
+        //Arrumar: uma notificação aberta
+        Notificacao aberta = notificacaoAberta();
+
+        //Agir: marca como resolvida
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", "MULTA_REDUZIDA").param("observacao", "  Pago com desconto em 18/11.  "))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: ficou guardado no banco (a observação sem os espaços das pontas) e a tela mostra, sem o formulario
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isResolvida()).isTrue();
+        assertThat(guardada.getDesfecho()).isEqualTo(Desfecho.MULTA_REDUZIDA);
+        assertThat(guardada.getObservacao()).isEqualTo("Pago com desconto em 18/11.");
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(content().string(containsString("Multa reduzida")))
+                .andExpect(content().string(containsString("Pago com desconto em 18/11.")))
+                .andExpect(content().string(not(containsString("Marcar como resolvida"))));
+    }
+
+    @Test
+    void resolverSemObservacaoERecusadoComMensagem() throws Exception {
+        //Arrumar: uma notificação aberta
+        Notificacao aberta = notificacaoAberta();
+
+        //Agir e conferir: sem observação, volta a tela com a mensagem e o desfecho escolhido, e nada muda no banco
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", "ARQUIVADO").param("observacao", "   "))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Escolha o desfecho e escreva uma observação")));
+        assertThat(ultimaGuardadaNoBanco().isResolvida()).isFalse();
+    }
+
+    @Test
+    void resolverDeNovoNaoTrocaOQueFoiRegistrado() throws Exception {
+        //Arrumar: uma notificação ja resolvida
+        Notificacao aberta = notificacaoAberta();
+        aberta.resolver(Desfecho.ARQUIVADO, "Primeira observação.");
+
+        //Agir: alguem manda resolver de novo, com outro desfecho
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", "MULTA_CHEIA").param("observacao", "Segunda observação."))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: vale o primeiro registro
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.getDesfecho()).isEqualTo(Desfecho.ARQUIVADO);
+        assertThat(guardada.getObservacao()).isEqualTo("Primeira observação.");
     }
 
     @Test

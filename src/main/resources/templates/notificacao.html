@@ -11,8 +11,9 @@
       <a class="volta" th:href="@{/}">Notificações</a>
       <h1>
         <span th:text="${empresa}"></span>
-        <span class="etq atencao" th:if="${notificacao.precisaDeRevisao}">Precisa de gente</span>
-        <span class="etq" th:unless="${notificacao.precisaDeRevisao}">Lido e conferido</span>
+        <span class="etq" th:if="${notificacao.resolvida}">Resolvida</span>
+        <span class="etq atencao" th:if="${notificacao.precisaDeRevisao and not notificacao.resolvida}">Precisa de gente</span>
+        <span class="etq" th:if="${not notificacao.precisaDeRevisao and not notificacao.resolvida}">Lido e conferido</span>
       </h1>
       <p>Recebida em <span class="num" th:text="${recebidaEm}"></span></p>
     </div>
@@ -21,6 +22,13 @@
       <!-- No HTML o cartão do prazo vem primeiro: quem usa teclado ou leitor de tela recebe a situação antes do PDF.
            Na tela larga o CSS põe o documento à esquerda -->
       <aside class="lado">
+        <!-- Caso fechado: o que ficou registrado, sem formulário -->
+        <section class="vidro cartao" th:if="${notificacao.resolvida}" aria-labelledby="titulo-desfecho">
+          <h2 class="rotulo" id="titulo-desfecho">Resolvida em <span class="num" th:text="${resolvidaEm}"></span></h2>
+          <strong class="grande" th:text="${notificacao.desfecho.nome}"></strong>
+          <p class="observacao" th:text="${notificacao.observacao}"></p>
+        </section>
+
         <!-- Só aparece quando alguma peça desconfiou: diz por que uma pessoa precisa olhar -->
         <section class="vidro cartao" th:if="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-revisao">
           <h2 class="rotulo" id="titulo-revisao">Por que precisa de gente</h2>
@@ -53,6 +61,30 @@
           <h2 class="rotulo" id="titulo-prazo">Data limite</h2>
           <strong class="grande">Ainda sem prazo</strong>
           <p>O Atalaia só mostra uma data depois que a regra de prazo é conferida na norma. Por enquanto, confira o prazo no documento.</p>
+        </section>
+
+        <!-- Fechar o caso: o desfecho e uma observação curta, para todo mundo saber que já foi tratado -->
+        <section class="vidro cartao" th:unless="${notificacao.resolvida}" aria-labelledby="titulo-resolver">
+          <h2 class="rotulo" id="titulo-resolver">Já foi tratado?</h2>
+          <form class="resolver" method="post" th:action="@{/notificacoes/{id}/resolver(id=${notificacao.id})}">
+            <p class="erro" id="erro-resolver" role="alert" th:if="${erro}" th:text="${erro}"></p>
+            <div>
+              <label class="rotulo" for="desfecho">Desfecho</label>
+              <select id="desfecho" name="desfecho" required>
+                <option value="">Escolha o desfecho</option>
+                <option th:each="opcao : ${desfechos}" th:value="${opcao.name()}" th:text="${opcao.nome}"
+                        th:selected="${opcao == desfechoEscolhido}"></option>
+              </select>
+            </div>
+            <div>
+              <label class="rotulo" for="observacao">Observação</label>
+              <textarea id="observacao" name="observacao" rows="3" maxlength="500" required
+                        aria-describedby="dica-observacao" th:text="${observacao}"
+                        th:attr="aria-invalid=${erro != null} ? 'true', aria-describedby=${erro != null} ? 'erro-resolver dica-observacao' : 'dica-observacao'"></textarea>
+              <p class="dica" id="dica-observacao">O que foi feito, em poucas palavras. Até 500 letras.</p>
+            </div>
+            <button class="botao cheio" type="submit">Marcar como resolvida</button>
+          </form>
         </section>
 
         <section class="vidro cartao" th:unless="${notificacao.texto.isBlank()}">

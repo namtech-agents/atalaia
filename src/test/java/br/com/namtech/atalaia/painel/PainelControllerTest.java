@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
+import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
@@ -67,6 +68,23 @@ class PainelControllerTest {
                 .isBetween(pagina.indexOf("Precisa de gente"), pagina.indexOf("Lidas e conferidas"));
         assertThat(pagina.indexOf("/notificacoes/" + conferida.getId()))
                 .isGreaterThan(pagina.indexOf("Lidas e conferidas"));
+    }
+
+    @Test
+    void notificacaoResolvidaSaiDosGruposAbertosEVaiParaOFim() throws Exception {
+        //Arrumar: uma notificação que precisava de gente e ja foi resolvida
+        Empresa empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+        Notificacao resolvida = notificacoes.save(
+                new Notificacao(empresa, PDF, "", null, List.of(), List.of("Este PDF não tem texto.")));
+        resolvida.resolver(Desfecho.ARQUIVADO, "Conferido com o cliente.");
+
+        //Agir: abre a tela inicial
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: ela aparece só no grupo das resolvidas, com o desfecho
+        assertThat(pagina).doesNotContain("Precisa de gente").contains("Nada precisa de gente", "Arquivado");
+        assertThat(pagina.indexOf("/notificacoes/" + resolvida.getId() + "\""))
+                .isGreaterThan(pagina.indexOf("Resolvidas"));
     }
 
     @Test
