@@ -21,8 +21,9 @@ class MigracaoTest {
         Integer empresas = banco.queryForObject("select count(*) from empresa", Integer.class);
         Integer notificacoes = banco.queryForObject("select count(*) from notificacao", Integer.class);
 
-        //Conferir: as duas tabelas existem (senão a consulta dava erro) e nascem vazias
-        assertThat(empresas).isZero();
-        assertThat(notificacoes).isZero();
+        //Conferir: as duas tabelas existem (senão a consulta dava erro em vez de devolver um numero).
+        //Nao confere se estao vazias: o banco de teste é o mesmo para todos os testes, e outro pode ter gravado
+        assertThat(empresas).isNotNull();
+        assertThat(notificacoes).isNotNull();
     }
 }

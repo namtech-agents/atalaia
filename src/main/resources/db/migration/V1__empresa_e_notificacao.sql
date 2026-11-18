@@ -4,8 +4,11 @@
 create table empresa (
     id        bigint generated always as identity primary key,
     -- 14 posições em texto: o CNPJ novo (2026) pode ter letras
-    cnpj      varchar(14)  not null unique check (char_length(cnpj) = 14),
-    nome      varchar(200) not null
+    cnpj      varchar(14)  not null,
+    nome      varchar(200) not null,
+    -- Restrição com nome: se um dia precisar mudar, o V seguinte sabe como chamar
+    constraint empresa_cnpj_unico unique (cnpj),
+    constraint empresa_cnpj_14_posicoes check (char_length(cnpj) = 14)
 );
 
 -- Notificação: um PDF enviado, com o que o Leitor e a Calculadora devolveram
