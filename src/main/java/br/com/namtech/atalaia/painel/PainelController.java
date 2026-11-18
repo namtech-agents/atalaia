@@ -22,9 +22,12 @@ public class PainelController {
     @GetMapping("/")
     public String painel(Model model) {
         List<NotificacaoNaLista> todas = notificacoes.listar();
-        //Dois grupos, na ordem em que a pessoa deve olhar: primeiro o que o Atalaia nao conseguiu conferir sozinho
-        model.addAttribute("precisaDeGente", todas.stream().filter(NotificacaoNaLista::precisaDeRevisao).toList());
-        model.addAttribute("conferidas", todas.stream().filter(linha -> !linha.precisaDeRevisao()).toList());
+        //Tres grupos, na ordem em que a pessoa deve olhar: primeiro o que o Atalaia nao conseguiu conferir sozinho,
+        //depois o que esta conferido e aberto, e por ultimo o que ja foi resolvido
+        List<NotificacaoNaLista> abertas = todas.stream().filter(linha -> !linha.resolvida()).toList();
+        model.addAttribute("precisaDeGente", abertas.stream().filter(NotificacaoNaLista::precisaDeRevisao).toList());
+        model.addAttribute("conferidas", abertas.stream().filter(linha -> !linha.precisaDeRevisao()).toList());
+        model.addAttribute("resolvidas", todas.stream().filter(NotificacaoNaLista::resolvida).toList());
         return "painel";
     }
 }
