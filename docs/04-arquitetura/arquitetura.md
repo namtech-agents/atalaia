@@ -60,18 +60,21 @@ flowchart TB
     navegador["Navegador do escritório"]
 
     subgraph app["Atalaia (Spring Boot, Java 21)"]
+        painel["Painel<br/>lista: precisa de gente, conferidas, resolvidas"]
         recepcao["Recepção<br/>recebe o PDF e recusa o que não serve"]
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
         analista["Analista<br/>classifica e extrai os dados com o trecho de cada um"]
         verificador["Verificador<br/>confere cada trecho no texto do PDF"]
         calculadora["Calculadora de prazo<br/>conta de dois jeitos, mostra os passos"]
         avisos["Avisos (planejado)<br/>e-mail e Telegram"]
-        revisao["Fila 'precisa de gente'<br/>(planejado como tela)"]
+        revisao["Fila 'precisa de gente'<br/>(primeiro grupo do Painel)"]
     end
 
     banco[("PostgreSQL<br/>tabelas criadas pelo Flyway")]
     ia["Serviço de IA (Gemini)"]
 
+    navegador -->|abre a lista| painel
+    painel --> banco
     navegador -->|envia o PDF| recepcao
     recepcao --> leitor
     recepcao --> analista
@@ -86,7 +89,7 @@ flowchart TB
     calculadora -.->|contas diferentes ou regra não conferida| revisao
 
     classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
-    class avisos,revisao planejado
+    class avisos planejado
 ```
 
 Seta cheia: ligação que já funciona. Seta tracejada: a peça existe (ou está planejada), mas a ligação ainda não foi feita.
@@ -95,6 +98,7 @@ Decisões:
 
 - **A IA nunca calcula prazo.** O prazo sai da Calculadora, que é só `java.time`.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
+- **Toda resposta sai com cabeçalhos de segurança** (filtro `CabecalhosDeSeguranca`): a página só carrega o que é do próprio Atalaia e não pode ser mostrada dentro de outro site.
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
 - **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
 - **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
@@ -286,7 +290,9 @@ stateDiagram-v2
     Lida --> Conferida: tipo e dados conferidos com o texto
     Conferida --> PrecisaDeGente: contas diferentes ou regra não conferida
     Conferida --> ComPrazo: prazo calculado (planejado)
-    PrecisaDeGente --> ComPrazo: pessoa confere e confirma
+    PrecisaDeGente --> ComPrazo: pessoa confere e confirma (planejado)
+    PrecisaDeGente --> Resolvida: pessoa fecha o caso com o desfecho
+    Conferida --> Resolvida: pessoa fecha o caso com o desfecho
     ComPrazo --> AvisadaAoCliente: link enviado
     AvisadaAoCliente --> Resolvida: caso fechado com o desfecho
     ComPrazo --> Resolvida: caso fechado com o desfecho
@@ -302,6 +308,7 @@ Hoje o código chega até **Lida** ou **Precisa de gente** (pelo aviso `precisaD
 | `V1__empresa_e_notificacao.sql` | Cria `empresa` (CNPJ único, 14 posições) e `notificacao` (texto lido, data limite, aviso de revisão, quando chegou) |
 | `V2__notificacao_guarda_o_pdf.sql` | A notificação passa a guardar o PDF original |
 | `V3__notificacao_guarda_a_analise.sql` | A notificação passa a guardar o tipo e os motivos da revisão; cria `dado_extraido` (campo, valor, trecho e a ordem de cada dado) |
+| `V4__notificacao_resolvida.sql` | A notificação pode ser resolvida: quando, o desfecho e a observação (os três vazios ou os três preenchidos) |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Empresas inventadas para a prévia |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.

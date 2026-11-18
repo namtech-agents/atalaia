@@ -39,7 +39,7 @@ A lista do que entra na prévia, do que vem depois e do que foi descartado está
 
 ## Situação
 
-O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto e mostrar tudo na tela. A calculadora de prazo está pronta e testada, mas ainda não aparece na tela: nenhuma regra de prazo entra sem ser conferida na norma. O que falta para o caminho ficar inteiro: ligar o prazo e os avisos.
+O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, mostrar tudo na tela, listar as notificações (o que precisa de gente primeiro) e marcar um caso como resolvido, com o desfecho. A calculadora de prazo está pronta e testada, mas ainda não aparece na tela: nenhuma regra de prazo entra sem ser conferida na norma. O que falta para o caminho ficar inteiro: ligar o prazo e os avisos.
 
 Em 10/11 a pesquisa de concorrentes mostrou que só monitorar as caixas já existe. Em 11/11 o rumo mudou para o que vem depois do aviso, e o Canvas, o backlog e este README foram ajustados.
 
