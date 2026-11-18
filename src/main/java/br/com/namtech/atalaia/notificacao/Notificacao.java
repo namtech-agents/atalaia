@@ -2,6 +2,8 @@ package br.com.namtech.atalaia.notificacao;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +25,10 @@ import jakarta.persistence.OrderColumn;
 //Notificação: um PDF enviado, com o que o Leitor tirou dele e o que o Analista entendeu. Cada objeto é uma linha da tabela notificacao
 @Entity
 public class Notificacao {
+
+    //Data e hora como se escreve aqui, no horario de Teresina. Serve a todas as telas
+    public static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
+            .withZone(ZoneId.of("America/Fortaleza"));
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

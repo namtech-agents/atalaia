@@ -2,8 +2,6 @@ package br.com.namtech.atalaia.recepcao;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,10 +44,6 @@ public class RecepcaoController {
 
     //Todo PDF começa com estes 5 caracteres. Vale mais que o nome do arquivo, que qualquer um troca
     private static final String ASSINATURA_DE_PDF = "%PDF-";
-
-    //Data e hora como se escreve aqui, no horario de Teresina
-    private static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
-            .withZone(ZoneId.of("America/Fortaleza"));
 
     private final EmpresaRepository empresas;
     private final NotificacaoRepository notificacoes;
@@ -112,7 +106,7 @@ public class RecepcaoController {
         Notificacao notificacao = buscar(id);
         model.addAttribute("notificacao", notificacao);
         model.addAttribute("empresa", notificacao.getEmpresa().getNome());
-        model.addAttribute("recebidaEm", DIA_E_HORA.format(notificacao.getRecebidaEm()));
+        model.addAttribute("recebidaEm", Notificacao.DIA_E_HORA.format(notificacao.getRecebidaEm()));
         //Os dados tambem sao buscados só quando alguem pede: a copia traz todos agora, com a conversa aberta
         model.addAttribute("dados", List.copyOf(notificacao.getDados()));
         return "notificacao";

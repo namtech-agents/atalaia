@@ -8,7 +8,7 @@
 
   <main>
     <div class="titulo">
-      <a class="volta" th:href="@{/enviar}">Enviar outra notificação</a>
+      <a class="volta" th:href="@{/}">Notificações</a>
       <h1>
         <span th:text="${empresa}"></span>
         <span class="etq atencao" th:if="${notificacao.precisaDeRevisao}">Precisa de gente</span>
@@ -37,7 +37,8 @@
           <!-- Só com tudo conferido: dado que o Verificador reprovou não aparece na tela -->
           <dl class="dados" th:unless="${notificacao.precisaDeRevisao or dados.isEmpty()}">
             <div th:each="dado : ${dados}">
-              <dt th:text="${dado.campo}"></dt>
+              <!-- a IA escreve o nome do campo com sublinhado (numero_do_processo): na tela vira espaço -->
+              <dt th:text="${#strings.replace(dado.campo, '_', ' ')}"></dt>
               <dd>
                 <span th:text="${dado.valor}"></span>
                 <q th:text="${dado.trecho}"></q>

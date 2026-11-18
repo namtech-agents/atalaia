@@ -94,6 +94,10 @@ a { color: var(--marca); }
   .vidro { background: var(--brilho), var(--vidro); -webkit-backdrop-filter: blur(30px) saturate(1.8); backdrop-filter: blur(30px) saturate(1.8); }
 }
 
+/* a barra de cima fica presa no topo: ao andar pelo teclado, a página rola deixando esse espaço livre,
+   senão o item em foco ficaria escondido atrás da barra (16 de respiro + 60 da barra + 16) */
+html { scroll-padding-top: 92px; }
+
 /* a página: barra em cima e o conteúdo embaixo */
 .pagina { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 .topo { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 12px 0 18px; border-radius: 30px; position: sticky; top: 16px; z-index: 4; }
@@ -175,6 +179,20 @@ a { color: var(--marca); }
 }
 /* em tela muito estreita o selo fica só com a primeira palavra */
 @media (max-width: 420px) { .topo .previa span { display: none; } }
+
+/* tela inicial: o título com o botão de enviar ao lado, e os grupos de notificações */
+.titulo.com-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.grupo h2 { font-size: 15px; font-weight: 700; padding: 8px 6px; display: flex; align-items: center; gap: 8px; }
+.grupo .conta { font-size: 13px; font-weight: 500; color: var(--texto); }
+.tudo-certo { padding: 8px 6px; color: var(--apagado-fora); font-weight: 500; }
+.lista { list-style: none; margin: 0; padding: 6px; }
+.lista li + li { border-top: 1px solid var(--fio); }
+/* a linha inteira é o link: alvo grande para o dedo e para o mouse */
+.lista a { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 10px 12px; border-radius: 18px; text-decoration: none; color: var(--texto); }
+.lista a strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.lista .quando { margin-left: auto; font-size: 13.5px; color: var(--apagado); white-space: nowrap; }
+@media (hover: hover) { .lista a:hover { background: var(--campo-fundo); } }
+.vazio { padding: 22px; max-width: 560px; color: var(--apagado); }
 
 /* página de erro */
 .engano { padding: 26px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
