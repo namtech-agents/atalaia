@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 
 public class LeitorPdf {
@@ -13,11 +14,17 @@ public class LeitorPdf {
     public static final int MAXIMO_DE_PAGINAS = 100;
     private String extrairTexto(byte[] pdf) throws IOException {
         // Abre o PDF; o try fecha o documento sozinho no fim
-        //createTempFileOnlyStreamCache: o que o PDFBox descompacta vai para um arquivo temporario, nao para a memoria.
-        //Um PDF pequeno pode "inchar" muito ao ser aberto; assim ele nao derruba o servidor
+        //createTempFileOnlyStreamCache: o que o PDFBox precisar guardar enquanto le vai para um arquivo temporario
+        //(apagado no fim), em vez de ocupar a memoria do servidor
         try (PDDocument documento = Loader.loadPDF(pdf, "", null, null, IOUtils.createTempFileOnlyStreamCache())) {
-            if (documento.getNumberOfPages() > MAXIMO_DE_PAGINAS) {
-                throw new PaginasDemais();
+            //Conta as paginas uma a uma. O numero que o PDF declara (getNumberOfPages) nao serve:
+            //quem monta o arquivo escreve ali o que quiser
+            int paginas = 0;
+            for (PDPage pagina : documento.getPages()) {
+                paginas++;
+                if (paginas > MAXIMO_DE_PAGINAS) {
+                    throw new PaginasDemais();
+                }
             }
             PDFTextStripper extrator = new PDFTextStripper();
             return extrator.getText(documento);

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
+import br.com.namtech.atalaia.leitor.LeitorPdfTest;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
@@ -134,6 +136,9 @@ class RecepcaoControllerTest {
         navegador.perform(get("/notificacoes/" + guardada.getId() + "/pdf"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                //o PDF sai sem a CSP das paginas, mas com os outros cabeçalhos de segurança
+                .andExpect(header().doesNotExist("Content-Security-Policy"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(content().bytes(pdf.getBytes()));
     }
 
@@ -258,6 +263,20 @@ class RecepcaoControllerTest {
         navegador.perform(multipart("/enviar").file(quebrado).param("empresaId", empresa.getId().toString()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Não foi possível abrir este PDF.")));
+    }
+
+    @Test
+    void pdfComPaginasDemaisERecusadoComMensagem() throws Exception {
+        //Arrumar: um PDF de 101 paginas que declara ter uma só
+        MockMultipartFile pdf = new MockMultipartFile("arquivo", "enorme.pdf", MediaType.APPLICATION_PDF_VALUE,
+                LeitorPdfTest.pdfComPaginasDemais(true));
+
+        //Agir e conferir: recusa com a mensagem e nao guarda nada
+        long antes = notificacoes.count();
+        navegador.perform(multipart("/enviar").file(pdf).param("empresaId", empresa.getId().toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Este PDF tem páginas demais")));
+        assertThat(notificacoes.count()).isEqualTo(antes);
     }
 
     @Test
