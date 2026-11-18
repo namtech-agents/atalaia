@@ -129,11 +129,17 @@ public class RecepcaoController {
         Notificacao notificacao = buscar(id);
         //Ja resolvida (clique duplo, ou a pagina ficou aberta em duas abas): nao troca o que foi registrado
         if (!notificacao.isResolvida()) {
-            String texto = observacao.strip();
-            if (desfecho == null || texto.isEmpty() || texto.length() > OBSERVACAO_MAXIMA) {
+            //O navegador envia cada Enter como dois caracteres (\r\n), mas o limite da tela conta um:
+            //trocando por \n, a conta daqui fica igual a que a pessoa ve
+            String texto = observacao.replace("\r\n", "\n").strip();
+            //Observação sem nenhuma letra ou numero (só espaços, inclusive os invisiveis) nao diz nada
+            boolean semConteudo = texto.codePoints().noneMatch(Character::isLetterOrDigit);
+            if (desfecho == null || semConteudo || texto.length() > OBSERVACAO_MAXIMA) {
                 resposta.setStatus(HttpStatus.BAD_REQUEST.value());
-                model.addAttribute("erro", "Escolha o desfecho e escreva uma observação de até "
-                        + OBSERVACAO_MAXIMA + " letras.");
+                //A mensagem fala do campo que falhou, e a tela marca esse campo (campoComErro)
+                model.addAttribute("campoComErro", desfecho == null ? "desfecho" : "observacao");
+                model.addAttribute("erro", desfecho == null ? "Escolha o desfecho."
+                        : "Escreva o que foi feito, em até " + OBSERVACAO_MAXIMA + " letras.");
                 model.addAttribute("observacao", observacao);
                 model.addAttribute("desfechoEscolhido", desfecho);
                 return notificacao(id, model);

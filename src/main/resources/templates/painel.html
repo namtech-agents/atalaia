@@ -48,7 +48,8 @@
   <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}">
     <strong th:text="${linha.empresa}"></strong>
     <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
-    <span class="etq atencao" th:if="${linha.tipo == null}">Sem tipo</span>
+    <!-- o vermelho de atenção só em caso aberto -->
+    <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
     <span class="etq" th:if="${linha.desfecho != null}" th:text="${linha.desfecho.nome}"></span>
     <span class="quando">Recebida em <span class="num" th:text="${linha.recebida}"></span></span>
   </a>

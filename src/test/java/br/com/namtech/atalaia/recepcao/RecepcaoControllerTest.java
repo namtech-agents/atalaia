@@ -318,7 +318,39 @@ class RecepcaoControllerTest {
         navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
                 .param("desfecho", "ARQUIVADO").param("observacao", "   "))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(containsString("Escolha o desfecho e escreva uma observação")));
+                .andExpect(content().string(containsString("Escreva o que foi feito")))
+                .andExpect(content().string(containsString("<title>Erro · ")));
+        //e sem desfecho a mensagem é a do desfecho
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver").param("observacao", "Pago."))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Escolha o desfecho.")));
+        assertThat(ultimaGuardadaNoBanco().isResolvida()).isFalse();
+    }
+
+    @Test
+    void observacaoNoLimiteContaAQuebraDeLinhaComoUmaLetra() throws Exception {
+        //Arrumar: 500 letras do jeito que a tela conta, com uma quebra de linha no meio (o navegador envia \r\n)
+        Notificacao aberta = notificacaoAberta();
+        String noLimite = "a".repeat(249) + "\r\n" + "b".repeat(250);
+
+        //Agir e conferir: é aceita, e fica guardada com 500
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", "OUTRO").param("observacao", noLimite))
+                .andExpect(status().is3xxRedirection());
+        assertThat(ultimaGuardadaNoBanco().getObservacao()).hasSize(500);
+    }
+
+    @Test
+    void observacaoAcimaDoLimiteOuSoComEspacoInvisivelERecusada() throws Exception {
+        //Arrumar: uma notificação aberta
+        Notificacao aberta = notificacaoAberta();
+
+        //Agir e conferir: 501 letras nao passa; e um espaço que nao quebra (colado do Word) nao conta como texto
+        for (String observacao : List.of("a".repeat(501), "\u00A0\u200B")) {
+            navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                    .param("desfecho", "OUTRO").param("observacao", observacao))
+                    .andExpect(status().isBadRequest());
+        }
         assertThat(ultimaGuardadaNoBanco().isResolvida()).isFalse();
     }
 
