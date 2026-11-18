@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<!-- Pedaços que se repetem em todas as telas. Cada tela chama com th:replace. -->
+
+<!-- O que vai dentro do <head>; cada tela passa o seu título -->
+<head th:fragment="cabeca(titulo)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="${titulo} + ' · Atalaia'">Atalaia</title>
+  <!-- Prévia: não é para aparecer em buscador -->
+  <meta name="robots" content="noindex">
+  <link rel="icon" th:href="@{/logo/atalaia-simbolo.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/atalaia.css}">
+</head>
+
+<body>
+  <!-- O campo de cor do fundo: três manchas azuis paradas, só enfeite (por isso aria-hidden) -->
+  <div th:fragment="campo" class="campo" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <!-- A barra de cima -->
+  <header th:fragment="topo" class="topo vidro">
+    <a class="marca" th:href="@{/enviar}">
+      <!-- O navegador escolhe o símbolo claro ou o escuro conforme o tema do aparelho -->
+      <picture>
+        <source th:srcset="@{/logo/atalaia-simbolo-escuro.svg}" media="(prefers-color-scheme: dark)">
+        <img th:src="@{/logo/atalaia-simbolo.svg}" alt="" width="28" height="28">
+      </picture>
+      <span>Atalaia</span>
+    </a>
+    <span class="previa">Prévia · só documento de teste</span>
+  </header>
+</body>
+</html>

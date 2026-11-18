@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Enviar notificação')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo}"></header>
+
+  <main>
+    <div class="titulo">
+      <h1>Enviar notificação</h1>
+      <p>Envie o PDF que chegou para o cliente. O Atalaia lê o documento e guarda o original para conferência.</p>
+    </div>
+
+    <!-- enctype multipart: é o que deixa o formulário carregar um arquivo -->
+    <form class="vidro formulario" method="post" th:action="@{/enviar}" enctype="multipart/form-data">
+      <!-- role=alert: o leitor de tela anuncia a mensagem assim que a página abre -->
+      <p class="erro" role="alert" th:if="${erro}" th:text="${erro}"></p>
+
+      <p th:if="${empresas.isEmpty()}">Nenhuma empresa cadastrada ainda. Sem empresa não dá para enviar.</p>
+
+      <div th:unless="${empresas.isEmpty()}">
+        <label class="rotulo" for="empresaId">Empresa</label>
+        <select id="empresaId" name="empresaId" required>
+          <option value="">Escolha a empresa</option>
+          <!-- Uma opção por empresa; se o envio foi recusado, a escolhida volta marcada -->
+          <option th:each="empresa : ${empresas}" th:value="${empresa.id}"
+                  th:selected="${empresa.id == empresaEscolhida}"
+                  th:text="${empresa.nome + ' · CNPJ ' + empresa.cnpj}"></option>
+        </select>
+      </div>
+
+      <div th:unless="${empresas.isEmpty()}">
+        <label class="rotulo" for="arquivo">PDF da notificação</label>
+        <input id="arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required aria-describedby="dica-arquivo">
+        <p class="dica" id="dica-arquivo">Só PDF, até 10 MB.</p>
+      </div>
+
+      <button class="botao cheio" type="submit" th:unless="${empresas.isEmpty()}">Enviar PDF</button>
+
+      <p class="aviso">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
+    </form>
+  </main>
+</div>
+</body>
+</html>
