@@ -2,15 +2,25 @@ package br.com.namtech.atalaia.notificacao;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import br.com.namtech.atalaia.analista.TipoDeDocumento;
+import br.com.namtech.atalaia.verificador.DadoExtraido;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderColumn;
 
-//Notificação: um PDF enviado, com o que o Leitor tirou dele. Cada objeto é uma linha da tabela notificacao
+//Notificação: um PDF enviado, com o que o Leitor tirou dele e o que o Analista entendeu. Cada objeto é uma linha da tabela notificacao
 @Entity
 public class Notificacao {
 
@@ -31,7 +41,21 @@ public class Notificacao {
     //Fica vazia enquanto o prazo nao passa pelas conferencias
     private LocalDate dataLimite;
 
+    //O tipo que o Analista deu. STRING: guarda o nome (INTIMACAO), nao a posição na lista. Vazio se nao classificou
+    @Enumerated(EnumType.STRING)
+    private TipoDeDocumento tipo;
+
+    //Os dados que o Analista tirou do documento. Ficam numa tabela propria (dado_extraido), ligada por notificacao_id
+    @ElementCollection
+    @CollectionTable(name = "dado_extraido", joinColumns = @JoinColumn(name = "notificacao_id"))
+    //OrderColumn: guarda a posição de cada dado, para a lista voltar do banco na mesma ordem
+    @OrderColumn(name = "ordem")
+    private List<DadoExtraido> dados;
+
     private boolean precisaDeRevisao;
+
+    //Um motivo por linha. Vazio quando nao precisa de revisao
+    private String motivoDaRevisao;
 
     //Instant: um ponto exato no tempo, sem depender do fuso de quem le
     private Instant recebidaEm;
@@ -39,11 +63,19 @@ public class Notificacao {
     protected Notificacao() {
     }
 
-    public Notificacao(Empresa empresa, byte[] arquivo, String texto, boolean precisaDeRevisao) {
+    //Quem cria nao diz se precisa de revisao: precisa sempre que houver pelo menos um motivo
+    public Notificacao(Empresa empresa, byte[] arquivo, String texto, TipoDeDocumento tipo, List<DadoExtraido> dados,
+            List<String> motivosDaRevisao) {
         this.empresa = empresa;
         this.arquivo = arquivo;
         this.texto = texto;
-        this.precisaDeRevisao = precisaDeRevisao;
+        this.tipo = tipo;
+        this.dados = dados;
+        this.precisaDeRevisao = !motivosDaRevisao.isEmpty();
+        //Um motivo pode citar um nome de campo vindo da IA: sem quebra de linha dentro dele, para nao virar dois motivos
+        this.motivoDaRevisao = precisaDeRevisao
+                ? motivosDaRevisao.stream().map(motivo -> motivo.replaceAll("\\R", " ")).collect(Collectors.joining("\n"))
+                : null;
         this.recebidaEm = Instant.now();
     }
 
@@ -65,6 +97,19 @@ public class Notificacao {
 
     public LocalDate getDataLimite() {
         return dataLimite;
+    }
+
+    public TipoDeDocumento getTipo() {
+        return tipo;
+    }
+
+    public List<DadoExtraido> getDados() {
+        return dados;
+    }
+
+    //Devolve os motivos separados de novo, um por item
+    public List<String> getMotivosDaRevisao() {
+        return motivoDaRevisao == null ? List.of() : motivoDaRevisao.lines().toList();
     }
 
     public boolean isPrecisaDeRevisao() {

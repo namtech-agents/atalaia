@@ -21,8 +21,10 @@ public class Gemini implements ModeloDeIA {
                 .modelName(MODELO)
                 //Obriga a resposta a ser um JSON, sem texto em volta
                 .responseFormat(ResponseFormat.JSON)
-                //Cada tentativa espera no maximo isso; a biblioteca tenta de novo sozinha algumas vezes antes de desistir
-                .timeout(Duration.ofSeconds(60))
+                //Quem enviou o PDF esta esperando a tela: cada tentativa espera no maximo 30 segundos,
+                //e sao no maximo 2 tentativas antes de desistir (e o caso ir para uma pessoa)
+                .timeout(Duration.ofSeconds(30))
+                .maxRetries(1)
                 .build();
     }
 

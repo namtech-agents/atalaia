@@ -1,7 +1,7 @@
 package br.com.namtech.atalaia.analista;
 
+import java.text.Normalizer;
 import java.util.List;
-import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,11 @@ public class Analista {
         }
         //Documento que traz as proprias marcas pode estar tentando "fechar" o texto e dar ordens para a IA:
         //nem chega nela, vai direto para uma pessoa
-        if (textoDoDocumento.contains(ABRE) || textoDoDocumento.contains(FECHA)) {
+        //A comparação ignora maiuscula e tira tudo que separa sem aparecer: espaços de todo tipo (\p{Z}),
+        //caracteres invisiveis (\p{Cf}) e, com o NFKC, as letras "parecidas". "<<< documento" tambem conta
+        String semEspacos = Normalizer.normalize(textoDoDocumento, Normalizer.Form.NFKC)
+                .replaceAll("[\\s\\p{Z}\\p{Cf}]", "").toUpperCase();
+        if (semEspacos.contains(ABRE) || semEspacos.contains(FECHA)) {
             return paraRevisao("O documento contém as marcas que o Atalaia usa para falar com a IA. Não foi analisado.");
         }
 
@@ -90,7 +94,14 @@ public class Analista {
         }
         //A IA tambem pode devolver nada (resposta bloqueada ou cortada)
         if (resposta == null || resposta.isBlank()) {
+            registro.warn("A IA devolveu uma resposta vazia");
             return paraRevisao(NAO_RESPONDEU);
+        }
+
+        //O caractere nulo (escrito \u0000 no JSON) nao pode ser guardado no banco: resposta com ele nao serve
+        if (resposta.contains("\\u0000")) {
+            registro.warn("A resposta da IA veio fora do formato combinado");
+            return paraRevisao(FORA_DO_FORMATO);
         }
 
         RespostaDaIA lida;
@@ -98,6 +109,8 @@ public class Analista {
             lida = json.readValue(resposta, RespostaDaIA.class);
         } catch (JacksonException erro) {
             //Nao é o JSON combinado: conversa em vez de JSON, JSON cortado, tipo que nao é um dos cinco...
+            //O registro nao leva a resposta nem o erro: os dois podem trazer pedaços do documento
+            registro.warn("A resposta da IA veio fora do formato combinado");
             return paraRevisao(FORA_DO_FORMATO);
         }
         if (lida == null || lida.tipo() == null) {
@@ -105,14 +118,19 @@ public class Analista {
         }
 
         List<DadoExtraido> dados = lida.dados() == null ? List.of() : lida.dados();
-        //Um item vazio no meio da lista ("dados": [null]) quebraria o Verificador mais adiante
-        if (dados.stream().anyMatch(Objects::isNull)) {
+        //Um item vazio no meio da lista ("dados": [null] ou [{}]) quebraria o Verificador e a tela mais adiante
+        if (dados.stream().anyMatch(Analista::vazio)) {
             return paraRevisao(FORA_DO_FORMATO);
         }
         if (!"alta".equals(lida.confianca())) {
             return new Analise(lida.tipo(), dados, true, "A IA ficou em dúvida sobre o tipo do documento.");
         }
         return new Analise(lida.tipo(), dados, false, null);
+    }
+
+    //Vazio: o item nao veio, ou veio sem nenhum dos tres campos
+    private static boolean vazio(DadoExtraido dado) {
+        return dado == null || (dado.campo() == null && dado.valor() == null && dado.trecho() == null);
     }
 
     private Analise paraRevisao(String motivo) {

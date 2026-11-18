@@ -150,6 +150,15 @@ a { color: var(--marca); }
 .cartao { padding: 18px; }
 .cartao .grande { display: block; font-size: 24px; line-height: 1.15; letter-spacing: -.02em; font-weight: 700; margin-bottom: 6px; }
 .cartao p { color: var(--apagado); font-size: 14px; }
+/* motivos da revisão: lista simples, um por linha */
+.motivos { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.motivos li + li { margin-top: 4px; }
+/* dados extraídos: nome do campo apagado, valor forte e o trecho do documento embaixo, como citação */
+.dados { margin: 12px 0 0; display: grid; gap: 12px; }
+.dados dt { font-size: 13px; font-weight: 600; color: var(--apagado); text-transform: capitalize; }
+.dados dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.dados q { display: block; margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--picote); font-weight: 400; font-size: 13.5px; color: var(--apagado); quotes: none; }
+.cartao .aviso-ia { margin-top: 12px; font-size: 13px; }
 /* o texto lido: folha sólida (documento não é vidro), respeitando as quebras de linha do PDF */
 .lido { margin-top: 10px; max-height: 320px; overflow: auto; background: var(--solido); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 
