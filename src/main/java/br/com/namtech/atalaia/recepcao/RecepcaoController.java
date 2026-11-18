@@ -34,7 +34,7 @@ public class RecepcaoController {
     static final long TAMANHO_MAXIMO = 10 * 1024 * 1024;
 
     //A mesma mensagem serve para as duas travas de tamanho: a daqui e a do servidor (ArquivoGrandeDemais)
-    static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB.";
+    static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.";
 
     //Todo PDF começa com estes 5 caracteres. Vale mais que o nome do arquivo, que qualquer um troca
     private static final String ASSINATURA_DE_PDF = "%PDF-";
@@ -81,7 +81,7 @@ public class RecepcaoController {
             leitura = leitor.ler(pdf);
         } catch (IOException erro) {
             //Tem a assinatura de PDF mas o PDFBox nao conseguiu abrir: quebrado ou com senha
-            return recusar("Não foi possível abrir este PDF. Ele pode estar corrompido ou protegido por senha.",
+            return recusar("Não foi possível abrir este PDF. Ele pode estar corrompido ou protegido por senha. Escolha outro arquivo.",
                     empresaId, model, resposta);
         }
 
@@ -127,7 +127,7 @@ public class RecepcaoController {
         String comeco = new String(arquivo, 0, Math.min(arquivo.length, ASSINATURA_DE_PDF.length()),
                 StandardCharsets.US_ASCII);
         if (!comeco.equals(ASSINATURA_DE_PDF)) {
-            return "Este arquivo não é um PDF. Envie a notificação em PDF.";
+            return "Este arquivo não é um PDF. Escolha a notificação em PDF.";
         }
         return null;
     }

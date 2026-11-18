@@ -70,7 +70,7 @@ class RecepcaoControllerTest {
         //Agir e conferir: a tela abre e a empresa aparece na lista
         navegador.perform(get("/enviar"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Empresa de Teste · CNPJ 99999009000100")));
+                .andExpect(content().string(containsString("Empresa de Teste · CNPJ 99.999.009/0001-00")));
     }
 
     @Test
@@ -113,7 +113,9 @@ class RecepcaoControllerTest {
         Notificacao guardada = ultimaGuardadaNoBanco();
         assertThat(guardada.isPrecisaDeRevisao()).isTrue();
         navegador.perform(get("/notificacoes/" + guardada.getId()))
-                .andExpect(content().string(containsString("Precisa de gente")));
+                .andExpect(content().string(containsString("Precisa de gente")))
+                .andExpect(content().string(containsString("Confira o prazo no documento")))
+                .andExpect(content().string(containsString("Abrir o PDF em outra aba")));
     }
 
     @Test
@@ -127,6 +129,9 @@ class RecepcaoControllerTest {
         navegador.perform(multipart("/enviar").file(falso).param("empresaId", empresa.getId().toString()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Este arquivo não é um PDF.")))
+                //o campo do arquivo fica marcado como invalido e ligado à mensagem, para o leitor de tela
+                .andExpect(content().string(containsString("aria-invalid=\"true\"")))
+                .andExpect(content().string(containsString("aria-describedby=\"erro-envio dica-arquivo\"")))
                 //a empresa escolhida volta marcada, para a pessoa nao escolher de novo
                 .andExpect(content().string(containsString("selected=\"selected\"")));
         assertThat(notificacoes.count()).isEqualTo(antes);
@@ -179,5 +184,11 @@ class RecepcaoControllerTest {
     @Test
     void notificacaoQueNaoExisteDa404() throws Exception {
         navegador.perform(get("/notificacoes/999999")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void cnpjApareceComAPontuacao() {
+        assertThat(new Empresa("99999001000100", "Empresa de Teste").getCnpjFormatado())
+                .isEqualTo("99.999.001/0001-00");
     }
 }
