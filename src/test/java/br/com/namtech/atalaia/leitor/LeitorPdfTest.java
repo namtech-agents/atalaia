@@ -1,7 +1,12 @@
 package br.com.namtech.atalaia.leitor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -53,5 +58,21 @@ public class LeitorPdfTest {
         assertThat(resultado.texto()).contains("Notificação de lançamento");
         assertThat(resultado.texto()).contains("Prazo: 30 dias a contar da ciência");
         assertThat(resultado.precisaDeRevisao()).isFalse();
+    }
+
+    @Test
+    void recusaPdfComPaginasDemais() throws IOException {
+        //Arrumar: monta na hora um PDF em branco com uma pagina a mais que o limite
+        ByteArrayOutputStream saida = new ByteArrayOutputStream();
+        try (PDDocument documento = new PDDocument()) {
+            for (int pagina = 0; pagina <= LeitorPdf.MAXIMO_DE_PAGINAS; pagina++) {
+                documento.addPage(new PDPage());
+            }
+            documento.save(saida);
+        }
+
+        //Agir e conferir: o leitor recusa antes de tentar ler o texto
+        LeitorPdf leitor = new LeitorPdf();
+        assertThatThrownBy(() -> leitor.ler(saida.toByteArray())).isInstanceOf(PaginasDemais.class);
     }
 }

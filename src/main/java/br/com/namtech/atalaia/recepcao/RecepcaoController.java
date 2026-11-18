@@ -25,6 +25,7 @@ import br.com.namtech.atalaia.analista.Analista;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
+import br.com.namtech.atalaia.leitor.PaginasDemais;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
@@ -89,6 +90,9 @@ public class RecepcaoController {
         ResultadoLeitura leitura;
         try {
             leitura = leitor.ler(pdf);
+        } catch (PaginasDemais erro) {
+            return recusar("Este PDF tem páginas demais. O limite é " + LeitorPdf.MAXIMO_DE_PAGINAS
+                    + " páginas. Escolha outro arquivo.", empresaId, model, resposta);
         } catch (IOException erro) {
             //Tem a assinatura de PDF mas o PDFBox nao conseguiu abrir: quebrado ou com senha
             return recusar("Não foi possível abrir este PDF. Ele pode estar corrompido ou protegido por senha. Escolha outro arquivo.",
@@ -119,8 +123,6 @@ public class RecepcaoController {
     public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                //nosniff: o navegador trata como PDF e nada mais, mesmo que o conteudo pareça outra coisa
-                .header("X-Content-Type-Options", "nosniff")
                 .header("Content-Disposition", "inline; filename=\"notificacao-" + id + ".pdf\"")
                 .body(buscar(id).getArquivo());
     }
