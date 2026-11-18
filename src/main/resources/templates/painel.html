@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Notificações')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo}"></header>
+
+  <main>
+    <div class="titulo com-acao">
+      <h1>Notificações</h1>
+      <a class="botao cheio" th:href="@{/enviar}">Enviar notificação</a>
+    </div>
+
+    <section class="vidro vazio" th:if="${precisaDeGente.isEmpty() and conferidas.isEmpty()}">
+      <p>Nenhuma notificação recebida ainda. Envie o PDF que chegou para o cliente e ele aparece aqui.</p>
+    </section>
+
+    <!-- O que o Atalaia não conseguiu conferir sozinho vem primeiro -->
+    <section class="grupo" th:unless="${precisaDeGente.isEmpty()}" aria-labelledby="titulo-gente">
+      <h2 id="titulo-gente">Precisa de gente <span class="conta num" th:text="${precisaDeGente.size()}"></span></h2>
+      <ul class="vidro lista">
+        <li th:each="linha : ${precisaDeGente}" th:insert="~{:: linha(${linha})}"></li>
+      </ul>
+    </section>
+
+    <section class="grupo" th:unless="${conferidas.isEmpty()}" aria-labelledby="titulo-conferidas">
+      <h2 id="titulo-conferidas">Lidas e conferidas <span class="conta num" th:text="${conferidas.size()}"></span></h2>
+      <ul class="vidro lista">
+        <li th:each="linha : ${conferidas}" th:insert="~{:: linha(${linha})}"></li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<!-- Uma linha da lista: a linha inteira é o link para a notificação. Os dois grupos usam o mesmo pedaço -->
+<th:block th:remove="all">
+  <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}">
+    <strong th:text="${linha.empresa}"></strong>
+    <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
+    <span class="etq atencao" th:if="${linha.tipo == null}">Sem tipo</span>
+    <span class="quando">Recebida em <span class="num" th:text="${linha.recebida}"></span></span>
+  </a>
+</th:block>
+</body>
+</html>
