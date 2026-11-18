@@ -39,6 +39,11 @@ public class Empresa {
         return cnpj;
     }
 
+    //O CNPJ como se escreve: 99.999.001/0001-00. Cada parentese pega um pedaço e o $ poe de volta com a pontuação
+    public String getCnpjFormatado() {
+        return cnpj.replaceFirst("(.{2})(.{3})(.{3})(.{4})(.{2})", "$1.$2.$3/$4-$5");
+    }
+
     public String getNome() {
         return nome;
     }
