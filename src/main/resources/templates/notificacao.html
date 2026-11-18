@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${empresa})}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo}"></header>
+
+  <main>
+    <div class="titulo">
+      <a class="volta" th:href="@{/enviar}">Enviar outra</a>
+      <h1>
+        <span th:text="${empresa}"></span>
+        <span class="etq atencao" th:if="${notificacao.precisaDeRevisao}">Precisa de gente</span>
+        <span class="etq" th:unless="${notificacao.precisaDeRevisao}">Texto lido</span>
+      </h1>
+      <p>Recebida em <span class="num" th:text="${recebidaEm}"></span></p>
+    </div>
+
+    <div class="dois">
+      <!-- O documento original, do jeito que chegou -->
+      <section class="vidro mesa" aria-label="Documento original">
+        <iframe th:src="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" title="PDF original da notificação"></iframe>
+      </section>
+
+      <aside class="lado">
+        <section class="vidro cartao" aria-labelledby="titulo-prazo">
+          <span class="rotulo" id="titulo-prazo">Data limite</span>
+          <strong class="grande">Ainda sem prazo</strong>
+          <p th:if="${notificacao.precisaDeRevisao}">Este PDF não tem texto que dê para ler (parece escaneado). Uma pessoa precisa abrir o documento ao lado e conferir o prazo.</p>
+          <p th:unless="${notificacao.precisaDeRevisao}">O prazo só aparece depois de passar pelas conferências. A extração dos dados e o cálculo entram nas próximas etapas.</p>
+        </section>
+
+        <section class="vidro cartao" th:unless="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-lido">
+          <span class="rotulo" id="titulo-lido">Texto lido do PDF</span>
+          <!-- tabindex=0: quem usa só o teclado consegue rolar o texto -->
+          <div class="lido" tabindex="0" th:text="${notificacao.texto}"></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</body>
+</html>
