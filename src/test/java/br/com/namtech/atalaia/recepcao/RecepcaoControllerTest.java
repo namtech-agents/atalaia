@@ -23,6 +23,7 @@ import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import jakarta.persistence.EntityManager;
 
 //Sobe a aplicação inteira com o banco de teste. MockMvc: faz os pedidos como um navegador faria, sem abrir um
 //Transactional: cada teste desfaz o que gravou no fim, para um nao atrapalhar o outro
@@ -40,11 +41,23 @@ class RecepcaoControllerTest {
     @Autowired
     private NotificacaoRepository notificacoes;
 
+    //EntityManager: a "mesa de trabalho" do JPA, onde ficam os objetos ja lidos ou salvos neste teste
+    @Autowired
+    private EntityManager mesa;
+
     private Empresa empresa;
 
     @BeforeEach
     void criaUmaEmpresaInventada() {
         empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+    }
+
+    //Manda para o banco o que esta na mesa e limpa a mesa: a proxima busca le do banco de verdade,
+    //em vez de devolver o mesmo objeto que o controller acabou de salvar
+    private Notificacao ultimaGuardadaNoBanco() {
+        mesa.flush();
+        mesa.clear();
+        return notificacoes.findAll().getLast();
     }
 
     private MockMultipartFile pdfDeExemplo(String nome) throws IOException {
@@ -70,7 +83,7 @@ class RecepcaoControllerTest {
                 .andExpect(status().is3xxRedirection());
 
         //Conferir: a notificação ficou guardada com o texto lido, o PDF original e sem pedir revisao
-        Notificacao guardada = notificacoes.findAll().getLast();
+        Notificacao guardada = ultimaGuardadaNoBanco();
         assertThat(guardada.getTexto()).contains("Prazo: 30 dias a contar da ciência");
         assertThat(guardada.getArquivo()).isEqualTo(pdf.getBytes());
         assertThat(guardada.isPrecisaDeRevisao()).isFalse();
@@ -97,7 +110,7 @@ class RecepcaoControllerTest {
                 .andExpect(status().is3xxRedirection());
 
         //Conferir: ficou guardada pedindo revisao, e a pagina avisa
-        Notificacao guardada = notificacoes.findAll().getLast();
+        Notificacao guardada = ultimaGuardadaNoBanco();
         assertThat(guardada.isPrecisaDeRevisao()).isTrue();
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(content().string(containsString("Precisa de gente")));
@@ -113,7 +126,9 @@ class RecepcaoControllerTest {
         //Agir e conferir: volta para o formulario com a mensagem, e nada é guardado
         navegador.perform(multipart("/enviar").file(falso).param("empresaId", empresa.getId().toString()))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(containsString("Este arquivo não é um PDF.")));
+                .andExpect(content().string(containsString("Este arquivo não é um PDF.")))
+                //a empresa escolhida volta marcada, para a pessoa nao escolher de novo
+                .andExpect(content().string(containsString("selected=\"selected\"")));
         assertThat(notificacoes.count()).isEqualTo(antes);
     }
 
@@ -139,6 +154,26 @@ class RecepcaoControllerTest {
         navegador.perform(multipart("/enviar").file(quebrado).param("empresaId", empresa.getId().toString()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Não foi possível abrir este PDF.")));
+    }
+
+    @Test
+    void envioSemArquivoERecusadoComMensagem() throws Exception {
+        //Arrumar: o campo do arquivo veio vazio
+        MockMultipartFile vazio = new MockMultipartFile("arquivo", "", MediaType.APPLICATION_PDF_VALUE, new byte[0]);
+
+        //Agir e conferir: pede para escolher um arquivo
+        navegador.perform(multipart("/enviar").file(vazio).param("empresaId", empresa.getId().toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Escolha um arquivo PDF para enviar.")));
+    }
+
+    @Test
+    void empresaQueNaoExisteERecusada() throws Exception {
+        //Agir e conferir: um numero de empresa que nao esta no banco da 400 e nada é guardado
+        long antes = notificacoes.count();
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-simples.pdf")).param("empresaId", "999999"))
+                .andExpect(status().isBadRequest());
+        assertThat(notificacoes.count()).isEqualTo(antes);
     }
 
     @Test

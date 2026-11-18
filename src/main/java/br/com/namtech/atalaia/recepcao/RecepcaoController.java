@@ -33,6 +33,9 @@ public class RecepcaoController {
     //10 MB. Notificação é um PDF de poucas paginas; acima disso é engano ou abuso
     static final long TAMANHO_MAXIMO = 10 * 1024 * 1024;
 
+    //A mesma mensagem serve para as duas travas de tamanho: a daqui e a do servidor (ArquivoGrandeDemais)
+    static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB.";
+
     //Todo PDF começa com estes 5 caracteres. Vale mais que o nome do arquivo, que qualquer um troca
     private static final String ASSINATURA_DE_PDF = "%PDF-";
 
@@ -63,12 +66,16 @@ public class RecepcaoController {
         Empresa empresa = empresas.findById(empresaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
-        String recusa = motivoDaRecusa(arquivo);
+        //Confere o tamanho antes de trazer o arquivo para a memoria
+        if (arquivo.getSize() > TAMANHO_MAXIMO) {
+            return recusar(GRANDE_DEMAIS, empresaId, model, resposta);
+        }
+        byte[] pdf = arquivo.getBytes();
+        String recusa = motivoDaRecusa(pdf);
         if (recusa != null) {
             return recusar(recusa, empresaId, model, resposta);
         }
 
-        byte[] pdf = arquivo.getBytes();
         ResultadoLeitura leitura;
         try {
             leitura = leitor.ler(pdf);
@@ -84,7 +91,8 @@ public class RecepcaoController {
         return "redirect:/notificacoes/" + notificacao.getId();
     }
 
-    //Transactional: mantem a conversa com o banco aberta ate o fim, para a tela conseguir ler a empresa (LAZY)
+    //Transactional: mantem a conversa com o banco aberta durante este metodo, para ler aqui o nome da empresa (LAZY).
+    //A tela recebe só o texto pronto; se ela mesma fosse buscar a empresa, a conversa ja estaria fechada
     @GetMapping("/notificacoes/{id}")
     @Transactional(readOnly = true)
     public String notificacao(@PathVariable Long id, Model model) {
@@ -111,15 +119,14 @@ public class RecepcaoController {
     }
 
     //Devolve a mensagem para a pessoa, ou null se o arquivo pode seguir
-    private String motivoDaRecusa(MultipartFile arquivo) throws IOException {
-        if (arquivo.isEmpty()) {
+    private String motivoDaRecusa(byte[] arquivo) {
+        if (arquivo.length == 0) {
             return "Escolha um arquivo PDF para enviar.";
         }
-        if (arquivo.getSize() > TAMANHO_MAXIMO) {
-            return "Este arquivo é grande demais. O limite é 10 MB.";
-        }
-        byte[] comeco = arquivo.getInputStream().readNBytes(ASSINATURA_DE_PDF.length());
-        if (!ASSINATURA_DE_PDF.equals(new String(comeco, StandardCharsets.US_ASCII))) {
+        //Compara só o começo do arquivo com a assinatura (US_ASCII: um byte vira uma letra)
+        String comeco = new String(arquivo, 0, Math.min(arquivo.length, ASSINATURA_DE_PDF.length()),
+                StandardCharsets.US_ASCII);
+        if (!comeco.equals(ASSINATURA_DE_PDF)) {
             return "Este arquivo não é um PDF. Envie a notificação em PDF.";
         }
         return null;

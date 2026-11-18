@@ -34,7 +34,7 @@
         <section class="vidro cartao" th:unless="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-lido">
           <span class="rotulo" id="titulo-lido">Texto lido do PDF</span>
           <!-- tabindex=0: quem usa só o teclado consegue rolar o texto -->
-          <div class="lido" tabindex="0" th:text="${notificacao.texto}"></div>
+          <div class="lido" tabindex="0" role="region" aria-labelledby="titulo-lido" th:text="${notificacao.texto}"></div>
         </section>
       </aside>
     </div>
