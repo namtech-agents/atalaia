@@ -58,6 +58,13 @@
 			<version>3.0.8</version>
 		</dependency>
 
+		<!--LangChain4j: a ponte entre o Java e a IA. Esta peça fala com o Gemini, do Google (US10) -->
+		<dependency>
+			<groupId>dev.langchain4j</groupId>
+			<artifactId>langchain4j-google-ai-gemini</artifactId>
+			<version>1.24.0</version>
+		</dependency>
+
 		<!--Flyway: roda os arquivos SQL de db/migration, em ordem, quando a aplicação sobe -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
