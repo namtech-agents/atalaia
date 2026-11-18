@@ -1,7 +1,8 @@
 /* ATALAIA · direção Vidro
    As cores e as peças vieram do kit aprovado no protótipo (atalaia-prototipo/modelos/vidro.css).
    Aqui entra só o que as telas de verdade já usam; peça nova entra junto com a tela que precisar dela.
-   Tema escuro: segue o aparelho da pessoa (prefers-color-scheme), sem botão. */
+   Tema: sempre o claro, mesmo com o aparelho em modo escuro (decisão de 18/11/2026).
+   O tema escuro do kit continua lá, para o dia em que houver um botão de trocar. */
 
 /* A letra da marca, guardada na própria pasta (nada vem da internet). Licença SIL Open Font 1.1 */
 @font-face {
@@ -47,23 +48,8 @@
   --raio: 28px;        /* painel de vidro */
   --raio-m: 12px;      /* botão e campo: nem pílula nem quadrado */
   --sair: cubic-bezier(.23, 1, .32, 1);
-  color-scheme: light dark;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fundo: #0b0e15; --texto: #eef0f4; --apagado: #a2aab8;
-    --fio: rgba(255, 255, 255, .09);
-    --vidro: rgba(26, 31, 44, .58); --vidro-solido: #171c28;
-    --vidro-borda: rgba(255, 255, 255, .13); --vidro-fora: rgba(0, 0, 0, .4);
-    --solido: #1b2130; --campo-fundo: rgba(140, 156, 242, .11);
-    --marca: var(--azul-claro);
-    --apagado-fora: var(--apagado); --marca-fora: var(--azul-claro);
-    --relevo: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(0,0,0,.25);
-    --brilho: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 42%);
-    --sombra: 0 1px 0 rgba(255,255,255,.04) inset, 0 18px 40px -18px rgba(0,0,0,.7);
-    --mancha-1: rgba(36, 56, 166, .62); --mancha-2: rgba(36, 56, 166, .38); --mancha-3: rgba(28, 44, 134, .40);
-    --vermelho: #ff9a90; --lacre: rgba(255, 120, 108, .16);
-  }
+  /* Só o tema claro: os campos e a barra de rolagem do navegador também ficam claros */
+  color-scheme: light;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
