@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: cabeca('Enviar notificação')}"></head>
+<!-- Com erro, o título da aba muda: é a primeira coisa que o leitor de tela anuncia -->
+<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro no envio · Enviar notificação' : 'Enviar notificação')}"></head>
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
@@ -9,13 +10,14 @@
   <main>
     <div class="titulo">
       <h1>Enviar notificação</h1>
-      <p>Envie o PDF que chegou para o cliente. O Atalaia lê o documento e guarda o original para conferência.</p>
+      <p th:unless="${empresas.isEmpty()}">Envie o PDF que chegou para o cliente. O Atalaia lê o documento e guarda o original para conferência.</p>
     </div>
 
     <!-- enctype multipart: é o que deixa o formulário carregar um arquivo -->
     <form class="vidro formulario" method="post" th:action="@{/enviar}" enctype="multipart/form-data">
-      <!-- role=alert: o leitor de tela anuncia a mensagem assim que a página abre -->
-      <p class="erro" role="alert" th:if="${erro}" th:text="${erro}"></p>
+      <!-- A mensagem de erro. O campo do arquivo aponta para ela (aria-describedby) e recebe o foco,
+           então quem usa leitor de tela ouve o erro ao chegar no campo -->
+      <p class="erro" id="erro-envio" role="alert" th:if="${erro}" th:text="${erro}"></p>
 
       <p th:if="${empresas.isEmpty()}">Nenhuma empresa cadastrada ainda. Sem empresa não dá para enviar.</p>
 
@@ -26,19 +28,21 @@
           <!-- Uma opção por empresa; se o envio foi recusado, a escolhida volta marcada -->
           <option th:each="empresa : ${empresas}" th:value="${empresa.id}"
                   th:selected="${empresa.id == empresaEscolhida}"
-                  th:text="${empresa.nome + ' · CNPJ ' + empresa.cnpj}"></option>
+                  th:text="${empresa.nome + ' · CNPJ ' + empresa.cnpjFormatado}"></option>
         </select>
       </div>
 
       <div th:unless="${empresas.isEmpty()}">
         <label class="rotulo" for="arquivo">PDF da notificação</label>
-        <input id="arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required aria-describedby="dica-arquivo">
+        <input id="arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required aria-describedby="dica-arquivo"
+               th:attr="aria-invalid=${erro != null} ? 'true', aria-describedby=${erro != null} ? 'erro-envio dica-arquivo' : 'dica-arquivo'"
+               th:autofocus="${erro != null}">
         <p class="dica" id="dica-arquivo">Só PDF, até 10 MB.</p>
       </div>
 
       <button class="botao cheio" type="submit" th:unless="${empresas.isEmpty()}">Enviar PDF</button>
 
-      <p class="aviso">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
+      <p class="aviso" th:unless="${empresas.isEmpty()}">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
     </form>
   </main>
 </div>
