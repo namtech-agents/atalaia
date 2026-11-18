@@ -101,6 +101,8 @@ a { color: var(--marca); }
 .topo .marca img { width: 28px; height: 28px; display: block; }
 .topo .marca span { font: 800 19px/1 "Archivo", system-ui, sans-serif; font-stretch: 84%; letter-spacing: -.02em; }
 .topo .previa { white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--apagado); padding: 0 10px; height: 24px; display: inline-flex; align-items: center; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--picote); }
+/* o espaço no começo de um item de caixa flexível some: a distância vem por margem */
+.topo .previa span { margin-left: .3em; }
 
 /* título grande, à moda do iPhone */
 .titulo { padding: 10px 6px 6px; }
@@ -140,7 +142,9 @@ a { color: var(--marca); }
    na tela larga, o order devolve o documento para a esquerda */
 .mesa { padding: 14px; order: -1; }
 /* a moldura ocupa o que sobra da janela (100dvh menos o que fica acima dela), para não haver duas rolagens */
-.mesa iframe { display: block; width: 100%; height: calc(100dvh - 276px); min-height: 320px; border: 0; border-radius: 16px; background: var(--solido); }
+.mesa iframe { display: block; width: 100%; height: calc(100dvh - 304px); min-height: 320px; border: 0; border-radius: 16px; background: var(--solido); }
+/* quem chega na moldura pelo teclado precisa ver onde está */
+.mesa iframe:focus { outline: 2.5px solid var(--marca); outline-offset: 2px; }
 .mesa .abrir { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-weight: 600; }
 .lado { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 92px; }
 .cartao { padding: 18px; }
