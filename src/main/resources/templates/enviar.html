@@ -20,6 +20,7 @@
       <p class="erro" id="erro-envio" role="alert" th:if="${erro}" th:text="${erro}"></p>
 
       <p th:if="${empresas.isEmpty()}">Nenhuma empresa cadastrada ainda. Sem empresa não dá para enviar.</p>
+      <a class="botao cheio" th:if="${empresas.isEmpty()}" th:href="@{/empresas}">Cadastrar empresa</a>
 
       <div th:unless="${empresas.isEmpty()}">
         <label class="rotulo" for="empresaId">Empresa</label>

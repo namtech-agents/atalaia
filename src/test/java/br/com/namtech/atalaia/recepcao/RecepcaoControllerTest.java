@@ -23,13 +23,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.conta.Escritorio;
+import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.leitor.LeitorPdfTest;
@@ -44,12 +47,17 @@ import jakarta.persistence.EntityManager;
 //Sobe a aplicação inteira com o banco de teste. MockMvc: faz os pedidos como um navegador faria, sem abrir um
 //Transactional: cada teste desfaz o que gravou no fim, para um nao atrapalhar o outro
 @SpringBootTest
-@AutoConfigureMockMvc
 @Transactional
 class RecepcaoControllerTest {
 
-    @Autowired
+    //O navegador de mentira é montado antes de cada teste, ja com a sessão de uma pessoa do escritório de teste
     private MockMvc navegador;
+
+    @Autowired
+    private WebApplicationContext aplicacao;
+
+    @Autowired
+    private EscritorioRepository escritorios;
 
     @Autowired
     private EmpresaRepository empresas;
@@ -69,8 +77,10 @@ class RecepcaoControllerTest {
     private Empresa empresa;
 
     @BeforeEach
-    void criaUmaEmpresaInventada() {
-        empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+    void criaUmEscritorioComUmaEmpresaInventadaEEntra() {
+        Escritorio escritorio = escritorios.save(new Escritorio("Escritório de Teste"));
+        empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
+        navegador = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
     }
 
     //Sem outra ordem, a IA de mentira responde certo para o PDF de exemplo: um dado que esta mesmo no texto
@@ -417,7 +427,7 @@ class RecepcaoControllerTest {
 
     @Test
     void cnpjApareceComAPontuacao() {
-        assertThat(new Empresa("99999001000100", "Empresa de Teste").getCnpjFormatado())
+        assertThat(new Empresa(null, "99999001000100", "Empresa de Teste").getCnpjFormatado())
                 .isEqualTo("99.999.001/0001-00");
     }
 }

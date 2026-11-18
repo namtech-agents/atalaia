@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${erro} ? 'Erro · Entrar' : 'Entrar')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo}"></header>
+
+  <main>
+    <div class="titulo">
+      <h1>Entrar</h1>
+    </div>
+
+    <!-- Quem confere o e-mail e a senha é o Spring Security: este formulário só envia para ele (POST /entrar).
+         O th:action põe junto o código escondido que protege o formulário (CSRF) -->
+    <form class="vidro formulario" method="post" th:action="@{/entrar}">
+      <!-- A mensagem não diz se errou o e-mail ou a senha: assim ninguém descobre por aqui quais e-mails têm conta -->
+      <p class="erro" id="erro-entrar" role="alert" th:if="${erro}">E-mail ou senha não conferem. Tente de novo.</p>
+      <p class="recado" role="status" th:if="${criada}">Conta criada. Entre com o e-mail e a senha que você escolheu.</p>
+      <p class="recado" role="status" th:if="${saiu}">Você saiu do Atalaia.</p>
+
+      <div>
+        <label class="rotulo" for="email">E-mail</label>
+        <input id="email" name="email" type="email" autocomplete="username" required
+               th:autofocus="${erro}"
+               th:attr="aria-invalid=${erro} ? 'true', aria-describedby=${erro} ? 'erro-entrar'">
+      </div>
+      <div>
+        <label class="rotulo" for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+      </div>
+
+      <button class="botao cheio" type="submit">Entrar</button>
+
+      <p class="aviso">Ainda não tem conta? <a th:href="@{/cadastro}">Criar a conta do escritório</a></p>
+    </form>
+  </main>
+</div>
+</body>
+</html>

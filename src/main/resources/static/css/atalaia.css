@@ -90,6 +90,11 @@ html { scroll-padding-top: 92px; }
 .topo .marca { display: flex; align-items: center; gap: 10px; height: 44px; text-decoration: none; color: var(--texto); margin-right: auto; }
 .topo .marca img { width: 28px; height: 28px; display: block; }
 .topo .marca span { font: 800 19px/1 "Archivo", system-ui, sans-serif; font-stretch: 84%; letter-spacing: -.02em; }
+/* o menu de quem entrou: um link e o botão de sair, com a mesma cara */
+.topo nav { display: flex; align-items: center; gap: 4px; }
+.topo nav form { margin: 0; }
+.topo nav a, .topo nav button { display: inline-flex; align-items: center; height: 44px; padding: 0 12px; border: 0; border-radius: var(--raio-m); background: none; color: var(--texto); font: inherit; font-weight: 600; font-size: 14.5px; text-decoration: none; cursor: pointer; }
+@media (hover: hover) { .topo nav a:hover, .topo nav button:hover { background: var(--campo-fundo); } }
 .topo .previa { white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--apagado); padding: 0 10px; height: 24px; display: inline-flex; align-items: center; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--picote); }
 /* o espaço no começo de um item de caixa flexível some: a distância vem por margem */
 .topo .previa span { margin-left: .3em; }
@@ -118,12 +123,19 @@ html { scroll-padding-top: 92px; }
 /* formulário */
 .formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
 /* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
-.formulario select, .formulario input[type="file"], .resolver select, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
+.formulario select, .formulario input, .resolver select, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 .formulario .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
 .formulario .botao { align-self: flex-start; }
 .erro { border-radius: var(--raio-m); background: var(--lacre); color: var(--vermelho); padding: 12px 14px; font-weight: 600; }
+/* recado bom (conta criada, saiu): o mesmo formato do erro, na cor da marca */
+.recado { border-radius: var(--raio-m); background: var(--campo-fundo); color: var(--marca); padding: 12px 14px; font-weight: 600; }
+.formulario a { color: var(--marca); font-weight: 600; }
+/* o formulário logo depois de uma lista (Empresas) */
+.grupo + .formulario { margin-top: 14px; }
+/* linha de lista que não é link (Empresas) */
+.lista .linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 10px 12px; }
 .aviso { font-size: 13px; color: var(--apagado); border-top: 1px solid var(--fio); padding-top: 14px; }
 
 /* a notificação: o documento à esquerda, o que o Atalaia leu à direita */
@@ -165,6 +177,8 @@ html { scroll-padding-top: 92px; }
 }
 /* em tela muito estreita o selo fica só com a primeira palavra */
 @media (max-width: 420px) { .topo .previa span { display: none; } }
+/* tela estreita com o menu aberto: o aviso de prévia sai da barra para o menu caber (o formulário de envio repete o aviso) */
+@media (max-width: 560px) { .topo nav ~ .previa { display: none; } }
 
 /* fechar o caso: o mesmo campo do formulário de envio, dentro do cartão */
 .resolver { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }

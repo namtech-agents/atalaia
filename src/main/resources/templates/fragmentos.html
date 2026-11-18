@@ -23,6 +23,14 @@
       <img th:src="@{/logo/atalaia-simbolo.svg}" alt="" width="28" height="28">
       <span>Atalaia</span>
     </a>
+    <!-- O menu só aparece com a sessão aberta (quemEntrou vem do QuemEntrou.java) -->
+    <nav th:if="${quemEntrou}" aria-label="Menu">
+      <a th:href="@{/empresas}">Empresas</a>
+      <!-- Sair é um formulário (POST), não um link: um link poderia ser acionado por outro site -->
+      <form method="post" th:action="@{/sair}">
+        <button type="submit" th:title="${quemEntrou}">Sair</button>
+      </form>
+    </nav>
     <span class="previa">Prévia<span>&nbsp;· só documento de teste</span></span>
   </header>
 </body>

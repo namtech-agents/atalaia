@@ -3,10 +3,12 @@ package br.com.namtech.atalaia.painel;
 import java.util.Comparator;
 import java.util.List;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import br.com.namtech.atalaia.conta.UsuarioLogado;
 import br.com.namtech.atalaia.notificacao.NotificacaoNaLista;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 
@@ -21,8 +23,9 @@ public class PainelController {
     }
 
     @GetMapping("/")
-    public String painel(Model model) {
-        List<NotificacaoNaLista> todas = notificacoes.listar();
+    public String painel(@AuthenticationPrincipal UsuarioLogado usuario, Model model) {
+        //Só as notificações do escritório de quem entrou
+        List<NotificacaoNaLista> todas = notificacoes.listar(usuario.escritorioId());
         //Tres grupos, na ordem em que a pessoa deve olhar: primeiro o que o Atalaia nao conseguiu conferir sozinho,
         //depois o que esta conferido e aberto, e por ultimo o que ja foi resolvido
         List<NotificacaoNaLista> abertas = todas.stream().filter(linha -> !linha.resolvida()).toList();

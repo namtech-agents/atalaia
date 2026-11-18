@@ -2,6 +2,8 @@ package br.com.namtech.atalaia.seguranca;
 
 import java.io.IOException;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -12,7 +14,9 @@ import jakarta.servlet.http.HttpServletResponse;
 
 //Filtro: passa por todo pedido antes do controller. Este acrescenta, em toda resposta, os cabeçalhos
 //que dizem ao navegador o que a pagina pode e o que nao pode fazer
+//Order: roda antes de todos, inclusive do Spring Security. Assim até o redirecionamento para a tela de entrar sai protegido
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class CabecalhosDeSeguranca extends OncePerRequestFilter {
 
     //CSP (Content-Security-Policy): a lista do que a pagina pode carregar. 'self' = só do proprio Atalaia.

@@ -17,12 +17,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.conta.Escritorio;
+import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.notificacao.Desfecho;
@@ -35,11 +38,17 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 //Este teste nao tem Transactional: as duas "pessoas" sao conversas separadas com o banco, e cada uma grava de verdade.
 //Por isso ele mesmo apaga o que criou, no fim
 @SpringBootTest
-@AutoConfigureMockMvc
 class ResolverAoMesmoTempoTest {
 
-    @Autowired
     private MockMvc navegador;
+
+    @Autowired
+    private WebApplicationContext aplicacao;
+
+    @Autowired
+    private EscritorioRepository escritorios;
+
+    private Escritorio escritorio;
 
     @Autowired
     private EmpresaRepository empresas;
@@ -66,12 +75,17 @@ class ResolverAoMesmoTempoTest {
         if (empresa != null) {
             empresas.delete(empresa);
         }
+        if (escritorio != null) {
+            escritorios.delete(escritorio);
+        }
     }
 
     @Test
     void segundoPedidoDeResolverEsperaOPrimeiroENaoTrocaOQueFoiRegistrado() throws Exception {
         //Arrumar: uma notificação aberta, e uma segunda linha de execução para fazer o papel da outra pessoa
-        empresa = empresas.save(new Empresa("99999009000281", "Empresa de Teste"));
+        escritorio = escritorios.save(new Escritorio("Escritório de Teste"));
+        navegador = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
+        empresa = empresas.save(new Empresa(escritorio, "99999009000281", "Empresa de Teste"));
         id = notificacoes.save(new Notificacao(empresa, "%PDF-teste".getBytes(), "texto",
                 TipoDeDocumento.COBRANCA, List.of(), List.of())).getId();
         ExecutorService outraPessoa = Executors.newSingleThreadExecutor();
@@ -82,7 +96,7 @@ class ResolverAoMesmoTempoTest {
         try {
             segundoPedido = conversa.execute(aberta -> {
                 //Agir: a primeira pessoa pega a notificação para alterar e, antes de ela gravar, a segunda manda resolver
-                Notificacao daPrimeira = notificacoes.buscarParaAlterar(id).orElseThrow();
+                Notificacao daPrimeira = notificacoes.buscarParaAlterar(id, escritorio.getId()).orElseThrow();
                 Future<ResultActions> pedido = outraPessoa.submit(() -> {
                     outraPessoaComecou.complete(null);
                     return navegador.perform(post("/notificacoes/" + id + "/resolver")

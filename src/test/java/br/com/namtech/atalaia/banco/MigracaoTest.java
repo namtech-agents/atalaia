@@ -30,12 +30,16 @@ class MigracaoTest {
         assertThat(notificacoes).isNotNull();
     }
 
-    //Transactional: desfaz no fim a empresa que este teste grava
+    //Transactional: desfaz no fim o que este teste grava
     @Test
     @Transactional
     void bancoRecusaDesfechoQueNaoExiste() {
-        //Arrumar: uma empresa inventada para ser a dona da notificação
-        banco.update("insert into empresa (cnpj, nome) values ('99999009000362', 'Empresa de Teste')");
+        //Arrumar: um escritório e uma empresa inventados para serem os donos da notificação
+        banco.update("insert into escritorio (nome) values ('Escritório do teste de migração')");
+        banco.update("""
+                insert into empresa (escritorio_id, cnpj, nome)
+                select id, '99999009000362', 'Empresa de Teste' from escritorio where nome = 'Escritório do teste de migração'
+                """);
 
         //Agir e conferir: uma notificação resolvida com um desfecho fora dos quatro nao entra,
         //mesmo escrita direto no banco, sem passar pelo Java
