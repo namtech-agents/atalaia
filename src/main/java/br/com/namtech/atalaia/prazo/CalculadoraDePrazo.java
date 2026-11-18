@@ -1,5 +1,6 @@
 package br.com.namtech.atalaia.prazo;
 
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.MonthDay;
@@ -17,9 +18,13 @@ public class CalculadoraDePrazo {
     //Feriados que a calculadora conhece; quem cria a calculadora é que informa
     private final Set<LocalDate> feriados;
 
-    public CalculadoraDePrazo(Set<LocalDate> feriados) {
+    //Relogio de onde sai o "hoje". Vem de fora para o teste poder parar o tempo num dia certo
+    private final Clock relogio;
+
+    public CalculadoraDePrazo(Set<LocalDate> feriados, Clock relogio) {
         //copyOf: guarda uma copia que ninguem de fora consegue mudar depois
         this.feriados = Set.copyOf(feriados);
+        this.relogio = relogio;
     }
 
     //Entrada principal: recebe a regra e o dia da ciencia, devolve a data limite com a conta
@@ -48,7 +53,12 @@ public class CalculadoraDePrazo {
             passos.add("A regra ainda não foi conferida por contador ou advogado: o caso vai para revisão.");
             return new PrazoCalculado(null, passos, true);
         }
-        passos.add("Regra conferida na norma em " + DIA.format(regra.conferidaEm()) + ".");
+        passos.add("Regra conferida na norma em " + DIA.format(regra.conferidaEm()) + ". Próxima conferência até "
+                + DIA.format(regra.proximaConferencia()) + ".");
+        //Conferencia vencida nao trava o prazo, mas o aviso aparece na conta para alguem reconferir
+        if (regra.conferenciaVencida(LocalDate.now(relogio))) {
+            passos.add("Atenção: a conferência desta regra está vencida. É preciso ler a regra na norma de novo.");
+        }
         passos.add("Ciência em " + DIA.format(ciencia) + ".");
 
         //O dia da ciencia nao entra, e o prazo so começa a correr em dia com expediente.

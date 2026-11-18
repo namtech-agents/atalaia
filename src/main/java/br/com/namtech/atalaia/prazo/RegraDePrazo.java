@@ -19,4 +19,14 @@ public record RegraDePrazo(
             throw new IllegalArgumentException("O prazo precisa ter pelo menos 1 dia");
         }
     }
+
+    //Norma muda: seis meses depois da conferencia, alguem precisa ler a regra na norma de novo.
+    //So faz sentido chamar em regra ja conferida (conferidaEm preenchida)
+    public LocalDate proximaConferencia() {
+        return conferidaEm.plusMonths(6);
+    }
+
+    public boolean conferenciaVencida(LocalDate hoje) {
+        return hoje.isAfter(proximaConferencia());
+    }
 }
