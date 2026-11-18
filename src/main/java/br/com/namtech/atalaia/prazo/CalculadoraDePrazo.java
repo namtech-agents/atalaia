@@ -18,7 +18,8 @@ public class CalculadoraDePrazo {
     private final Set<LocalDate> feriados;
 
     public CalculadoraDePrazo(Set<LocalDate> feriados) {
-        this.feriados = feriados;
+        //copyOf: guarda uma copia que ninguem de fora consegue mudar depois
+        this.feriados = Set.copyOf(feriados);
     }
 
     //Entrada principal: recebe a regra e o dia da ciencia, devolve a data limite com a conta
@@ -28,23 +29,36 @@ public class CalculadoraDePrazo {
 
     //Ciencia tacita: ninguem abriu a mensagem, entao a ciencia vale sozinha alguns dias corridos depois da entrega
     public PrazoCalculado calcularComCienciaTacita(RegraDePrazo regra, LocalDate entrega, int diasAteACiencia) {
+        if (diasAteACiencia < 1) {
+            throw new IllegalArgumentException("A ciência tácita precisa de pelo menos 1 dia depois da entrega");
+        }
         LocalDate ciencia = entrega.plusDays(diasAteACiencia);
         List<String> passos = new ArrayList<>();
-        passos.add("Ninguém abriu a mensagem entregue em " + DIA.format(entrega) + ": ciência tácita "
-                + diasAteACiencia + " dias depois.");
+        passos.add("Ninguém abriu a mensagem entregue em " + DIA.format(entrega) + ": ciência tácita depois de "
+                + diasAteACiencia + " dia(s).");
         return calcular(regra, ciencia, passos);
     }
 
     private PrazoCalculado calcular(RegraDePrazo regra, LocalDate ciencia, List<String> passos) {
         String contagem = regra.contagem() == TipoDeContagem.DIAS_UTEIS ? "dias úteis" : "dias corridos";
         passos.add("Regra: " + regra.nome() + ", " + regra.dias() + " " + contagem + " (" + regra.artigo() + ").");
+
+        //Regra que ninguem conferiu na norma nao pode dar prazo: para aqui, antes de qualquer data aparecer
+        if (regra.conferidaEm() == null) {
+            passos.add("A regra ainda não foi conferida por contador ou advogado: o caso vai para revisão.");
+            return new PrazoCalculado(null, passos, true);
+        }
+        passos.add("Regra conferida na norma em " + DIA.format(regra.conferidaEm()) + ".");
         passos.add("Ciência em " + DIA.format(ciencia) + ".");
 
-        //O dia da ciencia nao entra, e o prazo so começa a correr em dia com expediente
+        //O dia da ciencia nao entra, e o prazo so começa a correr em dia com expediente.
+        //Ciencia num sabado conta igual a ciencia na sexta: começa na segunda. Ha norma que empurra a propria
+        //ciencia para o dia util seguinte; isso fica para conferir regra por regra com o contador.
         LocalDate inicio = proximoDiaComExpediente(ciencia.plusDays(1), regra);
         passos.add("A contagem começa em " + DIA.format(inicio) + ", primeiro dia com expediente depois da ciência.");
 
-        //Calculo duplo: a mesma conta feita de dois jeitos
+        //Calculo duplo: a mesma conta feita de dois jeitos. As duas usam a mesma definição de dia que conta,
+        //entao a comparação pega erro de contagem, nao erro de feriado ou de recesso
         LocalDate andando = contarAndando(regra, inicio);
         LocalDate peloCalendario = contarPeloCalendario(regra, inicio);
         return fechar(regra, andando, peloCalendario, passos);
@@ -84,15 +98,8 @@ public class CalculadoraDePrazo {
         //O prazo so vence em dia com expediente: se cair fora, vai para o proximo
         LocalDate limite = proximoDiaComExpediente(andando, regra);
         if (!limite.equals(andando)) {
-            passos.add(DIA.format(andando) + " não tem expediente: o prazo vai para o próximo dia com expediente.");
+            passos.add(DIA.format(andando) + " não tem expediente: o prazo vai para " + DIA.format(limite) + ".");
         }
-
-        //Regra que ninguem conferiu na norma nao pode dar prazo para ninguem
-        if (regra.conferidaEm() == null) {
-            passos.add("A regra ainda não foi conferida por contador ou advogado: o caso vai para revisão.");
-            return new PrazoCalculado(null, passos, true);
-        }
-        passos.add("Regra conferida na norma em " + DIA.format(regra.conferidaEm()) + ".");
         passos.add("Data limite: " + DIA.format(limite) + ".");
         return new PrazoCalculado(limite, passos, false);
     }
@@ -104,8 +111,12 @@ public class CalculadoraDePrazo {
         return data;
     }
 
-    //Em dias corridos todo dia conta; em dias uteis so conta o dia com expediente
+    //Dia de recesso nunca conta na regra que para nele. Fora isso: em dias corridos todo dia conta,
+    //em dias uteis so conta o dia com expediente
     private boolean contaNoPrazo(LocalDate data, RegraDePrazo regra) {
+        if (paradoNoRecesso(data, regra)) {
+            return false;
+        }
         return regra.contagem() == TipoDeContagem.DIAS_CORRIDOS || temExpediente(data, regra);
     }
 
@@ -113,8 +124,11 @@ public class CalculadoraDePrazo {
     private boolean temExpediente(LocalDate data, RegraDePrazo regra) {
         DayOfWeek dia = data.getDayOfWeek();
         boolean fimDeSemana = dia == DayOfWeek.SATURDAY || dia == DayOfWeek.SUNDAY;
-        boolean parado = regra.suspendeNoRecesso() && noRecesso(data);
-        return !fimDeSemana && !feriados.contains(data) && !parado;
+        return !fimDeSemana && !feriados.contains(data) && !paradoNoRecesso(data, regra);
+    }
+
+    private boolean paradoNoRecesso(LocalDate data, RegraDePrazo regra) {
+        return regra.suspendeNoRecesso() && noRecesso(data);
     }
 
     //Recesso forense: de 20 de dezembro a 20 de janeiro, contando os dois dias

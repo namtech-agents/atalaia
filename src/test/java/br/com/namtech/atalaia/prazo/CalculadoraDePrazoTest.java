@@ -1,6 +1,7 @@
 package br.com.namtech.atalaia.prazo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -89,10 +90,10 @@ class CalculadoraDePrazoTest {
         //Conferir: cada passo da conta aparece, na ordem, com o artigo e a data da conferencia
         assertThat(prazo.passos()).containsExactly(
                 "Regra: Prazo de exemplo, 30 dias corridos (Norma de exemplo, art. 1º).",
+                "Regra conferida na norma em 02/11/2026.",
                 "Ciência em 02/03/2026.",
                 "A contagem começa em 03/03/2026, primeiro dia com expediente depois da ciência.",
                 "O último dia da contagem é 01/04/2026. As duas contas deram a mesma data.",
-                "Regra conferida na norma em 02/11/2026.",
                 "Data limite: 01/04/2026.");
     }
 
@@ -123,7 +124,22 @@ class CalculadoraDePrazoTest {
         //Conferir: sabado nao tem expediente, o prazo vai para a segunda, 9 de março, e a conta avisa
         assertThat(prazo.dataLimite()).isEqualTo(LocalDate.of(2026, 3, 9));
         assertThat(prazo.passos()).contains(
-                "07/03/2026 não tem expediente: o prazo vai para o próximo dia com expediente.");
+                "07/03/2026 não tem expediente: o prazo vai para 09/03/2026.");
+    }
+
+    @Test
+    void prazoEmDiasCorridosQueVenceNoFeriadoVaiParaODiaSeguinte() {
+        //Arrumar: ciencia na quinta, 16 de abril de 2026; terça 21 é Tiradentes
+        LocalDate ciencia = LocalDate.of(2026, 4, 16);
+        Set<LocalDate> feriados = Set.of(LocalDate.of(2026, 4, 21));
+        RegraDePrazo regra = regraDeExemplo(5, TipoDeContagem.DIAS_CORRIDOS, false);
+
+        //Agir: pede o prazo de 5 dias corridos, que termina no feriado
+        CalculadoraDePrazo calculadora = new CalculadoraDePrazo(feriados);
+        PrazoCalculado prazo = calculadora.calcular(regra, ciencia);
+
+        //Conferir: conta 17, 18, 19, 20 e 21; feriado nao tem expediente, vai para a quarta, 22 de abril
+        assertThat(prazo.dataLimite()).isEqualTo(LocalDate.of(2026, 4, 22));
     }
 
     @Test
@@ -139,6 +155,36 @@ class CalculadoraDePrazoTest {
         //Conferir: conta 17 e 18 de dezembro, para de 20/12 a 20/01,
         //conta 21, 22 e 25 de janeiro. Cai na segunda, 25 de janeiro de 2027
         assertThat(prazo.dataLimite()).isEqualTo(LocalDate.of(2027, 1, 25));
+    }
+
+    @Test
+    void recessoComecaNoDia20DeDezembroETerminaNoDia20DeJaneiro() {
+        //Arrumar: ciencia na quinta, 16 de dezembro de 2027; nesse ano o dia 20 cai numa segunda
+        LocalDate ciencia = LocalDate.of(2027, 12, 16);
+        RegraDePrazo regra = regraDeExemplo(2, TipoDeContagem.DIAS_UTEIS, true);
+
+        //Agir: pede o prazo de 2 dias úteis
+        CalculadoraDePrazo calculadora = new CalculadoraDePrazo(Set.of());
+        PrazoCalculado prazo = calculadora.calcular(regra, ciencia);
+
+        //Conferir: conta a sexta, 17; a segunda, 20, ja é recesso, e a quinta, 20 de janeiro, ainda é.
+        //O segundo dia é a sexta, 21 de janeiro de 2028
+        assertThat(prazo.dataLimite()).isEqualTo(LocalDate.of(2028, 1, 21));
+    }
+
+    @Test
+    void prazoEmDiasCorridosTambemParaNoRecesso() {
+        //Arrumar: ciencia na quinta, 10 de dezembro de 2026, numa regra de dias corridos que para no recesso
+        LocalDate ciencia = LocalDate.of(2026, 12, 10);
+        RegraDePrazo regra = regraDeExemplo(30, TipoDeContagem.DIAS_CORRIDOS, true);
+
+        //Agir: pede o prazo de 30 dias corridos
+        CalculadoraDePrazo calculadora = new CalculadoraDePrazo(Set.of());
+        PrazoCalculado prazo = calculadora.calcular(regra, ciencia);
+
+        //Conferir: conta 9 dias, de 11 a 19 de dezembro, para no recesso,
+        //e os 21 que faltam vao de 21 de janeiro a 10 de fevereiro de 2027
+        assertThat(prazo.dataLimite()).isEqualTo(LocalDate.of(2027, 2, 10));
     }
 
     @Test
@@ -168,8 +214,9 @@ class CalculadoraDePrazoTest {
         //Conferir: a ciencia vale em 16 de junho; 30 dias depois é quinta, 16 de julho
         assertThat(prazo.dataLimite()).isEqualTo(LocalDate.of(2026, 7, 16));
         assertThat(prazo.passos()).startsWith(
-                "Ninguém abriu a mensagem entregue em 01/06/2026: ciência tácita 15 dias depois.",
+                "Ninguém abriu a mensagem entregue em 01/06/2026: ciência tácita depois de 15 dia(s).",
                 "Regra: Prazo de exemplo, 30 dias corridos (Norma de exemplo, art. 1º).",
+                "Regra conferida na norma em 02/11/2026.",
                 "Ciência em 16/06/2026.");
     }
 
@@ -202,10 +249,29 @@ class CalculadoraDePrazoTest {
         CalculadoraDePrazo calculadora = new CalculadoraDePrazo(Set.of());
         PrazoCalculado prazo = calculadora.calcular(regra, ciencia);
 
-        //Conferir: fica sem data limite, vai para revisao e a conta diz o motivo
+        //Conferir: fica sem data limite, vai para revisao e a conta para no motivo, sem mostrar data nenhuma
         assertThat(prazo.dataLimite()).isNull();
         assertThat(prazo.precisaDeRevisao()).isTrue();
-        assertThat(prazo.passos()).contains(
+        assertThat(prazo.passos()).containsExactly(
+                "Regra: Prazo de exemplo, 30 dias corridos (Norma de exemplo, art. 1º).",
                 "A regra ainda não foi conferida por contador ou advogado: o caso vai para revisão.");
+    }
+
+    @Test
+    void recusaPrazoDeZeroDia() {
+        //Agir e conferir: criar uma regra de zero dia tem que dar erro na hora
+        assertThatThrownBy(() -> regraDeExemplo(0, TipoDeContagem.DIAS_UTEIS, false))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void recusaCienciaTacitaSemNenhumDia() {
+        //Arrumar
+        RegraDePrazo regra = regraDeExemplo(30, TipoDeContagem.DIAS_CORRIDOS, false);
+        CalculadoraDePrazo calculadora = new CalculadoraDePrazo(Set.of());
+
+        //Agir e conferir: ciencia tacita de zero dia tem que dar erro na hora
+        assertThatThrownBy(() -> calculadora.calcularComCienciaTacita(regra, LocalDate.of(2026, 6, 1), 0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
