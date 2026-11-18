@@ -50,7 +50,7 @@ class EmpresaControllerTest {
 
         //Agir: cadastra, com o CNPJ digitado com a pontuação
         navegador.perform(post("/empresas").param("nome", "  Padaria de Teste  ").param("cnpj", "99.999.009/0001-00"))
-                .andExpect(redirectedUrl("/empresas"));
+                .andExpect(redirectedUrl("/empresas?cadastrada"));
 
         //Conferir: ficou guardada no escritório de quem cadastrou, só com as 14 posições, e aparece na lista
         assertThat(empresas.findAllByEscritorioIdOrderByNome(escritorio.getId()))
@@ -59,7 +59,9 @@ class EmpresaControllerTest {
                     assertThat(empresa.getNome()).isEqualTo("Padaria de Teste");
                     assertThat(empresa.getCnpj()).isEqualTo("99999009000100");
                 });
-        navegador.perform(get("/empresas"))
+        //(o aviso de "cadastrada" vem com o caminho para o envio)
+        navegador.perform(get("/empresas").param("cadastrada", ""))
+                .andExpect(content().string(containsString("Empresa cadastrada.")))
                 .andExpect(content().string(containsString("Padaria de Teste")))
                 .andExpect(content().string(containsString("99.999.009/0001-00")));
     }
@@ -89,7 +91,7 @@ class EmpresaControllerTest {
 
         //Agir e conferir: o escritório de quem entrou cadastra a mesma empresa sem erro
         navegador.perform(post("/empresas").param("nome", "Padaria de Teste").param("cnpj", "99999009000100"))
-                .andExpect(redirectedUrl("/empresas"));
+                .andExpect(redirectedUrl("/empresas?cadastrada"));
         assertThat(empresas.findAllByEscritorioIdOrderByNome(escritorio.getId())).hasSize(1);
     }
 }

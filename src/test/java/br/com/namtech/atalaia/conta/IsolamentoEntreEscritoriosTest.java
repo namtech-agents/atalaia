@@ -54,13 +54,14 @@ class IsolamentoEntreEscritoriosTest {
     //O navegador da pessoa de fora (do outro escritório)
     private MockMvc deFora;
 
+    private Escritorio dono;
     private Empresa empresaAlheia;
     private Notificacao notificacaoAlheia;
 
     @BeforeEach
     void criaDoisEscritorios() {
         //O escritório dono dos dados, com uma empresa e uma notificação
-        Escritorio dono = escritorios.save(new Escritorio("Escritório Dono"));
+        dono = escritorios.save(new Escritorio("Escritório Dono"));
         empresaAlheia = empresas.save(new Empresa(dono, "99999009000100", "Empresa Secreta"));
         notificacaoAlheia = notificacoes.save(new Notificacao(empresaAlheia, "%PDF-teste".getBytes(), "texto secreto",
                 TipoDeDocumento.COBRANCA, List.of(), List.of()));
@@ -99,13 +100,19 @@ class IsolamentoEntreEscritoriosTest {
                     .andExpect(status().isOk())
                     .andExpect(content().string(not(containsString("Empresa Secreta"))));
         }
+
+        //Conferir: o dono enxerga (sem isso, o teste passaria até se a tela nao mostrasse empresa nenhuma)
+        NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(dono.getId()))
+                .perform(get("/empresas"))
+                .andExpect(content().string(containsString("Empresa Secreta")));
     }
 
     @Test
     void naoDaParaEnviarPdfParaAEmpresaDeOutroEscritorio() throws Exception {
-        //Arrumar: um PDF qualquer, e a contagem de antes
+        //Arrumar: um PDF de verdade (com um PDF quebrado o envio seria recusado de qualquer jeito,
+        //e o teste passaria mesmo sem a proteção), e a contagem de antes
         MockMultipartFile pdf = new MockMultipartFile("arquivo", "teste.pdf", MediaType.APPLICATION_PDF_VALUE,
-                "%PDF-teste".getBytes());
+                getClass().getResourceAsStream("/pdfs/notificacao-simples.pdf").readAllBytes());
         long antes = notificacoes.count();
 
         //Agir: envia trocando, no formulario, o numero da empresa pelo da empresa alheia

@@ -17,20 +17,29 @@
 
       <div>
         <label class="rotulo" for="escritorio">Nome do escritório</label>
+        <!-- Só o campo que falhou recebe o foco e o aviso de erro (campoComErro vem do ContaController) -->
         <input id="escritorio" name="escritorio" type="text" maxlength="200" autocomplete="organization" required
-               th:value="${escritorio}" aria-describedby="erro-cadastro">
+               th:value="${escritorio}" th:autofocus="${campoComErro == 'escritorio'}"
+               th:attr="aria-invalid=${campoComErro == 'escritorio'} ? 'true', aria-describedby=${campoComErro == 'escritorio'} ? 'erro-cadastro'">
       </div>
       <div>
         <label class="rotulo" for="email">E-mail</label>
         <input id="email" name="email" type="email" maxlength="254" autocomplete="username" required
-               th:value="${email}" aria-describedby="erro-cadastro">
+               th:value="${email}" th:autofocus="${campoComErro == 'email'}"
+               th:attr="aria-invalid=${campoComErro == 'email'} ? 'true', aria-describedby=${campoComErro == 'email'} ? 'erro-cadastro'">
       </div>
       <div>
         <label class="rotulo" for="senha">Senha</label>
         <!-- A senha não volta preenchida depois de um erro: ela nunca é escrita de volta na página -->
         <input id="senha" name="senha" type="password" minlength="8" autocomplete="new-password" required
-               aria-describedby="dica-senha">
-        <p class="dica" id="dica-senha">Pelo menos 8 letras ou números. Uma frase comprida é melhor que uma senha curta e complicada.</p>
+               aria-describedby="dica-senha" th:autofocus="${campoComErro == 'senha'}"
+               th:attr="aria-invalid=${campoComErro == 'senha'} ? 'true', aria-describedby=${campoComErro == 'senha'} ? 'erro-cadastro dica-senha' : 'dica-senha'">
+        <p class="dica" id="dica-senha">Pelo menos 8 caracteres. Uma frase comprida é melhor que uma senha curta e complicada.</p>
+      </div>
+      <div>
+        <!-- A senha é digitada sem aparecer: repetir pega o erro de digitação -->
+        <label class="rotulo" for="senhaRepetida">Repita a senha</label>
+        <input id="senhaRepetida" name="senhaRepetida" type="password" minlength="8" autocomplete="new-password" required>
       </div>
 
       <button class="botao cheio" type="submit">Criar conta</button>

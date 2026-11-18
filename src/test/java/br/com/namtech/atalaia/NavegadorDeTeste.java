@@ -25,8 +25,8 @@ public final class NavegadorDeTeste {
                 .build();
     }
 
-    //Uma pessoa inventada do escritório dado. O numero e o e-mail nao importam para as telas: o que separa os dados é o escritório
+    //Uma pessoa inventada do escritório dado. O e-mail nao importa para as telas: o que separa os dados é o escritório
     public static UsuarioLogado pessoaDo(Long escritorioId) {
-        return new UsuarioLogado(1L, "pessoa@escritorio.test", "", escritorioId);
+        return new UsuarioLogado("pessoa@escritorio.test", "", escritorioId);
     }
 }

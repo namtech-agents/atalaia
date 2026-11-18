@@ -2,6 +2,7 @@ package br.com.namtech.atalaia.painel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -57,11 +58,25 @@ class PainelControllerTest {
     private static final byte[] PDF = "%PDF-teste".getBytes();
 
     @Test
-    void painelVazioConvidaAEnviar() throws Exception {
-        //Agir e conferir: sem nenhuma notificação, a tela explica o que fazer
+    void escritorioSemEmpresaEConvidadoACadastrarAPrimeira() throws Exception {
+        //Agir e conferir: escritório novo ainda nao tem para quem enviar; a tela aponta para o cadastro de empresas
         navegador.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Nenhuma notificação recebida ainda")));
+                .andExpect(content().string(containsString("Comece cadastrando a primeira empresa")))
+                .andExpect(content().string(containsString("href=\"/empresas\"")))
+                .andExpect(content().string(not(containsString("Enviar notificação"))));
+    }
+
+    @Test
+    void painelVazioConvidaAEnviar() throws Exception {
+        //Arrumar: o escritório ja tem uma empresa, mas nenhuma notificação
+        empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
+
+        //Agir e conferir: a tela explica o que fazer
+        navegador.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Nenhuma notificação recebida ainda")))
+                .andExpect(content().string(containsString("Enviar notificação")));
     }
 
     @Test

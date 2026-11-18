@@ -9,10 +9,15 @@
   <main>
     <div class="titulo com-acao">
       <h1>Notificações</h1>
-      <a class="botao cheio" th:href="@{/enviar}">Enviar notificação</a>
+      <a class="botao cheio" th:unless="${semEmpresa}" th:href="@{/enviar}">Enviar notificação</a>
+      <a class="botao cheio" th:if="${semEmpresa}" th:href="@{/empresas}">Cadastrar empresa</a>
     </div>
 
-    <section class="vidro vazio" th:if="${precisaDeGente.isEmpty() and conferidas.isEmpty() and resolvidas.isEmpty()}">
+    <!-- Escritório novo: o primeiro passo é cadastrar uma empresa; só depois faz sentido falar em enviar -->
+    <section class="vidro vazio" th:if="${semEmpresa}">
+      <p>Comece cadastrando a primeira empresa que o escritório atende. Depois é só enviar o PDF que chegou para ela.</p>
+    </section>
+    <section class="vidro vazio" th:if="${not semEmpresa and precisaDeGente.isEmpty() and conferidas.isEmpty() and resolvidas.isEmpty()}">
       <p>Nenhuma notificação recebida ainda. Envie o PDF que chegou para o cliente e ele aparece aqui.</p>
     </section>
 

@@ -2,15 +2,17 @@ package br.com.namtech.atalaia.conta;
 
 import java.nio.charset.StandardCharsets;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 //Conta: as telas de entrar e de criar a conta. Quem confere e-mail e senha na entrada é o Spring Security
@@ -24,23 +26,22 @@ public class ContaController {
     //O bcrypt só usa os primeiros 72 bytes da senha: acima disso o resto seria ignorado em silencio
     static final int SENHA_MAXIMA_EM_BYTES = 72;
 
-    private final EscritorioRepository escritorios;
+    private final Contas contas;
     private final UsuarioRepository usuarios;
     private final PasswordEncoder embaralhador;
 
-    public ContaController(EscritorioRepository escritorios, UsuarioRepository usuarios, PasswordEncoder embaralhador) {
-        this.escritorios = escritorios;
+    public ContaController(Contas contas, UsuarioRepository usuarios, PasswordEncoder embaralhador) {
+        this.contas = contas;
         this.usuarios = usuarios;
         this.embaralhador = embaralhador;
     }
 
     //Os avisos da tela chegam pelo endereço: /entrar?erro (o Spring Security manda para ca quando a senha
-    //nao confere), ?criada (conta nova) e ?saiu. Aqui cada um vira um sim ou nao para a tela
+    //nao confere) e ?saiu. Aqui cada um vira um sim ou nao para a tela
     @GetMapping("/entrar")
-    public String entrar(@RequestParam(required = false) String erro, @RequestParam(required = false) String criada,
-            @RequestParam(required = false) String saiu, Model model) {
+    public String entrar(@RequestParam(required = false) String erro, @RequestParam(required = false) String saiu,
+            Model model) {
         model.addAttribute("erro", erro != null);
-        model.addAttribute("criada", criada != null);
         model.addAttribute("saiu", saiu != null);
         return "entrar";
     }
@@ -50,48 +51,73 @@ public class ContaController {
         return "cadastro";
     }
 
-    //Cria o escritório e a primeira pessoa dele. Transactional: ou grava os dois, ou nenhum
     @PostMapping("/cadastro")
-    @Transactional
     public String cadastrar(@RequestParam(defaultValue = "") String escritorio,
             @RequestParam(defaultValue = "") String email, @RequestParam(defaultValue = "") String senha,
-            Model model, HttpServletResponse resposta) {
+            @RequestParam(defaultValue = "") String senhaRepetida, Model model, HttpServletRequest pedido,
+            HttpServletResponse resposta) throws ServletException {
         String nome = escritorio.strip();
         String emailArrumado = Contas.arrumar(email);
 
-        String erro = motivoDaRecusa(nome, emailArrumado, senha);
-        if (erro != null) {
+        Recusa recusa = motivoDaRecusa(nome, emailArrumado, senha, senhaRepetida);
+        if (recusa == null) {
+            try {
+                contas.criar(nome, emailArrumado, embaralhador.encode(senha));
+            } catch (DataIntegrityViolationException erro) {
+                //Dois cadastros com o mesmo e-mail ao mesmo tempo (clique duplo): os dois passaram pela conferencia,
+                //e o banco recusou o segundo. A pessoa ve a mesma mensagem de e-mail repetido, nao uma pagina de erro
+                recusa = EMAIL_REPETIDO;
+            }
+        }
+        if (recusa != null) {
             resposta.setStatus(HttpStatus.BAD_REQUEST.value());
-            model.addAttribute("erro", erro);
+            model.addAttribute("erro", recusa.mensagem());
+            //A tela marca e poe o foco no campo que falhou
+            model.addAttribute("campoComErro", recusa.campo());
             //Devolve o que a pessoa ja digitou, menos a senha
             model.addAttribute("escritorio", escritorio);
             model.addAttribute("email", email);
             return "cadastro";
         }
 
-        Escritorio novo = escritorios.save(new Escritorio(nome));
-        usuarios.save(new Usuario(novo, emailArrumado, embaralhador.encode(senha)));
-        //Redireciona para a tela de entrar, com o aviso de que a conta foi criada
-        return "redirect:/entrar?criada";
+        //A conta nasce com a sessão aberta: pedir o e-mail e a senha de novo, um segundo depois, nao protegeria nada.
+        //login(): o proprio Spring Security confere a senha e abre a sessão, como faria na tela de entrar
+        pedido.login(emailArrumado, senha);
+        //Troca o numero da sessão na hora de entrar, como a tela de entrar ja faz sozinha.
+        //Se alguem tivesse plantado um numero de sessão no navegador da pessoa antes, ele deixa de valer aqui
+        pedido.changeSessionId();
+        return "redirect:/";
     }
 
-    //Devolve a mensagem para a pessoa, ou null se a conta pode ser criada
-    private String motivoDaRecusa(String nome, String email, String senha) {
-        if (nome.isEmpty() || nome.length() > 200) {
-            return "Escreva o nome do escritório, em até 200 letras.";
+    //O que a tela precisa saber de um cadastro recusado: qual campo falhou e a mensagem para a pessoa
+    private record Recusa(String campo, String mensagem) {
+    }
+
+    private static final Recusa EMAIL_REPETIDO = new Recusa("email", "Já existe uma conta com este e-mail. Entre com ela.");
+
+    //Devolve a recusa, ou null se a conta pode ser criada
+    private Recusa motivoDaRecusa(String nome, String email, String senha, String senhaRepetida) {
+        //Nome sem nenhuma letra ou numero (só espaços, inclusive os invisiveis) nao é nome
+        if (nome.codePoints().noneMatch(Character::isLetterOrDigit) || nome.length() > 200) {
+            return new Recusa("escritorio", "Escreva o nome do escritório, em até 200 letras.");
         }
-        //Conferencia simples: algo, arroba, algo, ponto, algo, sem espaço. Se o e-mail existe mesmo, só enviando para ele
-        if (email.length() > 254 || !email.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
-            return "Escreva um e-mail válido, como nome@escritorio.com.br.";
+        //Conferencia simples: algo, arroba, algo, ponto, algo, sem espaço de nenhum tipo (\\p{Z} pega os invisiveis).
+        //Se o e-mail existe mesmo, só enviando para ele
+        if (email.length() > 254 || !email.matches("[^@\\s\\p{Z}]+@[^@\\s\\p{Z}]+\\.[^@\\s\\p{Z}]+")) {
+            return new Recusa("email", "Escreva um e-mail válido, como nome@escritorio.com.br.");
         }
-        if (senha.length() < SENHA_MINIMA) {
-            return "A senha precisa ter pelo menos " + SENHA_MINIMA + " letras ou números.";
+        if (senha.length() < SENHA_MINIMA || senha.isBlank()) {
+            return new Recusa("senha", "A senha precisa ter pelo menos " + SENHA_MINIMA + " caracteres.");
         }
         if (senha.getBytes(StandardCharsets.UTF_8).length > SENHA_MAXIMA_EM_BYTES) {
-            return "A senha é longa demais. Use até " + SENHA_MAXIMA_EM_BYTES + " letras ou números.";
+            return new Recusa("senha", "A senha é longa demais. Escolha uma mais curta.");
+        }
+        //A senha é digitada sem aparecer: repetir pega o erro de digitação antes de a pessoa ficar trancada para fora
+        if (!senha.equals(senhaRepetida)) {
+            return new Recusa("senha", "As duas senhas não são iguais. Digite de novo.");
         }
         if (usuarios.existsByEmail(email)) {
-            return "Já existe uma conta com este e-mail. Entre com ela.";
+            return EMAIL_REPETIDO;
         }
         return null;
     }

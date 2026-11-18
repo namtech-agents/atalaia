@@ -16,5 +16,7 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
     //Vazio se a empresa nao existe ou é de outro escritório (quem chama nao fica sabendo qual dos dois)
     Optional<Empresa> findByIdAndEscritorioId(Long id, Long escritorioId);
 
+    boolean existsByEscritorioId(Long escritorioId);
+
     boolean existsByEscritorioIdAndCnpj(Long escritorioId, String cnpj);
 }

@@ -2,6 +2,7 @@ package br.com.namtech.atalaia.notificacao;
 
 import java.util.Locale;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -18,6 +19,8 @@ import jakarta.servlet.http.HttpServletResponse;
 @Controller
 public class EmpresaController {
 
+    private static final String CNPJ_REPETIDO = "Este CNPJ já está cadastrado no escritório.";
+
     private final EmpresaRepository empresas;
     private final EscritorioRepository escritorios;
 
@@ -27,7 +30,10 @@ public class EmpresaController {
     }
 
     @GetMapping("/empresas")
-    public String lista(@AuthenticationPrincipal UsuarioLogado usuario, Model model) {
+    public String lista(@AuthenticationPrincipal UsuarioLogado usuario,
+            @RequestParam(required = false) String cadastrada, Model model) {
+        //?cadastrada no endereço: acabou de cadastrar uma empresa, a tela confirma e mostra o proximo passo
+        model.addAttribute("cadastrada", cadastrada != null);
         model.addAttribute("empresas", empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
         return "empresas";
     }
@@ -40,25 +46,36 @@ public class EmpresaController {
         String cnpjArrumado = cnpj.replaceAll("[.\\-/\\s]", "").toUpperCase(Locale.ROOT);
 
         String erro = null;
+        //O campo que falhou: a tela marca ele e poe o foco nele
+        String campoComErro = "cnpj";
         if (nomeArrumado.isEmpty() || nomeArrumado.length() > 200) {
+            campoComErro = "nome";
             erro = "Escreva o nome da empresa, em até 200 letras.";
         //12 letras ou numeros e 2 numeros no fim (os digitos de conferencia): o formato do CNPJ, inclusive o novo, com letras
         } else if (!cnpjArrumado.matches("[A-Z0-9]{12}[0-9]{2}")) {
-            erro = "Escreva o CNPJ completo, com as 14 posições.";
+            erro = "Escreva o CNPJ completo, com os 14 dígitos.";
         } else if (empresas.existsByEscritorioIdAndCnpj(usuario.escritorioId(), cnpjArrumado)) {
-            erro = "Este CNPJ já está cadastrado no escritório.";
+            erro = CNPJ_REPETIDO;
+        } else {
+            try {
+                //getReferenceById: só aponta para o escritório pelo numero, sem ir busca-lo no banco
+                empresas.save(new Empresa(escritorios.getReferenceById(usuario.escritorioId()), cnpjArrumado, nomeArrumado));
+            } catch (DataIntegrityViolationException repetida) {
+                //Clique duplo: os dois pedidos passaram pela conferencia de cima e o banco recusou o segundo
+                //(empresa_cnpj_unico_no_escritorio). A pessoa ve a mensagem, nao uma pagina de erro
+                erro = CNPJ_REPETIDO;
+            }
         }
         if (erro != null) {
             resposta.setStatus(HttpStatus.BAD_REQUEST.value());
             model.addAttribute("erro", erro);
+            model.addAttribute("campoComErro", campoComErro);
             model.addAttribute("nome", nome);
             model.addAttribute("cnpj", cnpj);
-            return lista(usuario, model);
+            return lista(usuario, null, model);
         }
 
-        //getReferenceById: só aponta para o escritório pelo numero, sem ir busca-lo no banco
-        empresas.save(new Empresa(escritorios.getReferenceById(usuario.escritorioId()), cnpjArrumado, nomeArrumado));
         //Redireciona: recarregar a tela nao cadastra de novo
-        return "redirect:/empresas";
+        return "redirect:/empresas?cadastrada";
     }
 }

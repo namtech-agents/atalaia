@@ -25,6 +25,7 @@
     </a>
     <!-- O menu só aparece com a sessão aberta (quemEntrou vem do QuemEntrou.java) -->
     <nav th:if="${quemEntrou}" aria-label="Menu">
+      <a th:href="@{/}">Notificações</a>
       <a th:href="@{/empresas}">Empresas</a>
       <!-- Sair é um formulário (POST), não um link: um link poderia ser acionado por outro site -->
       <form method="post" th:action="@{/sair}">

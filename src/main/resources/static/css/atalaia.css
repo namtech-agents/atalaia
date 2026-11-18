@@ -33,7 +33,7 @@
   --campo-fundo: rgba(36, 56, 166, .075);
   --marca: var(--azul);
   /* texto e link que ficam FORA do vidro, em cima das manchas azuis: mais escuros, senão o contraste reprova */
-  --apagado-fora: #39414d;
+  --apagado-fora: #353d48;
   --marca-fora: #1c2c86;
   /* sombra em três camadas, tingida de azul: perto, média e longe (é o que dá a sensação de flutuar) */
   --sombra: 0 1px 1px rgba(20,25,34,.04), 0 6px 14px -6px rgba(20,25,34,.08), 0 28px 56px -28px rgba(20,25,34,.20);
@@ -123,13 +123,14 @@ html { scroll-padding-top: 92px; }
 /* formulário */
 .formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
 /* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
-.formulario select, .formulario input, .resolver select, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
+.formulario select, .formulario input, .resolver select, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 .formulario .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
 .formulario .botao { align-self: flex-start; }
 .erro { border-radius: var(--raio-m); background: var(--lacre); color: var(--vermelho); padding: 12px 14px; font-weight: 600; }
 /* recado bom (conta criada, saiu): o mesmo formato do erro, na cor da marca */
+.recado a { color: inherit; }
 .recado { border-radius: var(--raio-m); background: var(--campo-fundo); color: var(--marca); padding: 12px 14px; font-weight: 600; }
 .formulario a { color: var(--marca); font-weight: 600; }
 /* o formulário logo depois de uma lista (Empresas) */
@@ -196,7 +197,7 @@ html { scroll-padding-top: 92px; }
 .lista li + li { border-top: 1px solid var(--fio); }
 /* a linha inteira é o link: alvo grande para o dedo e para o mouse */
 .lista a { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 10px 12px; border-radius: 18px; text-decoration: none; color: var(--texto); }
-.lista a strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.lista a strong, .lista .linha strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .lista .quando { margin-left: auto; font-size: 13.5px; color: var(--apagado); white-space: nowrap; }
 @media (hover: hover) { .lista a:hover { background: var(--campo-fundo); } }
 .vazio { padding: 22px; max-width: 560px; color: var(--apagado); }
