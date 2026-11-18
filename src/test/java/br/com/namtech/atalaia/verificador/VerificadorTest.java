@@ -206,6 +206,9 @@ class VerificadorTest {
         Verificador verificador = new Verificador();
         assertThat(verificador.falaEmObrigacao(
                 "O portal ficará fora do ar no sábado. A taxa de R$ 10,00 não muda.")).isFalse();
+        //palavra comum que só contem um sinal por dentro tambem nao conta
+        assertThat(verificador.falaEmObrigacao(
+                "A solicitação foi recebida e o documento solicitado sai simultaneamente.")).isFalse();
     }
 
     @Test

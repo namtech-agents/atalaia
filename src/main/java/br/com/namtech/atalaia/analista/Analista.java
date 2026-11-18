@@ -2,7 +2,6 @@ package br.com.namtech.atalaia.analista;
 
 import java.text.Normalizer;
 import java.util.List;
-import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,14 +118,19 @@ public class Analista {
         }
 
         List<DadoExtraido> dados = lida.dados() == null ? List.of() : lida.dados();
-        //Um item vazio no meio da lista ("dados": [null]) quebraria o Verificador mais adiante
-        if (dados.stream().anyMatch(Objects::isNull)) {
+        //Um item vazio no meio da lista ("dados": [null] ou [{}]) quebraria o Verificador e a tela mais adiante
+        if (dados.stream().anyMatch(Analista::vazio)) {
             return paraRevisao(FORA_DO_FORMATO);
         }
         if (!"alta".equals(lida.confianca())) {
             return new Analise(lida.tipo(), dados, true, "A IA ficou em dúvida sobre o tipo do documento.");
         }
         return new Analise(lida.tipo(), dados, false, null);
+    }
+
+    //Vazio: o item nao veio, ou veio sem nenhum dos tres campos
+    private static boolean vazio(DadoExtraido dado) {
+        return dado == null || (dado.campo() == null && dado.valor() == null && dado.trecho() == null);
     }
 
     private Analise paraRevisao(String motivo) {

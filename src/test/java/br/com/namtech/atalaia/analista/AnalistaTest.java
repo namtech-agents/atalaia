@@ -143,6 +143,20 @@ class AnalistaTest {
     }
 
     @Test
+    void itemSemNenhumCampoNaListaDeDadosMandaParaRevisao() {
+        //Arrumar: no meio da lista veio um item sem campo, valor nem trecho
+        ModeloDeIA ia = pergunta -> "{\"tipo\": \"INTIMACAO\", \"confianca\": \"alta\", \"dados\": "
+                + "[{\"campo\": \"prazo\", \"valor\": \"30 dias\", \"trecho\": \"Prazo: 30 dias\"}, {}]}";
+
+        //Agir: pede a analise
+        Analise analise = new Analista(ia).analisar(TEXTO);
+
+        //Conferir: vai para revisao, sem passar a lista adiante
+        assertThat(analise.precisaDeRevisao()).isTrue();
+        assertThat(analise.dados()).isEmpty();
+    }
+
+    @Test
     void respostaComCaractereNuloMandaParaRevisao() {
         //Arrumar: a IA pos um caractere nulo no valor (o banco nao consegue guardar)
         ModeloDeIA ia = pergunta -> "{\"tipo\": \"INTIMACAO\", \"confianca\": \"alta\", \"dados\": "
