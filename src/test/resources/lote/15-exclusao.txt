@@ -1,0 +1,9 @@
+DOCUMENTO DE TESTE (INVENTADO) - sem valor legal
+
+PREFEITURA DE VILA EXEMPLO
+Ato de exclusão do Programa de Parcelamento Incentivado
+Contribuinte: Oficina Roda Viva (exemplo)
+
+Fica o contribuinte excluído do Programa de Parcelamento Incentivado, por atraso de três parcelas seguidas.
+Saldo devedor restabelecido: R$ 9.310,00.
+Cabe recurso em 10 dias.
