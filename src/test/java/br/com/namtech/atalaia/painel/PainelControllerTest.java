@@ -81,8 +81,9 @@ class PainelControllerTest {
         //Agir: abre a tela inicial
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
 
-        //Conferir: ela aparece só no grupo das resolvidas, com o desfecho
-        assertThat(pagina).doesNotContain("Precisa de gente").contains("Nada precisa de gente", "Arquivado");
+        //Conferir: ela aparece só no grupo das resolvidas, com o desfecho e a data em que foi resolvida
+        assertThat(pagina).doesNotContain("Precisa de gente", "Recebida em")
+                .contains("Nada precisa de gente", "Desfecho: Arquivado", "Resolvida em");
         assertThat(pagina.indexOf("/notificacoes/" + resolvida.getId() + "\""))
                 .isGreaterThan(pagina.indexOf("Resolvidas"));
     }

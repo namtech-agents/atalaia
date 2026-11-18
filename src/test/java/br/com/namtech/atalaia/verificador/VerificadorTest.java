@@ -45,7 +45,7 @@ class VerificadorTest {
 
         //Conferir: vai para revisao e diz qual dado nao bateu
         assertThat(resultado.precisaDeRevisao()).isTrue();
-        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"prazo\" não está no texto do PDF.");
+        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"Prazo\" não está no texto do PDF.");
     }
 
     @Test
@@ -60,7 +60,7 @@ class VerificadorTest {
         //Conferir: vai para revisao e diz que o valor nao saiu daquele trecho
         assertThat(resultado.precisaDeRevisao()).isTrue();
         assertThat(resultado.motivos()).containsExactly(
-                "O valor do dado \"prazo\" não aparece no trecho de onde ele diz ter saído.");
+                "O valor do dado \"Prazo\" não aparece no trecho de onde ele diz ter saído.");
     }
 
     @Test
@@ -88,7 +88,7 @@ class VerificadorTest {
 
         //Conferir: vai para revisao
         assertThat(resultado.precisaDeRevisao()).isTrue();
-        assertThat(resultado.motivos()).containsExactly("O dado \"valor\" veio sem valor ou sem trecho.");
+        assertThat(resultado.motivos()).containsExactly("O dado \"Valor\" veio sem valor ou sem trecho.");
     }
 
     @Test
@@ -103,8 +103,8 @@ class VerificadorTest {
 
         //Conferir: os dois sao rejeitados
         assertThat(resultado.motivos()).containsExactly(
-                "O valor do dado \"prazo\" não aparece no trecho de onde ele diz ter saído.",
-                "O valor do dado \"valor\" não aparece no trecho de onde ele diz ter saído.");
+                "O valor do dado \"Prazo\" não aparece no trecho de onde ele diz ter saído.",
+                "O valor do dado \"Valor\" não aparece no trecho de onde ele diz ter saído.");
     }
 
     @Test
@@ -117,7 +117,7 @@ class VerificadorTest {
         ResultadoVerificacao resultado = verificador.conferir("Prazo: 130 dias", List.of(prazo));
 
         //Conferir: vai para revisao
-        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"prazo\" não está no texto do PDF.");
+        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"Prazo\" não está no texto do PDF.");
     }
 
     @Test
@@ -160,9 +160,9 @@ class VerificadorTest {
 
         //Conferir: os tres sao rejeitados
         assertThat(resultado.motivos()).containsExactly(
-                "O dado \"prazo\" veio sem valor ou sem trecho.",
-                "O dado \"valor\" veio sem valor ou sem trecho.",
-                "O dado \"tributo\" veio sem valor ou sem trecho.");
+                "O dado \"Prazo\" veio sem valor ou sem trecho.",
+                "O dado \"Valor\" veio sem valor ou sem trecho.",
+                "O dado \"Tributo\" veio sem valor ou sem trecho.");
     }
 
     @Test
@@ -177,7 +177,7 @@ class VerificadorTest {
 
         //Conferir: vai para revisao, e o unico motivo é o do dado ruim
         assertThat(resultado.precisaDeRevisao()).isTrue();
-        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"tributo\" não está no texto do PDF.");
+        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"Tributo\" não está no texto do PDF.");
     }
 
     @Test

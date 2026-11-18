@@ -39,11 +39,11 @@ public class Verificador {
 
             //Trecho ou valor sem nenhuma letra ou numero "aparece" em qualquer texto, entao é rejeitado antes de procurar
             if (semConteudo(trecho) || semConteudo(valor)) {
-                motivos.add("O dado \"" + dado.campo() + "\" veio sem valor ou sem trecho.");
+                motivos.add("O dado \"" + dado.rotulo() + "\" veio sem valor ou sem trecho.");
             } else if (!contemInteiro(texto, trecho)) {
-                motivos.add("O trecho do dado \"" + dado.campo() + "\" não está no texto do PDF.");
+                motivos.add("O trecho do dado \"" + dado.rotulo() + "\" não está no texto do PDF.");
             } else if (!contemInteiro(trecho, valor)) {
-                motivos.add("O valor do dado \"" + dado.campo() + "\" não aparece no trecho de onde ele diz ter saído.");
+                motivos.add("O valor do dado \"" + dado.rotulo() + "\" não aparece no trecho de onde ele diz ter saído.");
             }
         }
         return new ResultadoVerificacao(!motivos.isEmpty(), motivos);

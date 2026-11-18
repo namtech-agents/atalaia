@@ -46,8 +46,8 @@
           <!-- Só com tudo conferido: dado que o Verificador reprovou não aparece na tela -->
           <dl class="dados" th:unless="${notificacao.precisaDeRevisao or dados.isEmpty()}">
             <div th:each="dado : ${dados}">
-              <!-- a IA escreve o nome do campo com sublinhado (numero_do_processo): na tela vira espaço -->
-              <dt th:text="${#strings.replace(dado.campo, '_', ' ')}"></dt>
+              <!-- rotulo(): o nome do campo como a tela mostra ("Número do processo"), não como a IA escreve -->
+              <dt th:text="${dado.rotulo()}"></dt>
               <dd>
                 <span th:text="${dado.valor}"></span>
                 <q th:text="${dado.trecho}"></q>

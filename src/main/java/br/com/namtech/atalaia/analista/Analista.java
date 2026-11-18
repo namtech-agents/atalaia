@@ -45,7 +45,7 @@ public class Analista {
 
             "dados" traz o que estiver escrito no documento, entre estes campos:
             "valor" (valor em dinheiro), "tributo" (nome do tributo), "numero_do_processo",
-            "parte" (um item para cada parte: quem enviou e quem recebe) e "prazo" (ex.: "30 dias").
+            "remetente" (quem enviou o documento), "destinatario" (quem recebe) e "prazo" (ex.: "30 dias").
             Regras dos dados:
             - "trecho" é a frase do documento de onde o dado saiu, copiada letra por letra, sem corrigir nem resumir.
             - "valor" é copiado do trecho, letra por letra, inteiro (ex.: "R$ 1.250,00", não "1250").
