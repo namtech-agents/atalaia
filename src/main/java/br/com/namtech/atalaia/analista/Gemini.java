@@ -10,7 +10,7 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 public class Gemini implements ModeloDeIA {
 
     //O nome do modelo fica num lugar só: quando o Google trocar, muda aqui
-    private static final String MODELO = "gemini-2.5-flash";
+    private static final String MODELO = "gemini-3.5-flash-lite";
 
     private final ChatModel modelo;
 
@@ -19,11 +19,9 @@ public class Gemini implements ModeloDeIA {
         this.modelo = GoogleAiGeminiChatModel.builder()
                 .apiKey(chave)
                 .modelName(MODELO)
-                //Temperatura zero: a mesma pergunta da a mesma resposta, sem "criatividade"
-                .temperature(0.0)
                 //Obriga a resposta a ser um JSON, sem texto em volta
                 .responseFormat(ResponseFormat.JSON)
-                //Se a IA demorar mais que isso, desiste (e o caso vai para uma pessoa)
+                //Cada tentativa espera no maximo isso; a biblioteca tenta de novo sozinha algumas vezes antes de desistir
                 .timeout(Duration.ofSeconds(60))
                 .build();
     }

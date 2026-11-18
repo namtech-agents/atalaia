@@ -32,8 +32,11 @@ class LoteDoAnalistaTest {
         Verificador verificador = new Verificador();
         List<Path> documentos;
         try (Stream<Path> pasta = Files.list(Path.of("src/test/resources/lote"))) {
-            documentos = pasta.sorted().toList();
+            //So os .txt: o Mac cria arquivos escondidos na pasta (.DS_Store) que nao sao documentos
+            documentos = pasta.filter(arquivo -> arquivo.toString().endsWith(".txt")).sorted().toList();
         }
+        //Confere a quantidade antes de gastar as chamadas
+        assertThat(documentos).hasSize(20);
 
         //Agir: analisa e confere um por um, contando os acertos
         int tiposCertos = 0;
@@ -62,7 +65,6 @@ class LoteDoAnalistaTest {
                 + " | Sem revisão: " + semRevisao + " de " + documentos.size());
 
         //Conferir: US10 pede 9 em cada 10 no tipo (18 de 20); US11 pede 80% sem revisao (16 de 20)
-        assertThat(documentos).hasSize(20);
         assertThat(tiposCertos).isGreaterThanOrEqualTo(18);
         assertThat(semRevisao).isGreaterThanOrEqualTo(16);
     }
