@@ -75,7 +75,9 @@ public class Analista {
         }
         //Documento que traz as proprias marcas pode estar tentando "fechar" o texto e dar ordens para a IA:
         //nem chega nela, vai direto para uma pessoa
-        if (textoDoDocumento.contains(ABRE) || textoDoDocumento.contains(FECHA)) {
+        //A comparação tira os espaços e ignora maiuscula: "<<< documento" tambem conta
+        String semEspacos = textoDoDocumento.replaceAll("\\s", "").toUpperCase();
+        if (semEspacos.contains(ABRE) || semEspacos.contains(FECHA)) {
             return paraRevisao("O documento contém as marcas que o Atalaia usa para falar com a IA. Não foi analisado.");
         }
 
@@ -90,6 +92,7 @@ public class Analista {
         }
         //A IA tambem pode devolver nada (resposta bloqueada ou cortada)
         if (resposta == null || resposta.isBlank()) {
+            registro.warn("A IA devolveu uma resposta vazia");
             return paraRevisao(NAO_RESPONDEU);
         }
 
@@ -98,6 +101,8 @@ public class Analista {
             lida = json.readValue(resposta, RespostaDaIA.class);
         } catch (JacksonException erro) {
             //Nao é o JSON combinado: conversa em vez de JSON, JSON cortado, tipo que nao é um dos cinco...
+            //O registro nao leva a resposta nem o erro: os dois podem trazer pedaços do documento
+            registro.warn("A resposta da IA veio fora do formato combinado");
             return paraRevisao(FORA_DO_FORMATO);
         }
         if (lida == null || lida.tipo() == null) {

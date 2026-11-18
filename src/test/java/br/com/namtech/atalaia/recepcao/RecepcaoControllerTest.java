@@ -2,6 +2,10 @@ package br.com.namtech.atalaia.recepcao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -16,13 +20,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.namtech.atalaia.analista.ModeloDeIA;
+import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import br.com.namtech.atalaia.verificador.DadoExtraido;
 import jakarta.persistence.EntityManager;
 
 //Sobe a aplicação inteira com o banco de teste. MockMvc: faz os pedidos como um navegador faria, sem abrir um
@@ -45,11 +53,29 @@ class RecepcaoControllerTest {
     @Autowired
     private EntityManager mesa;
 
+    //MockitoBean: troca a IA de verdade por uma de mentira, que responde o que o teste mandar.
+    //Assim os testes nao dependem de internet nem gastam a chave
+    @MockitoBean
+    private ModeloDeIA ia;
+
     private Empresa empresa;
 
     @BeforeEach
     void criaUmaEmpresaInventada() {
         empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+    }
+
+    //Sem outra ordem, a IA de mentira responde certo para o PDF de exemplo: um dado que esta mesmo no texto
+    @BeforeEach
+    void iaRespondeCerto() {
+        iaResponde("30 dias");
+    }
+
+    private void iaResponde(String prazo) {
+        when(ia.responder(anyString())).thenReturn("""
+                {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
+                  {"campo": "prazo", "valor": "%s", "trecho": "Prazo: 30 dias a contar da ciência"}]}
+                """.formatted(prazo));
     }
 
     //Manda para o banco o que esta na mesa e limpa a mesa: a proxima busca le do banco de verdade,
@@ -74,7 +100,7 @@ class RecepcaoControllerTest {
     }
 
     @Test
-    void pdfEnviadoELidoEGuardadoComOOriginal() throws Exception {
+    void pdfEnviadoELidoAnalisadoEGuardadoComOOriginal() throws Exception {
         //Arrumar: o PDF de exemplo com acento
         MockMultipartFile pdf = pdfDeExemplo("notificacao-acentuada.pdf");
 
@@ -89,10 +115,18 @@ class RecepcaoControllerTest {
         assertThat(guardada.isPrecisaDeRevisao()).isFalse();
         assertThat(guardada.getDataLimite()).isNull();
 
-        //Conferir: a pagina da notificação abre com a empresa e o texto, e o PDF original é entregue igual
+        //Conferir: guardou tambem o que o Analista entendeu, com o trecho de onde saiu o dado
+        assertThat(guardada.getTipo()).isEqualTo(TipoDeDocumento.INTIMACAO);
+        assertThat(guardada.getDados())
+                .containsExactly(new DadoExtraido("prazo", "30 dias", "Prazo: 30 dias a contar da ciência"));
+        assertThat(guardada.getMotivosDaRevisao()).isEmpty();
+
+        //Conferir: a pagina da notificação abre com a empresa, o tipo, o dado e o texto, e o PDF original é entregue igual
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Empresa de Teste")))
+                .andExpect(content().string(containsString("Intimação")))
+                .andExpect(content().string(containsString("30 dias")))
                 .andExpect(content().string(containsString("Texto lido")));
         navegador.perform(get("/notificacoes/" + guardada.getId() + "/pdf"))
                 .andExpect(status().isOk())
@@ -109,13 +143,52 @@ class RecepcaoControllerTest {
         navegador.perform(multipart("/enviar").file(pdf).param("empresaId", empresa.getId().toString()))
                 .andExpect(status().is3xxRedirection());
 
-        //Conferir: ficou guardada pedindo revisao, e a pagina avisa
+        //Conferir: ficou guardada pedindo revisao, sem gastar chamada da IA, e a pagina avisa o motivo
         Notificacao guardada = ultimaGuardadaNoBanco();
         assertThat(guardada.isPrecisaDeRevisao()).isTrue();
+        verify(ia, never()).responder(anyString());
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(content().string(containsString("Precisa de gente")))
-                .andExpect(content().string(containsString("Confira o prazo no documento")))
+                .andExpect(content().string(containsString("parece escaneado")))
                 .andExpect(content().string(containsString("Abrir o PDF em outra aba")));
+    }
+
+    @Test
+    void dadoQueNaoEstaNoPdfMandaParaRevisaoComOMotivo() throws Exception {
+        //Arrumar: a IA inventa um prazo que nao esta no documento
+        iaResponde("45 dias");
+
+        //Agir: envia
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o Verificador barrou, a notificação pede revisao e a pagina mostra por que
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isPrecisaDeRevisao()).isTrue();
+        assertThat(guardada.getMotivosDaRevisao()).hasSize(1);
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(content().string(containsString("Por que precisa de gente")))
+                .andExpect(content().string(containsString("não aparece no trecho")));
+    }
+
+    @Test
+    void iaForaDoArNaoImpedeOEnvio() throws Exception {
+        //Arrumar: a IA da erro (sem internet, sem chave, limite estourado)
+        when(ia.responder(anyString())).thenThrow(new IllegalStateException("fora do ar"));
+
+        //Agir: envia
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o PDF ficou guardado do mesmo jeito, sem tipo, pedindo revisao com o motivo
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.getTipo()).isNull();
+        assertThat(guardada.getMotivosDaRevisao()).containsExactly("A IA não respondeu. O documento não foi analisado.");
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("A IA não respondeu")));
     }
 
     @Test

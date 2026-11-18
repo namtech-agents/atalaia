@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,15 +20,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import br.com.namtech.atalaia.analista.Analise;
+import br.com.namtech.atalaia.analista.Analista;
+import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import br.com.namtech.atalaia.verificador.Verificador;
 import jakarta.servlet.http.HttpServletResponse;
 
-//Recepção: a porta de entrada. O escritório envia o PDF de uma notificação e o Atalaia le e guarda
+//Recepção: a porta de entrada. O escritório envia o PDF de uma notificação e o Atalaia le, analisa, confere e guarda
 @Controller
 public class RecepcaoController {
 
@@ -46,11 +52,14 @@ public class RecepcaoController {
     private final EmpresaRepository empresas;
     private final NotificacaoRepository notificacoes;
     private final LeitorPdf leitor = new LeitorPdf();
+    private final Analista analista;
+    private final Verificador verificador = new Verificador();
 
-    //O Spring entrega os dois repositorios prontos quando cria o controller
-    public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes) {
+    //O Spring entrega os dois repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
+    public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes, ModeloDeIA ia) {
         this.empresas = empresas;
         this.notificacoes = notificacoes;
+        this.analista = new Analista(ia);
     }
 
     @GetMapping("/enviar")
@@ -85,8 +94,7 @@ public class RecepcaoController {
                     empresaId, model, resposta);
         }
 
-        Notificacao notificacao = notificacoes.save(
-                new Notificacao(empresa, pdf, leitura.texto(), leitura.precisaDeRevisao()));
+        Notificacao notificacao = notificacoes.save(analisar(empresa, pdf, leitura));
         //Redireciona para a pagina da notificação: recarregar a tela nao envia o arquivo de novo
         return "redirect:/notificacoes/" + notificacao.getId();
     }
@@ -100,6 +108,8 @@ public class RecepcaoController {
         model.addAttribute("notificacao", notificacao);
         model.addAttribute("empresa", notificacao.getEmpresa().getNome());
         model.addAttribute("recebidaEm", DIA_E_HORA.format(notificacao.getRecebidaEm()));
+        //Os dados tambem sao buscados só quando alguem pede: a copia traz todos agora, com a conversa aberta
+        model.addAttribute("dados", List.copyOf(notificacao.getDados()));
         return "notificacao";
     }
 
@@ -116,6 +126,26 @@ public class RecepcaoController {
 
     private Notificacao buscar(Long id) {
         return notificacoes.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    //O caminho do documento depois de lido: Analista (IA) e Verificador (codigo). Cada peça que desconfia
+    //acrescenta o seu motivo; com um motivo que seja, a notificação vai para uma pessoa
+    private Notificacao analisar(Empresa empresa, byte[] pdf, ResultadoLeitura leitura) {
+        if (leitura.precisaDeRevisao()) {
+            //Sem texto nao ha o que mandar para a IA
+            return new Notificacao(empresa, pdf, leitura.texto(), null, List.of(),
+                    List.of("Este PDF não tem texto que dê para ler (parece escaneado)."));
+        }
+        Analise analise = analista.analisar(leitura.texto());
+        List<String> motivos = new ArrayList<>();
+        if (analise.motivo() != null) {
+            motivos.add(analise.motivo());
+        }
+        //So confere os dados se a IA chegou a classificar; senao o motivo dela ja diz tudo
+        if (analise.tipo() != null) {
+            motivos.addAll(verificador.conferir(leitura.texto(), analise.dados()).motivos());
+        }
+        return new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
     }
 
     //Devolve a mensagem para a pessoa, ou null se o arquivo pode seguir
