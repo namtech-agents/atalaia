@@ -15,7 +15,7 @@ public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> 
     //colunas pedidas: o PDF e o texto ficam no banco
     @Query("""
             select new br.com.namtech.atalaia.notificacao.NotificacaoNaLista(
-                n.id, e.nome, n.tipo, n.precisaDeRevisao, n.recebidaEm, n.desfecho)
+                n.id, e.nome, n.tipo, n.precisaDeRevisao, n.recebidaEm, n.desfecho, n.resolvidaEm)
             from Notificacao n join n.empresa e
             order by n.recebidaEm desc, n.id desc
             """)

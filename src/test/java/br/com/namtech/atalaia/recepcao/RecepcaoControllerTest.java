@@ -134,8 +134,8 @@ class RecepcaoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Empresa de Teste")))
                 .andExpect(content().string(containsString("Intimação")))
-                //(o nome do campo so aparece no cartão dos dados; "30 dias" apareceria tambem no texto lido)
-                .andExpect(content().string(containsString("<dt>prazo</dt>")))
+                //(o nome do campo, ja com o rotulo da tela, so aparece no cartão dos dados; "30 dias" apareceria tambem no texto lido)
+                .andExpect(content().string(containsString("<dt>Prazo</dt>")))
                 .andExpect(content().string(containsString("conferido com o texto do PDF")))
                 .andExpect(content().string(containsString("Texto lido")));
         navegador.perform(get("/notificacoes/" + guardada.getId() + "/pdf"))
