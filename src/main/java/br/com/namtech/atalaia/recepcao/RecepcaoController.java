@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import br.com.namtech.atalaia.analista.Analise;
 import br.com.namtech.atalaia.analista.Analista;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
+import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
 import br.com.namtech.atalaia.notificacao.Empresa;
@@ -144,6 +145,10 @@ public class RecepcaoController {
         //So confere os dados se a IA chegou a classificar; senao o motivo dela ja diz tudo
         if (analise.tipo() != null) {
             motivos.addAll(verificador.conferir(leitura.texto(), analise.dados()).motivos());
+        }
+        //"Informativo" é o unico tipo que ninguem precisa responder: se o texto fala em prazo ou multa, uma pessoa confere
+        if (analise.tipo() == TipoDeDocumento.INFORMATIVO && verificador.falaEmObrigacao(leitura.texto())) {
+            motivos.add("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
         }
         return new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
     }

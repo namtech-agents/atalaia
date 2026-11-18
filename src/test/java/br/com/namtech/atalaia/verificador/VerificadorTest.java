@@ -192,6 +192,23 @@ class VerificadorTest {
     }
 
     @Test
+    void textoComPrazoOuIntimacaoFalaEmObrigacao() {
+        //Agir e conferir: maiuscula, acento e quebra de linha no meio nao escondem o sinal
+        Verificador verificador = new Verificador();
+        assertThat(verificador.falaEmObrigacao("Fica a empresa INTIMADA a apresentar os livros.")).isTrue();
+        assertThat(verificador.falaEmObrigacao("Apresente a defesa, sob\npena de revelia.")).isTrue();
+        assertThat(verificador.falaEmObrigacao("PRAZO: 30 dias.")).isTrue();
+    }
+
+    @Test
+    void avisoSemCobrancaNaoFalaEmObrigacao() {
+        //Agir e conferir: um aviso de manutenção, mesmo citando valor, nao tem sinal de obrigação
+        Verificador verificador = new Verificador();
+        assertThat(verificador.falaEmObrigacao(
+                "O portal ficará fora do ar no sábado. A taxa de R$ 10,00 não muda.")).isFalse();
+    }
+
+    @Test
     void confereUmDadoContraOTextoQueOLeitorTirouDoPdf() throws IOException {
         //Arrumar: o Leitor tira o texto do PDF de exemplo
         InputStream arquivo = getClass().getResourceAsStream("/pdfs/notificacao-acentuada.pdf");

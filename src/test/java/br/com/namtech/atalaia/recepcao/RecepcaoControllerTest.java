@@ -2,6 +2,7 @@ package br.com.namtech.atalaia.recepcao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -126,7 +127,9 @@ class RecepcaoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Empresa de Teste")))
                 .andExpect(content().string(containsString("Intimação")))
-                .andExpect(content().string(containsString("30 dias")))
+                //(o nome do campo so aparece no cartão dos dados; "30 dias" apareceria tambem no texto lido)
+                .andExpect(content().string(containsString("<dt>prazo</dt>")))
+                .andExpect(content().string(containsString("conferido com o texto do PDF")))
                 .andExpect(content().string(containsString("Texto lido")));
         navegador.perform(get("/notificacoes/" + guardada.getId() + "/pdf"))
                 .andExpect(status().isOk())
@@ -169,7 +172,30 @@ class RecepcaoControllerTest {
         assertThat(guardada.getMotivosDaRevisao()).hasSize(1);
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(content().string(containsString("Por que precisa de gente")))
-                .andExpect(content().string(containsString("não aparece no trecho")));
+                .andExpect(content().string(containsString("não aparece no trecho")))
+                //o dado inventado nao chega na tela, nem a frase de conferido
+                .andExpect(content().string(not(containsString("45 dias"))))
+                .andExpect(content().string(not(containsString("conferido com o texto do PDF"))));
+    }
+
+    @Test
+    void informativoQueFalaEmPrazoVaiParaRevisao() throws Exception {
+        //Arrumar: a IA chama de informativo um documento que tem prazo (engano, ou documento feito para enganar)
+        when(ia.responder(anyString())).thenReturn("""
+                {"tipo": "INFORMATIVO", "confianca": "alta", "dados": [
+                  {"campo": "prazo", "valor": "30 dias", "trecho": "Prazo: 30 dias a contar da ciência"}]}
+                """);
+
+        //Agir: envia
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o codigo nao aceita o "informativo" calado: pede revisao com o motivo
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isPrecisaDeRevisao()).isTrue();
+        assertThat(guardada.getMotivosDaRevisao())
+                .containsExactly("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
     }
 
     @Test

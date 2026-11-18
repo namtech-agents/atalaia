@@ -1,5 +1,6 @@
 package br.com.namtech.atalaia.analista;
 
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Objects;
 
@@ -75,8 +76,10 @@ public class Analista {
         }
         //Documento que traz as proprias marcas pode estar tentando "fechar" o texto e dar ordens para a IA:
         //nem chega nela, vai direto para uma pessoa
-        //A comparação tira os espaços e ignora maiuscula: "<<< documento" tambem conta
-        String semEspacos = textoDoDocumento.replaceAll("\\s", "").toUpperCase();
+        //A comparação ignora maiuscula e tira tudo que separa sem aparecer: espaços de todo tipo (\p{Z}),
+        //caracteres invisiveis (\p{Cf}) e, com o NFKC, as letras "parecidas". "<<< documento" tambem conta
+        String semEspacos = Normalizer.normalize(textoDoDocumento, Normalizer.Form.NFKC)
+                .replaceAll("[\\s\\p{Z}\\p{Cf}]", "").toUpperCase();
         if (semEspacos.contains(ABRE) || semEspacos.contains(FECHA)) {
             return paraRevisao("O documento contém as marcas que o Atalaia usa para falar com a IA. Não foi analisado.");
         }
@@ -94,6 +97,12 @@ public class Analista {
         if (resposta == null || resposta.isBlank()) {
             registro.warn("A IA devolveu uma resposta vazia");
             return paraRevisao(NAO_RESPONDEU);
+        }
+
+        //O caractere nulo (escrito \u0000 no JSON) nao pode ser guardado no banco: resposta com ele nao serve
+        if (resposta.contains("\\u0000")) {
+            registro.warn("A resposta da IA veio fora do formato combinado");
+            return paraRevisao(FORA_DO_FORMATO);
         }
 
         RespostaDaIA lida;

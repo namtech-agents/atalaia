@@ -34,7 +34,8 @@
           <h2 class="rotulo" id="titulo-tipo">Tipo do documento</h2>
           <strong class="grande" th:text="${notificacao.tipo.nome}"></strong>
           <!-- Cada dado vem com o trecho de onde saiu, para a pessoa conferir sem procurar -->
-          <dl class="dados" th:unless="${dados.isEmpty()}">
+          <!-- Só com tudo conferido: dado que o Verificador reprovou não aparece na tela -->
+          <dl class="dados" th:unless="${notificacao.precisaDeRevisao or dados.isEmpty()}">
             <div th:each="dado : ${dados}">
               <dt th:text="${dado.campo}"></dt>
               <dd>
@@ -43,7 +44,8 @@
               </dd>
             </div>
           </dl>
-          <p class="aviso-ia">Lido por inteligência artificial e conferido com o texto do PDF.</p>
+          <p class="aviso-ia" th:unless="${notificacao.precisaDeRevisao}">Lido por inteligência artificial e conferido com o texto do PDF.</p>
+          <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Tipo sugerido por inteligência artificial, ainda sem conferência. Os dados não aparecem porque o documento foi para revisão.</p>
         </section>
 
         <section class="vidro cartao" aria-labelledby="titulo-prazo">

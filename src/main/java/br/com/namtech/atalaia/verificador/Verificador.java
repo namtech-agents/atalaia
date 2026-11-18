@@ -3,10 +3,23 @@ package br.com.namtech.atalaia.verificador;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 //Confere, só por código, se o que a IA extraiu está mesmo escrito no PDF.
 //Dado cujo trecho nao esta no PDF nao passa daqui; se o trecho fala mesmo daquele campo, quem ve é a pessoa
 public class Verificador {
+
+    //Palavras de documento que cobra uma resposta. Achar uma delas nao diz qual é o tipo: só diz que
+    //"informativo" merece o olho de uma pessoa. (Valor em R$ ficou de fora: informativo tambem fala de valores)
+    private static final Pattern SINAL_DE_OBRIGACAO = Pattern.compile(
+            "prazo|intima|cita[cç][aã]o|citad[oa]|multa|sob pena|penalidade",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    //O tipo quem da é a IA, e o pior erro dela é chamar de "informativo" um documento que tem prazo:
+    //ninguem olharia. Por isso o codigo confere esse caso por conta propria
+    public boolean falaEmObrigacao(String textoDoPdf) {
+        return SINAL_DE_OBRIGACAO.matcher(arrumar(textoDoPdf)).find();
+    }
 
     public ResultadoVerificacao conferir(String textoDoPdf, List<DadoExtraido> dados) {
         List<String> motivos = new ArrayList<>();

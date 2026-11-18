@@ -10,10 +10,17 @@ alter table notificacao add column motivo_da_revisao text;
 -- e quem rejeita dado ruim é o Verificador (com o motivo), não o banco (com um erro)
 create table dado_extraido (
     notificacao_id bigint not null references notificacao (id),
+    -- A posição do dado na lista, para a tela mostrar na mesma ordem em que a IA devolveu
+    ordem          integer not null,
     campo          text,
     valor          text,
     trecho         text
 );
+
+-- O que foi recebido antes desta versão nunca passou pelo Analista: não pode aparecer como conferido
+update notificacao
+   set precisa_de_revisao = true,
+       motivo_da_revisao  = 'Recebida antes da análise automática.';
 
 -- A tela busca os dados de uma notificação
 create index dado_extraido_notificacao_idx on dado_extraido (notificacao_id);
