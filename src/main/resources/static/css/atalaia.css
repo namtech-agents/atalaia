@@ -31,6 +31,9 @@
   --solido: var(--folha);                       /* o que NÃO é vidro: a folha do documento */
   --campo-fundo: rgba(36, 56, 166, .075);
   --marca: var(--azul);
+  /* texto e link que ficam FORA do vidro, em cima das manchas azuis: mais escuros, senão o contraste reprova */
+  --apagado-fora: #39414d;
+  --marca-fora: #1c2c86;
   /* sombra em três camadas, tingida de azul: perto, média e longe (é o que dá a sensação de flutuar) */
   --sombra: 0 1px 1px rgba(20,25,34,.04), 0 6px 14px -6px rgba(20,25,34,.08), 0 28px 56px -28px rgba(20,25,34,.20);
   /* relevo: um fio de luz na borda de cima e um fio de sombra na de baixo, como vidro com espessura */
@@ -54,6 +57,7 @@
     --vidro-borda: rgba(255, 255, 255, .13); --vidro-fora: rgba(0, 0, 0, .4);
     --solido: #1b2130; --campo-fundo: rgba(140, 156, 242, .11);
     --marca: var(--azul-claro);
+    --apagado-fora: var(--apagado); --marca-fora: var(--azul-claro);
     --relevo: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(0,0,0,.25);
     --brilho: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 42%);
     --sombra: 0 1px 0 rgba(255,255,255,.04) inset, 0 18px 40px -18px rgba(0,0,0,.7);
@@ -70,7 +74,7 @@ body {
   color: var(--texto); background: var(--fundo);
   -webkit-font-smoothing: antialiased;
 }
-h1, p { margin: 0; }
+h1, h2, p { margin: 0; }
 button, input, select { font: inherit; color: inherit; }
 a { color: var(--marca); }
 :focus-visible { outline: 2.5px solid var(--marca); outline-offset: 2px; border-radius: 8px; }
@@ -93,16 +97,21 @@ a { color: var(--marca); }
 /* a página: barra em cima e o conteúdo embaixo */
 .pagina { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 .topo { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 12px 0 18px; border-radius: 30px; position: sticky; top: 16px; z-index: 4; }
-.topo .marca { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--texto); margin-right: auto; }
+.topo .marca { display: flex; align-items: center; gap: 10px; height: 44px; text-decoration: none; color: var(--texto); margin-right: auto; }
 .topo .marca img { width: 28px; height: 28px; display: block; }
 .topo .marca span { font: 800 19px/1 "Archivo", system-ui, sans-serif; font-stretch: 84%; letter-spacing: -.02em; }
-.topo .previa { font-size: 12.5px; font-weight: 600; color: var(--apagado); padding: 0 10px; height: 24px; display: inline-flex; align-items: center; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--picote); }
+.topo .previa { white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--apagado); padding: 0 10px; height: 24px; display: inline-flex; align-items: center; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--picote); }
+/* o espaço no começo de um item de caixa flexível some: a distância vem por margem */
+.topo .previa span { margin-left: .3em; }
 
 /* título grande, à moda do iPhone */
 .titulo { padding: 10px 6px 6px; }
-.titulo p { color: var(--apagado); font-weight: 500; font-size: 14px; max-width: 62ch; margin-top: 6px; }
+.titulo p { color: var(--apagado-fora); font-weight: 500; font-size: 14px; max-width: 62ch; margin-top: 6px; }
+/* nome com uma palavra muito comprida quebra no meio em vez de empurrar a página para o lado */
+.titulo h1 span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .titulo h1 { font-size: 34px; line-height: 1.1; letter-spacing: -.025em; font-weight: 700; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.volta { display: inline-block; margin-bottom: 6px; font-weight: 600; text-decoration: none; }
+/* 44px de altura: o mínimo para acertar com o dedo */
+.volta { display: inline-flex; align-items: center; min-height: 44px; color: var(--marca-fora); font-weight: 600; text-decoration: none; }
 
 /* botão */
 .botao { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--texto); cursor: pointer; transition: transform .13s var(--sair); }
@@ -118,7 +127,8 @@ a { color: var(--marca); }
 
 /* formulário */
 .formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
-.formulario select, .formulario input[type="file"] { width: 100%; min-height: 44px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
+/* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
+.formulario select, .formulario input[type="file"] { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 1px 2px rgba(28,44,134,.10); padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 .formulario .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
@@ -128,22 +138,43 @@ a { color: var(--marca); }
 
 /* a notificação: o documento à esquerda, o que o Atalaia leu à direita */
 .dois { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(330px, .8fr); gap: 14px; align-items: start; }
-.mesa { padding: 14px; }
-.mesa iframe { display: block; width: 100%; height: 76vh; min-height: 520px; border: 0; border-radius: 16px; background: var(--solido); }
+/* No HTML o cartão do prazo vem antes do documento (é a ordem em que o teclado e o leitor de tela passam);
+   na tela larga, o order devolve o documento para a esquerda */
+.mesa { padding: 14px; order: -1; }
+/* a moldura ocupa o que sobra da janela (100dvh menos o que fica acima dela), para não haver duas rolagens */
+.mesa iframe { display: block; width: 100%; height: calc(100dvh - 304px); min-height: 320px; border: 0; border-radius: 16px; background: var(--solido); }
+/* quem chega na moldura pelo teclado precisa ver onde está */
+.mesa iframe:focus { outline: 2.5px solid var(--marca); outline-offset: 2px; }
+.mesa .abrir { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-weight: 600; }
 .lado { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 92px; }
 .cartao { padding: 18px; }
 .cartao .grande { display: block; font-size: 24px; line-height: 1.15; letter-spacing: -.02em; font-weight: 700; margin-bottom: 6px; }
 .cartao p { color: var(--apagado); font-size: 14px; }
+/* motivos da revisão: lista simples, um por linha */
+.motivos { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.motivos li + li { margin-top: 4px; }
+/* dados extraídos: nome do campo apagado, valor forte e o trecho do documento embaixo, como citação */
+.dados { margin: 12px 0 0; display: grid; gap: 12px; }
+.dados dt { font-size: 13px; font-weight: 600; color: var(--apagado); text-transform: capitalize; }
+.dados dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.dados q { display: block; margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--picote); font-weight: 400; font-size: 13.5px; color: var(--apagado); quotes: none; }
+.cartao .aviso-ia { margin-top: 12px; font-size: 13px; }
 /* o texto lido: folha sólida (documento não é vidro), respeitando as quebras de linha do PDF */
 .lido { margin-top: 10px; max-height: 320px; overflow: auto; background: var(--solido); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 1000px) {
   .dois { grid-template-columns: 1fr; }
-  .lado { position: static; order: -1; }
+  .lado { position: static; }
+  .mesa { order: 0; }
   .mesa iframe { height: 70vh; }
 }
 @media (max-width: 860px) {
   .pagina { padding: 10px; }
   .titulo h1 { font-size: 28px; }
 }
+/* em tela muito estreita o selo fica só com a primeira palavra */
+@media (max-width: 420px) { .topo .previa span { display: none; } }
+
+/* página de erro */
+.engano { padding: 26px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }

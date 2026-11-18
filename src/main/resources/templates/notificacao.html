@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: cabeca(${empresa})}"></head>
+<head th:replace="~{fragmentos :: cabeca('Notificação · ' + ${empresa} + ' · ' + ${recebidaEm})}"></head>
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
@@ -8,35 +8,65 @@
 
   <main>
     <div class="titulo">
-      <a class="volta" th:href="@{/enviar}">Enviar outra</a>
+      <a class="volta" th:href="@{/enviar}">Enviar outra notificação</a>
       <h1>
         <span th:text="${empresa}"></span>
         <span class="etq atencao" th:if="${notificacao.precisaDeRevisao}">Precisa de gente</span>
-        <span class="etq" th:unless="${notificacao.precisaDeRevisao}">Texto lido</span>
+        <span class="etq" th:unless="${notificacao.precisaDeRevisao}">Lido e conferido</span>
       </h1>
       <p>Recebida em <span class="num" th:text="${recebidaEm}"></span></p>
     </div>
 
     <div class="dois">
-      <!-- O documento original, do jeito que chegou -->
-      <section class="vidro mesa" aria-label="Documento original">
-        <iframe th:src="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" title="PDF original da notificação"></iframe>
-      </section>
-
+      <!-- No HTML o cartão do prazo vem primeiro: quem usa teclado ou leitor de tela recebe a situação antes do PDF.
+           Na tela larga o CSS põe o documento à esquerda -->
       <aside class="lado">
-        <section class="vidro cartao" aria-labelledby="titulo-prazo">
-          <span class="rotulo" id="titulo-prazo">Data limite</span>
-          <strong class="grande">Ainda sem prazo</strong>
-          <p th:if="${notificacao.precisaDeRevisao}">Este PDF não tem texto que dê para ler (parece escaneado). Uma pessoa precisa abrir o documento ao lado e conferir o prazo.</p>
-          <p th:unless="${notificacao.precisaDeRevisao}">O prazo só aparece depois de passar pelas conferências. A extração dos dados e o cálculo entram nas próximas etapas.</p>
+        <!-- Só aparece quando alguma peça desconfiou: diz por que uma pessoa precisa olhar -->
+        <section class="vidro cartao" th:if="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-revisao">
+          <h2 class="rotulo" id="titulo-revisao">Por que precisa de gente</h2>
+          <strong class="grande">Confira no documento original</strong>
+          <ul class="motivos">
+            <li th:each="motivo : ${notificacao.motivosDaRevisao}" th:text="${motivo}"></li>
+          </ul>
         </section>
 
-        <section class="vidro cartao" th:unless="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-lido">
-          <span class="rotulo" id="titulo-lido">Texto lido do PDF</span>
+        <section class="vidro cartao" th:if="${notificacao.tipo != null}" aria-labelledby="titulo-tipo">
+          <h2 class="rotulo" id="titulo-tipo">Tipo do documento</h2>
+          <strong class="grande" th:text="${notificacao.tipo.nome}"></strong>
+          <!-- Cada dado vem com o trecho de onde saiu, para a pessoa conferir sem procurar -->
+          <!-- Só com tudo conferido: dado que o Verificador reprovou não aparece na tela -->
+          <dl class="dados" th:unless="${notificacao.precisaDeRevisao or dados.isEmpty()}">
+            <div th:each="dado : ${dados}">
+              <dt th:text="${dado.campo}"></dt>
+              <dd>
+                <span th:text="${dado.valor}"></span>
+                <q th:text="${dado.trecho}"></q>
+              </dd>
+            </div>
+          </dl>
+          <p class="aviso-ia" th:unless="${notificacao.precisaDeRevisao}">Lido por inteligência artificial e conferido com o texto do PDF.</p>
+          <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Tipo sugerido por inteligência artificial, ainda sem conferência. Os dados não aparecem porque o documento foi para revisão.</p>
+        </section>
+
+        <section class="vidro cartao" aria-labelledby="titulo-prazo">
+          <h2 class="rotulo" id="titulo-prazo">Data limite</h2>
+          <strong class="grande">Ainda sem prazo</strong>
+          <p>O Atalaia só mostra uma data depois que a regra de prazo é conferida na norma. Por enquanto, confira o prazo no documento.</p>
+        </section>
+
+        <section class="vidro cartao" th:unless="${notificacao.texto.isBlank()}">
+          <h2 class="rotulo" id="titulo-lido">Texto lido do PDF</h2>
           <!-- tabindex=0: quem usa só o teclado consegue rolar o texto -->
           <div class="lido" tabindex="0" role="region" aria-labelledby="titulo-lido" th:text="${notificacao.texto}"></div>
         </section>
       </aside>
+
+      <!-- O documento original, do jeito que chegou -->
+      <section class="vidro mesa" aria-label="Documento original">
+        <iframe th:src="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" title="PDF original da notificação"></iframe>
+        <!-- Nem todo navegador mostra PDF dentro da página (no celular quase nenhum): o link sempre funciona -->
+        <a class="abrir" th:href="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" target="_blank" rel="noopener">Abrir o PDF em outra aba</a>
+      </section>
     </div>
   </main>
 </div>

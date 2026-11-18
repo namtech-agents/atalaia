@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<!-- O Spring mostra esta página sozinho quando algo dá errado (endereço que não existe, pedido incompleto, falha).
+     Sem ela, apareceria a página padrão dele, em inglês. -->
+<head th:replace="~{fragmentos :: cabeca(${status == 404} ? 'Página não encontrada' : 'Algo deu errado')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo}"></header>
+
+  <main>
+    <div class="titulo">
+      <h1 th:text="${status == 404} ? 'Página não encontrada' : 'Algo deu errado'"></h1>
+    </div>
+    <section class="vidro engano">
+      <p th:if="${status == 404}">Este endereço não existe no Atalaia. Confira se o link está completo.</p>
+      <p th:unless="${status == 404}">Não foi possível concluir o que você pediu. Tente de novo; se continuar, avise quem cuida do sistema.</p>
+      <a class="botao cheio" th:href="@{/enviar}">Voltar para Enviar notificação</a>
+    </section>
+  </main>
+</div>
+</body>
+</html>
