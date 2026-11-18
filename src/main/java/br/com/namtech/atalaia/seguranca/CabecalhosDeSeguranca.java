@@ -26,7 +26,11 @@ public class CabecalhosDeSeguranca extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest pedido, HttpServletResponse resposta, FilterChain proximo)
             throws ServletException, IOException {
-        resposta.setHeader("Content-Security-Policy", CSP);
+        //A CSP é para pagina HTML. No PDF original ela nao protege nada e poderia atrapalhar
+        //o leitor de PDF do navegador, entao essa rota fica só com os outros cabeçalhos
+        if (!pedido.getRequestURI().endsWith("/pdf")) {
+            resposta.setHeader("Content-Security-Policy", CSP);
+        }
         //O mesmo que o frame-ancestors, para navegador antigo
         resposta.setHeader("X-Frame-Options", "SAMEORIGIN");
         //O navegador confia no tipo que o servidor diz, sem tentar adivinhar pelo conteudo
