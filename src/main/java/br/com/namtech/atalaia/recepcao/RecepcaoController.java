@@ -126,7 +126,9 @@ public class RecepcaoController {
     @Transactional
     public String resolver(@PathVariable Long id, @RequestParam(required = false) Desfecho desfecho,
             @RequestParam(defaultValue = "") String observacao, Model model, HttpServletResponse resposta) {
-        Notificacao notificacao = buscar(id);
+        //Busca trancando a linha: se dois pedidos chegarem juntos, o segundo espera aqui o primeiro gravar
+        Notificacao notificacao = notificacoes.buscarParaAlterar(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         //Ja resolvida (clique duplo, ou a pagina ficou aberta em duas abas): nao troca o que foi registrado
         if (!notificacao.isResolvida()) {
             //O navegador envia cada Enter como dois caracteres (\r\n), mas o limite da tela conta um:
