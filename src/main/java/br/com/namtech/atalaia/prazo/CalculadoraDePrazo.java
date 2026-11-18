@@ -18,7 +18,9 @@ public class CalculadoraDePrazo {
     //Feriados que a calculadora conhece; quem cria a calculadora é que informa
     private final Set<LocalDate> feriados;
 
-    //Relogio de onde sai o "hoje". Vem de fora para o teste poder parar o tempo num dia certo
+    //Relogio de onde sai o "hoje". Vem de fora para o teste poder parar o tempo num dia certo.
+    //Quem ligar a calculadora de verdade usa Clock.system(ZoneId.of("America/Fortaleza")): o "hoje" é o de
+    //Teresina, mesmo com o servidor em outro fuso
     private final Clock relogio;
 
     public CalculadoraDePrazo(Set<LocalDate> feriados, Clock relogio) {

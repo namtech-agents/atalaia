@@ -292,6 +292,16 @@ class CalculadoraDePrazoTest {
     }
 
     @Test
+    void proximaConferenciaEncurtaQuandoOMesDeChegadaEMaisCurto() {
+        //Arrumar: regra conferida em 31 de agosto de 2026; fevereiro de 2027 so vai ate o dia 28
+        RegraDePrazo regra = new RegraDePrazo("Prazo de exemplo", 5, TipoDeContagem.DIAS_UTEIS, false,
+                "Norma de exemplo, art. 1º", LocalDate.of(2026, 8, 31));
+
+        //Agir e conferir: a proxima conferencia cai no ultimo dia do mes, 28 de fevereiro (vence antes, lado seguro)
+        assertThat(regra.proximaConferencia()).isEqualTo(LocalDate.of(2027, 2, 28));
+    }
+
+    @Test
     void recusaPrazoDeZeroDia() {
         //Agir e conferir: criar uma regra de zero dia tem que dar erro na hora
         assertThatThrownBy(() -> regraDeExemplo(0, TipoDeContagem.DIAS_UTEIS, false))
