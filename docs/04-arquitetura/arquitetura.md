@@ -62,7 +62,7 @@ flowchart TB
     subgraph app["Atalaia (Spring Boot, Java 21)"]
         recepcao["Recepção<br/>recebe o PDF e recusa o que não serve"]
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
-        analista["Analista (planejado)<br/>extrai os dados com o trecho de cada um"]
+        analista["Analista<br/>classifica e extrai os dados com o trecho de cada um"]
         verificador["Verificador<br/>confere cada trecho no texto do PDF"]
         calculadora["Calculadora de prazo<br/>conta de dois jeitos, mostra os passos"]
         avisos["Avisos (planejado)<br/>e-mail e Telegram"]
@@ -70,22 +70,23 @@ flowchart TB
     end
 
     banco[("PostgreSQL<br/>tabelas criadas pelo Flyway")]
-    ia["Serviço de IA"]
+    ia["Serviço de IA (Gemini)"]
 
     navegador -->|envia o PDF| recepcao
     recepcao --> leitor
-    leitor -.-> analista
-    analista -.-> ia
-    analista -.-> verificador
+    recepcao --> analista
+    analista --> ia
+    recepcao --> verificador
     verificador -.-> calculadora
     calculadora -.-> avisos
     recepcao --> banco
     leitor -->|PDF sem texto| revisao
-    verificador -.->|dado não bate| revisao
+    analista -->|IA em dúvida ou fora do ar| revisao
+    verificador -->|dado não bate| revisao
     calculadora -.->|contas diferentes ou regra não conferida| revisao
 
     classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
-    class analista,avisos,revisao planejado
+    class avisos,revisao planejado
 ```
 
 Seta cheia: ligação que já funciona. Seta tracejada: a peça existe (ou está planejada), mas a ligação ainda não foi feita.
@@ -95,7 +96,10 @@ Decisões:
 - **A IA nunca calcula prazo.** O prazo sai da Calculadora, que é só `java.time`.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
-- **Peças conversando por eventos** (uma publica "documento lido", a outra escuta): é o plano para quando o Analista entrar. Hoje as ligações que existem são chamadas diretas, porque só há duas.
+- **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
+- **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
+- **O que a IA diz é conferido por código.** Cada dado precisa aparecer no texto do PDF (Verificador), e um "informativo" que fala em prazo, intimação, citação ou multa vai para revisão.
+- **Peças conversando por eventos** (uma publica "documento lido", a outra escuta): fica para quando a análise sair do pedido da tela. Hoje a pessoa espera a resposta da IA com a tela aberta.
 
 ## 3. Classes
 
@@ -158,6 +162,32 @@ classDiagram
             boolean precisaDeRevisao
         }
 
+        class Analista {
+            +analisar(String textoDoDocumento) Analise
+        }
+        class Analise {
+            <<record>>
+            TipoDeDocumento tipo
+            List~DadoExtraido~ dados
+            boolean precisaDeRevisao
+            String motivo
+        }
+        class TipoDeDocumento {
+            <<enumeration>>
+            CITACAO
+            INTIMACAO
+            COBRANCA
+            EXCLUSAO
+            INFORMATIVO
+        }
+        class ModeloDeIA {
+            <<interface>>
+            +responder(String pergunta) String
+        }
+        class Gemini {
+            +responder(String pergunta) String
+        }
+
         class Empresa {
             Long id
             String cnpj
@@ -167,8 +197,11 @@ classDiagram
             Long id
             bytes arquivo
             String texto
+            TipoDeDocumento tipo
+            List~DadoExtraido~ dados
             LocalDate dataLimite
             boolean precisaDeRevisao
+            String motivoDaRevisao
             Instant recebidaEm
         }
 
@@ -187,6 +220,13 @@ classDiagram
     RegraDePrazo --> TipoDeContagem
     Notificacao "*" --> "1" Empresa
     RecepcaoController ..> LeitorPdf : usa
+    RecepcaoController ..> Analista : usa
+    RecepcaoController ..> Verificador : usa
+    Analista ..> ModeloDeIA : pergunta
+    Analista ..> Analise : devolve
+    Analise --> TipoDeDocumento
+    Gemini ..|> ModeloDeIA
+    Notificacao "1" --> "*" DadoExtraido
     RecepcaoController ..> Notificacao : guarda
 ```
 
@@ -200,7 +240,7 @@ sequenceDiagram
     participant Recepcao as Recepção
     participant Leitor
     participant Banco
-    participant Analista as Analista (planejado)
+    participant Analista
     participant IA
     participant Verificador
     participant Calculadora
@@ -211,20 +251,22 @@ sequenceDiagram
     else PDF aceito
         Recepcao->>Leitor: ler(pdf)
         Leitor-->>Recepcao: texto + precisaDeRevisao
-        Recepcao->>Banco: guarda o PDF original e o texto
-        Recepcao-->>Contador: mostra a notificação
+        Recepcao->>Analista: analisar(texto)
+        Analista->>IA: tipo e dados, com o trecho literal de cada um
+        IA-->>Analista: JSON com tipo, confiança e dados
+        Analista-->>Recepcao: tipo + dados + precisaDeRevisao
+        Recepcao->>Verificador: conferir(texto, dados)
+        Verificador-->>Recepcao: motivos de cada dado que não bate
+        Recepcao->>Banco: guarda o PDF, o texto, o tipo, os dados e os motivos
+        Recepcao-->>Contador: mostra a notificação (tipo e dados, ou por que precisa de gente)
     end
 
-    Note over Analista,Calculadora: Daqui para baixo as peças existem, mas a ligação é planejada
+    Note over Verificador,Calculadora: Daqui para baixo a Calculadora existe, mas a ligação é planejada
 
-    Recepcao-->>Analista: documento lido
-    Analista->>IA: extrair os dados, com o trecho literal de cada um
-    IA-->>Analista: dados + trechos
-    Analista-->>Verificador: conferir(texto, dados)
-    alt algum trecho não está no PDF
-        Verificador-->>Contador: precisa de gente, com o motivo
+    alt algum motivo de revisão
+        Recepcao-->>Contador: precisa de gente, com o motivo
     else tudo confere
-        Verificador-->>Calculadora: calcular(regra, ciência)
+        Recepcao-->>Calculadora: calcular(regra, ciência)
         alt contas diferentes ou regra não conferida
             Calculadora-->>Contador: precisa de gente, sem data
         else contas iguais
@@ -240,8 +282,10 @@ stateDiagram-v2
     [*] --> Recebida: PDF aceito
     Recebida --> PrecisaDeGente: PDF sem texto (escaneado)
     Recebida --> Lida: texto tirado do PDF
-    Lida --> PrecisaDeGente: dado não confere, dúvida ou contas diferentes
-    Lida --> ComPrazo: conferências passaram
+    Lida --> PrecisaDeGente: IA em dúvida ou fora do ar, dado não confere
+    Lida --> Conferida: tipo e dados conferidos com o texto
+    Conferida --> PrecisaDeGente: contas diferentes ou regra não conferida
+    Conferida --> ComPrazo: prazo calculado (planejado)
     PrecisaDeGente --> ComPrazo: pessoa confere e confirma
     ComPrazo --> AvisadaAoCliente: link enviado
     AvisadaAoCliente --> Resolvida: caso fechado com o desfecho
@@ -257,6 +301,7 @@ Hoje o código chega até **Lida** ou **Precisa de gente** (pelo aviso `precisaD
 |---|---|
 | `V1__empresa_e_notificacao.sql` | Cria `empresa` (CNPJ único, 14 posições) e `notificacao` (texto lido, data limite, aviso de revisão, quando chegou) |
 | `V2__notificacao_guarda_o_pdf.sql` | A notificação passa a guardar o PDF original |
+| `V3__notificacao_guarda_a_analise.sql` | A notificação passa a guardar o tipo e os motivos da revisão; cria `dado_extraido` (campo, valor, trecho e a ordem de cada dado) |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Empresas inventadas para a prévia |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
