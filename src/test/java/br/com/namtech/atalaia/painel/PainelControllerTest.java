@@ -61,11 +61,28 @@ class PainelControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         //Conferir: os dois grupos aparecem, "precisa de gente" primeiro, cada um com o link da sua notificação
-        assertThat(pagina).contains("Empresa de Teste", "Cobrança", "Sem tipo");
+        assertThat(pagina).contains("Empresa de Teste", "Cobrança", "Sem tipo", "1 notificação");
         assertThat(pagina.indexOf("Precisa de gente")).isLessThan(pagina.indexOf("Lidas e conferidas"));
         assertThat(pagina.indexOf("/notificacoes/" + paraRevisao.getId()))
                 .isBetween(pagina.indexOf("Precisa de gente"), pagina.indexOf("Lidas e conferidas"));
         assertThat(pagina.indexOf("/notificacoes/" + conferida.getId()))
                 .isGreaterThan(pagina.indexOf("Lidas e conferidas"));
+    }
+
+    @Test
+    void listaVemDaMaisNovaParaAMaisAntiga() throws Exception {
+        //Arrumar: duas notificações conferidas da mesma empresa, uma depois da outra
+        Empresa empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+        Notificacao primeira = notificacoes.save(
+                new Notificacao(empresa, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
+        Notificacao segunda = notificacoes.save(
+                new Notificacao(empresa, PDF, "texto", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+
+        //Agir: abre a tela inicial
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: a que chegou por ultimo aparece em cima (aspas no fim: "/notificacoes/1" nao casa com "/notificacoes/10")
+        assertThat(pagina.indexOf("/notificacoes/" + segunda.getId() + "\""))
+                .isLessThan(pagina.indexOf("/notificacoes/" + primeira.getId() + "\""));
     }
 }

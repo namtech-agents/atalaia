@@ -18,14 +18,17 @@
 
     <!-- O que o Atalaia não conseguiu conferir sozinho vem primeiro -->
     <section class="grupo" th:unless="${precisaDeGente.isEmpty()}" aria-labelledby="titulo-gente">
-      <h2 id="titulo-gente">Precisa de gente <span class="conta num" th:text="${precisaDeGente.size()}"></span></h2>
+      <h2 id="titulo-gente">Precisa de gente <span class="conta num" th:text="${precisaDeGente.size() == 1} ? '1 notificação' : ${precisaDeGente.size() + ' notificações'}"></span></h2>
       <ul class="vidro lista">
         <li th:each="linha : ${precisaDeGente}" th:insert="~{:: linha(${linha})}"></li>
       </ul>
     </section>
 
+    <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
+    <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not conferidas.isEmpty()}">Nada precisa de gente agora.</p>
+
     <section class="grupo" th:unless="${conferidas.isEmpty()}" aria-labelledby="titulo-conferidas">
-      <h2 id="titulo-conferidas">Lidas e conferidas <span class="conta num" th:text="${conferidas.size()}"></span></h2>
+      <h2 id="titulo-conferidas">Lidas e conferidas <span class="conta num" th:text="${conferidas.size() == 1} ? '1 notificação' : ${conferidas.size() + ' notificações'}"></span></h2>
       <ul class="vidro lista">
         <li th:each="linha : ${conferidas}" th:insert="~{:: linha(${linha})}"></li>
       </ul>
