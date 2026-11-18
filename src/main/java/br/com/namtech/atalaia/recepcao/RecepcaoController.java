@@ -2,8 +2,6 @@ package br.com.namtech.atalaia.recepcao;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +23,9 @@ import br.com.namtech.atalaia.analista.Analista;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
+import br.com.namtech.atalaia.leitor.PaginasDemais;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
+import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
@@ -43,12 +43,11 @@ public class RecepcaoController {
     //A mesma mensagem serve para as duas travas de tamanho: a daqui e a do servidor (ArquivoGrandeDemais)
     static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.";
 
+    //O tamanho da coluna observacao no banco (V4)
+    static final int OBSERVACAO_MAXIMA = 500;
+
     //Todo PDF começa com estes 5 caracteres. Vale mais que o nome do arquivo, que qualquer um troca
     private static final String ASSINATURA_DE_PDF = "%PDF-";
-
-    //Data e hora como se escreve aqui, no horario de Teresina
-    private static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
-            .withZone(ZoneId.of("America/Fortaleza"));
 
     private final EmpresaRepository empresas;
     private final NotificacaoRepository notificacoes;
@@ -89,6 +88,9 @@ public class RecepcaoController {
         ResultadoLeitura leitura;
         try {
             leitura = leitor.ler(pdf);
+        } catch (PaginasDemais erro) {
+            return recusar("Este PDF tem páginas demais. O limite é " + LeitorPdf.MAXIMO_DE_PAGINAS
+                    + " páginas. Escolha outro arquivo.", empresaId, model, resposta);
         } catch (IOException erro) {
             //Tem a assinatura de PDF mas o PDFBox nao conseguiu abrir: quebrado ou com senha
             return recusar("Não foi possível abrir este PDF. Ele pode estar corrompido ou protegido por senha. Escolha outro arquivo.",
@@ -108,10 +110,44 @@ public class RecepcaoController {
         Notificacao notificacao = buscar(id);
         model.addAttribute("notificacao", notificacao);
         model.addAttribute("empresa", notificacao.getEmpresa().getNome());
-        model.addAttribute("recebidaEm", DIA_E_HORA.format(notificacao.getRecebidaEm()));
+        model.addAttribute("recebidaEm", Notificacao.DIA_E_HORA.format(notificacao.getRecebidaEm()));
         //Os dados tambem sao buscados só quando alguem pede: a copia traz todos agora, com a conversa aberta
         model.addAttribute("dados", List.copyOf(notificacao.getDados()));
+        model.addAttribute("desfechos", Desfecho.values());
+        if (notificacao.isResolvida()) {
+            model.addAttribute("resolvidaEm", Notificacao.DIA_E_HORA.format(notificacao.getResolvidaEm()));
+        }
         return "notificacao";
+    }
+
+    //Marca a notificação como resolvida, com o desfecho e a observação de quem resolveu.
+    //Transactional (sem readOnly): a mudança feita no objeto é gravada no banco quando o metodo termina
+    @PostMapping("/notificacoes/{id}/resolver")
+    @Transactional
+    public String resolver(@PathVariable Long id, @RequestParam(required = false) Desfecho desfecho,
+            @RequestParam(defaultValue = "") String observacao, Model model, HttpServletResponse resposta) {
+        Notificacao notificacao = buscar(id);
+        //Ja resolvida (clique duplo, ou a pagina ficou aberta em duas abas): nao troca o que foi registrado
+        if (!notificacao.isResolvida()) {
+            //O navegador envia cada Enter como dois caracteres (\r\n), mas o limite da tela conta um:
+            //trocando por \n, a conta daqui fica igual a que a pessoa ve
+            String texto = observacao.replace("\r\n", "\n").strip();
+            //Observação sem nenhuma letra ou numero (só espaços, inclusive os invisiveis) nao diz nada
+            boolean semConteudo = texto.codePoints().noneMatch(Character::isLetterOrDigit);
+            if (desfecho == null || semConteudo || texto.length() > OBSERVACAO_MAXIMA) {
+                resposta.setStatus(HttpStatus.BAD_REQUEST.value());
+                //A mensagem fala do campo que falhou, e a tela marca esse campo (campoComErro)
+                model.addAttribute("campoComErro", desfecho == null ? "desfecho" : "observacao");
+                model.addAttribute("erro", desfecho == null ? "Escolha o desfecho."
+                        : "Escreva o que foi feito, em até " + OBSERVACAO_MAXIMA + " letras.");
+                model.addAttribute("observacao", observacao);
+                model.addAttribute("desfechoEscolhido", desfecho);
+                return notificacao(id, model);
+            }
+            notificacao.resolver(desfecho, texto);
+        }
+        //Redireciona: recarregar a tela nao envia o formulario de novo
+        return "redirect:/notificacoes/" + id;
     }
 
     //Entrega o PDF original para a tela mostrar ao lado do texto lido
@@ -119,8 +155,6 @@ public class RecepcaoController {
     public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                //nosniff: o navegador trata como PDF e nada mais, mesmo que o conteudo pareça outra coisa
-                .header("X-Content-Type-Options", "nosniff")
                 .header("Content-Disposition", "inline; filename=\"notificacao-" + id + ".pdf\"")
                 .body(buscar(id).getArquivo());
     }

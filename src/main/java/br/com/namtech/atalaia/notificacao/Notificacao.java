@@ -2,6 +2,8 @@ package br.com.namtech.atalaia.notificacao;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +25,10 @@ import jakarta.persistence.OrderColumn;
 //Notificação: um PDF enviado, com o que o Leitor tirou dele e o que o Analista entendeu. Cada objeto é uma linha da tabela notificacao
 @Entity
 public class Notificacao {
+
+    //Data e hora como se escreve aqui, no horario de Teresina. Serve a todas as telas
+    public static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
+            .withZone(ZoneId.of("America/Fortaleza"));
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -60,6 +66,14 @@ public class Notificacao {
     //Instant: um ponto exato no tempo, sem depender do fuso de quem le
     private Instant recebidaEm;
 
+    //Os tres ficam vazios enquanto o caso esta aberto, e sao preenchidos juntos em resolver()
+    private Instant resolvidaEm;
+
+    @Enumerated(EnumType.STRING)
+    private Desfecho desfecho;
+
+    private String observacao;
+
     protected Notificacao() {
     }
 
@@ -77,6 +91,32 @@ public class Notificacao {
                 ? motivosDaRevisao.stream().map(motivo -> motivo.replaceAll("\\R", " ")).collect(Collectors.joining("\n"))
                 : null;
         this.recebidaEm = Instant.now();
+    }
+
+    //Fecha o caso. Uma notificação só se resolve uma vez: o que foi registrado nao é trocado depois
+    public void resolver(Desfecho desfecho, String observacao) {
+        if (isResolvida()) {
+            throw new IllegalStateException("A notificação " + id + " já foi resolvida");
+        }
+        this.desfecho = desfecho;
+        this.observacao = observacao;
+        this.resolvidaEm = Instant.now();
+    }
+
+    public boolean isResolvida() {
+        return resolvidaEm != null;
+    }
+
+    public Instant getResolvidaEm() {
+        return resolvidaEm;
+    }
+
+    public Desfecho getDesfecho() {
+        return desfecho;
+    }
+
+    public String getObservacao() {
+        return observacao;
     }
 
     public Long getId() {

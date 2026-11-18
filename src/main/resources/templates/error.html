@@ -15,7 +15,7 @@
     <section class="vidro engano">
       <p th:if="${status == 404}">Este endereço não existe no Atalaia. Confira se o link está completo.</p>
       <p th:unless="${status == 404}">Não foi possível concluir o que você pediu. Tente de novo; se continuar, avise quem cuida do sistema.</p>
-      <a class="botao cheio" th:href="@{/enviar}">Voltar para Enviar notificação</a>
+      <a class="botao cheio" th:href="@{/}">Voltar para Notificações</a>
     </section>
   </main>
 </div>

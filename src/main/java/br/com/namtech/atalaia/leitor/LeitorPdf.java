@@ -3,13 +3,29 @@ package br.com.namtech.atalaia.leitor;
 import java.io.IOException;
 
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 
 public class LeitorPdf {
+
+    //Notificação é um documento de poucas paginas. Acima disso é engano ou abuso, e ler tudo custaria memoria e tempo
+    public static final int MAXIMO_DE_PAGINAS = 100;
     private String extrairTexto(byte[] pdf) throws IOException {
         // Abre o PDF; o try fecha o documento sozinho no fim
-        try (PDDocument documento = Loader.loadPDF(pdf)) {
+        //createTempFileOnlyStreamCache: o que o PDFBox precisar guardar enquanto le vai para um arquivo temporario
+        //(apagado no fim), em vez de ocupar a memoria do servidor
+        try (PDDocument documento = Loader.loadPDF(pdf, "", null, null, IOUtils.createTempFileOnlyStreamCache())) {
+            //Conta as paginas uma a uma. O numero que o PDF declara (getNumberOfPages) nao serve:
+            //quem monta o arquivo escreve ali o que quiser
+            int paginas = 0;
+            for (PDPage pagina : documento.getPages()) {
+                paginas++;
+                if (paginas > MAXIMO_DE_PAGINAS) {
+                    throw new PaginasDemais();
+                }
+            }
             PDFTextStripper extrator = new PDFTextStripper();
             return extrator.getText(documento);
         }

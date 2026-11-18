@@ -1,7 +1,13 @@
 package br.com.namtech.atalaia.leitor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -53,5 +59,41 @@ public class LeitorPdfTest {
         assertThat(resultado.texto()).contains("Notificação de lançamento");
         assertThat(resultado.texto()).contains("Prazo: 30 dias a contar da ciência");
         assertThat(resultado.precisaDeRevisao()).isFalse();
+    }
+
+    //Monta na hora um PDF em branco com uma pagina a mais que o limite.
+    //Com "mentindo", o arquivo declara ter uma pagina só (o campo /Count), como faria quem quer burlar o teto
+    public static byte[] pdfComPaginasDemais(boolean mentindo) throws IOException {
+        ByteArrayOutputStream saida = new ByteArrayOutputStream();
+        try (PDDocument documento = new PDDocument()) {
+            for (int pagina = 0; pagina <= LeitorPdf.MAXIMO_DE_PAGINAS; pagina++) {
+                documento.addPage(new PDPage());
+            }
+            if (mentindo) {
+                documento.getPages().getCOSObject().setInt(COSName.COUNT, 1);
+            }
+            documento.save(saida);
+        }
+        return saida.toByteArray();
+    }
+
+    @Test
+    void recusaPdfComPaginasDemais() throws IOException {
+        //Arrumar: um PDF com 101 paginas
+        byte[] pdf = pdfComPaginasDemais(false);
+
+        //Agir e conferir: o leitor recusa antes de tentar ler o texto
+        LeitorPdf leitor = new LeitorPdf();
+        assertThatThrownBy(() -> leitor.ler(pdf)).isInstanceOf(PaginasDemais.class);
+    }
+
+    @Test
+    void recusaPdfQueMenteONumeroDePaginas() throws IOException {
+        //Arrumar: as mesmas 101 paginas, mas o arquivo diz que tem uma
+        byte[] pdf = pdfComPaginasDemais(true);
+
+        //Agir e conferir: o leitor conta de verdade e recusa do mesmo jeito
+        LeitorPdf leitor = new LeitorPdf();
+        assertThatThrownBy(() -> leitor.ler(pdf)).isInstanceOf(PaginasDemais.class);
     }
 }
