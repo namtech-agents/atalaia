@@ -92,6 +92,95 @@ class VerificadorTest {
     }
 
     @Test
+    void valorQueEPedacoDeOutroNumeroMandaParaRevisao() {
+        //Arrumar: "0 dias" esta dentro de "30 dias", e "250,00" dentro de "1.250,00", mas nenhum dos dois é o valor escrito
+        DadoExtraido prazo = new DadoExtraido("prazo", "0 dias", "Prazo: 30 dias a contar da ciência.");
+        DadoExtraido valor = new DadoExtraido("valor", "250,00", "Valor do débito: R$ 1.250,00");
+
+        //Agir: pede a conferencia
+        Verificador verificador = new Verificador();
+        ResultadoVerificacao resultado = verificador.conferir(TEXTO, List.of(prazo, valor));
+
+        //Conferir: os dois sao rejeitados
+        assertThat(resultado.motivos()).containsExactly(
+                "O valor do dado \"prazo\" não aparece no trecho de onde ele diz ter saído.",
+                "O valor do dado \"valor\" não aparece no trecho de onde ele diz ter saído.");
+    }
+
+    @Test
+    void trechoQueEPedacoDeOutroNumeroMandaParaRevisao() {
+        //Arrumar: o documento diz 130 dias; o trecho "30 dias" so existe como pedaço de "130 dias"
+        DadoExtraido prazo = new DadoExtraido("prazo", "30 dias", "30 dias");
+
+        //Agir: pede a conferencia
+        Verificador verificador = new Verificador();
+        ResultadoVerificacao resultado = verificador.conferir("Prazo: 130 dias", List.of(prazo));
+
+        //Conferir: vai para revisao
+        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"prazo\" não está no texto do PDF.");
+    }
+
+    @Test
+    void valorNoFimDaFraseComPontoFinalPassa() {
+        //Arrumar: depois de "30 dias" vem o ponto final da frase, que nao faz parte de numero nenhum
+        DadoExtraido prazo = new DadoExtraido("prazo", "30 dias", "O prazo é de 30 dias.");
+
+        //Agir: pede a conferencia
+        Verificador verificador = new Verificador();
+        ResultadoVerificacao resultado = verificador.conferir("O prazo é de 30 dias. Valor: 10", List.of(prazo));
+
+        //Conferir: passa
+        assertThat(resultado.precisaDeRevisao()).isFalse();
+    }
+
+    @Test
+    void espacoQueNaoQuebraDoPdfNaoAtrapalha() {
+        //Arrumar: no PDF, entre "R$" e o numero vem o espaço que nao quebra (\u00A0); o dado veio com espaço normal
+        String texto = "Valor: R$\u00A01.250,00 devido";
+        DadoExtraido valor = new DadoExtraido("valor", "R$ 1.250,00", "Valor: R$ 1.250,00 devido");
+
+        //Agir: pede a conferencia
+        Verificador verificador = new Verificador();
+        ResultadoVerificacao resultado = verificador.conferir(texto, List.of(valor));
+
+        //Conferir: passa
+        assertThat(resultado.precisaDeRevisao()).isFalse();
+    }
+
+    @Test
+    void dadoSemLetraNemNumeroMandaParaRevisao() {
+        //Arrumar: valor em branco, trecho que nao veio (null) e trecho que é só um espaço invisivel
+        DadoExtraido semValor = new DadoExtraido("prazo", "  ", "Prazo: 30 dias a contar da ciência.");
+        DadoExtraido semTrecho = new DadoExtraido("valor", "R$ 1.250,00", null);
+        DadoExtraido invisivel = new DadoExtraido("tributo", "\u200B", "\u200B");
+
+        //Agir: pede a conferencia
+        Verificador verificador = new Verificador();
+        ResultadoVerificacao resultado = verificador.conferir(TEXTO, List.of(semValor, semTrecho, invisivel));
+
+        //Conferir: os tres sao rejeitados
+        assertThat(resultado.motivos()).containsExactly(
+                "O dado \"prazo\" veio sem valor ou sem trecho.",
+                "O dado \"valor\" veio sem valor ou sem trecho.",
+                "O dado \"tributo\" veio sem valor ou sem trecho.");
+    }
+
+    @Test
+    void umDadoRuimNoMeioDosBonsMandaParaRevisaoSoComOMotivoDele() {
+        //Arrumar: um dado certo e um com o trecho inventado
+        DadoExtraido prazo = new DadoExtraido("prazo", "30 dias", "Prazo: 30 dias a contar da ciência.");
+        DadoExtraido tributo = new DadoExtraido("tributo", "IRPJ", "Tributo: IRPJ");
+
+        //Agir: pede a conferencia
+        Verificador verificador = new Verificador();
+        ResultadoVerificacao resultado = verificador.conferir(TEXTO, List.of(prazo, tributo));
+
+        //Conferir: vai para revisao, e o unico motivo é o do dado ruim
+        assertThat(resultado.precisaDeRevisao()).isTrue();
+        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"tributo\" não está no texto do PDF.");
+    }
+
+    @Test
     void semNenhumDadoMandaParaRevisao() {
         //Agir: pede a conferencia sem nenhum dado extraido
         Verificador verificador = new Verificador();
