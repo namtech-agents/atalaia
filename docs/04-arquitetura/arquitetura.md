@@ -190,7 +190,7 @@ classDiagram
     RecepcaoController ..> Notificacao : guarda
 ```
 
-Os pacotes `notificacao` e `recepcao` chegam com a tela de envio (US07, PR #141).
+No pacote `recepcao` há também a classe `ArquivoGrandeDemais`, que devolve o formulário com a mensagem quando o arquivo passa da trava do servidor.
 
 ## 4. Sequência: do PDF enviado até o prazo
 
@@ -256,8 +256,8 @@ Hoje o código chega até **Lida** ou **Precisa de gente** (pelo aviso `precisaD
 | Arquivo | O que faz |
 |---|---|
 | `V1__empresa_e_notificacao.sql` | Cria `empresa` (CNPJ único, 14 posições) e `notificacao` (texto lido, data limite, aviso de revisão, quando chegou) |
-| `V2__notificacao_guarda_o_pdf.sql` | A notificação passa a guardar o PDF original (PR #141) |
-| `db/exemplo/R__empresas_de_exemplo.sql` | Empresas inventadas para a prévia (PR #141) |
+| `V2__notificacao_guarda_o_pdf.sql` | A notificação passa a guardar o PDF original |
+| `db/exemplo/R__empresas_de_exemplo.sql` | Empresas inventadas para a prévia |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
 
