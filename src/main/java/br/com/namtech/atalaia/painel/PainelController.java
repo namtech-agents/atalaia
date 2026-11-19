@@ -31,9 +31,9 @@ public class PainelController {
 
     public PainelController(NotificacaoRepository notificacoes, EmpresaRepository empresas,
             AvisoAoClienteRepository avisos, Clock relogio) {
-        this.avisos = avisos;
         this.notificacoes = notificacoes;
         this.empresas = empresas;
+        this.avisos = avisos;
         this.relogio = relogio;
     }
 
@@ -57,7 +57,9 @@ public class PainelController {
         model.addAttribute("resolvidas", todas.stream().filter(NotificacaoNaLista::resolvida)
                 .sorted(Comparator.comparing(NotificacaoNaLista::resolvidaEm).reversed()).toList());
         //O aviso ao cliente de cada caso aberto, guardado pelo numero da notificação: a linha da lista mostra
-        //se o cliente ainda nao respondeu ou se ja confirmou. "agora" serve para saber se o link venceu
+        //se o cliente ainda nao respondeu ou se ja confirmou. "agora" serve para saber se o link venceu.
+        //(um, outro) -> um: dois avisos do mesmo caso criados no mesmo instante viriam os dois; fica um só.
+        //Na pratica nao acontece: criar um aviso tranca a notificação, e os pedidos entram em fila
         model.addAttribute("avisos", avisos.dosCasosAbertos(usuario.escritorioId()).stream()
                 .collect(Collectors.toMap(AvisoAoCliente::getNotificacaoId, Function.identity(), (um, outro) -> um)));
         model.addAttribute("agora", Instant.now(relogio));

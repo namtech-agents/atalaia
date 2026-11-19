@@ -60,9 +60,9 @@
     <!-- O prazo, quando já foi calculado: em vermelho se faltam 3 dias ou menos. O texto já diz a situação -->
     <span class="etq num" th:if="${linha.temPrazo()}" th:classappend="${linha.prazoApertado(hoje)} ? 'atencao'" th:text="${linha.prazo(hoje)}"></span>
     <!-- O aviso ao cliente, só em caso aberto (avisos vem do PainelController): aguardando, confirmado ou vencido.
-         Em vermelho quando o escritório precisa agir: link vencido, ou cliente que confirmou marcando a data errada -->
-    <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora)} ? 'atencao'"
-          th:text="${aviso.situacao(agora).nome} + (${aviso.situacao(agora).name() == 'CONFIRMADO' and not aviso.acertouOPrazo()} ? ', com a data errada' : '')"></span>
+         Em vermelho quando o escritório precisa agir; o texto e a regra ficam no AvisoAoCliente (naLista, pedeAtencao) -->
+    <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora, linha.dataLimite)} ? 'atencao'"
+          th:text="${aviso.naLista(agora, linha.dataLimite)}"></span>
     <!-- Caso fechado mostra quando foi resolvido; caso aberto, quando chegou -->
     <span class="quando"><th:block th:text="${linha.resolvida()} ? 'Resolvida em ' : 'Recebida em '"></th:block><span class="num" th:text="${linha.quando}"></span></span>
   </a>

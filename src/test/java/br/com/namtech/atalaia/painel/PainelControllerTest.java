@@ -190,41 +190,71 @@ class PainelControllerTest {
         assertThat(pagina).contains("Vence amanhã").contains("Vence em 20 dias");
     }
 
+    //Um caso aberto, conferido e com data limite daqui a 20 dias, de uma empresa nova do escritório dado
+    private Notificacao casoComPrazo(Escritorio dono, String cnpj, String nomeDaEmpresa) {
+        Notificacao caso = notificacoes.save(new Notificacao(empresas.save(new Empresa(dono, cnpj, nomeDaEmpresa)),
+                PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        caso.registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
+        return caso;
+    }
+
+    private AvisoAoCliente avisoDo(Notificacao caso, String token, Instant criadoEm) {
+        return avisos.save(new AvisoAoCliente(caso, token, "Resumo.", null, "pessoa@escritorio.test", criadoEm));
+    }
+
     @Test
     void listaMostraSeOClienteFoiAvisadoESeJaConfirmou() throws Exception {
-        //Arrumar: quatro casos com prazo. Um sem aviso, um aguardando, um confirmado com a data errada e um com o link vencido
+        //Arrumar: um caso para cada situação do aviso
         Instant agora = Instant.now();
         LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
-        Notificacao[] casos = new Notificacao[4];
-        String[] nomes = { "Empresa Sem Aviso", "Empresa Aguardando", "Empresa Errou", "Empresa Vencida" };
-        for (int i = 0; i < casos.length; i++) {
-            casos[i] = notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "9999900900" + (1000 + i),
-                    nomes[i])), PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
-            casos[i].registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
-        }
-        //No caso que aguarda, um aviso antigo foi substituído: na lista vale o mais novo
-        AvisoAoCliente substituido = avisos.save(new AvisoAoCliente(casos[1], "token-de-teste-antigo", "Resumo.", null,
-                "pessoa@escritorio.test", agora.minusSeconds(60)));
-        substituido.substituir(agora);
-        avisos.save(new AvisoAoCliente(casos[1], "token-de-teste-aguardando", "Resumo.", null,
-                "pessoa@escritorio.test", agora));
-        AvisoAoCliente errou = avisos.save(new AvisoAoCliente(casos[2], "token-de-teste-errou", "Resumo.", null,
-                "pessoa@escritorio.test", agora));
-        errou.confirmar(hoje.plusDays(27), agora);
-        avisos.save(new AvisoAoCliente(casos[3], "token-de-teste-vencido", "Resumo.", null,
-                "pessoa@escritorio.test", agora.minus(31, ChronoUnit.DAYS)));
+        casoComPrazo(escritorio, "99999009001000", "Empresa Sem Aviso");
+        //Um aviso antigo foi substituído: na lista vale o mais novo
+        Notificacao aguardando = casoComPrazo(escritorio, "99999009001001", "Empresa Aguardando");
+        avisoDo(aguardando, "token-de-teste-antigo", agora.minusSeconds(60)).substituir(agora);
+        avisoDo(aguardando, "token-de-teste-aguardando", agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001002", "Empresa Acertou"), "token-de-teste-acertou", agora)
+                .confirmar(hoje.plusDays(20), agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001003", "Empresa Errou"), "token-de-teste-errou", agora)
+                .confirmar(hoje.plusDays(27), agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001004", "Empresa Vencida"), "token-de-teste-vencido",
+                agora.minus(31, ChronoUnit.DAYS));
+        //O cliente confirmou certo, e depois a conta do prazo foi refeita: ele viu outra data
+        Notificacao mudou = casoComPrazo(escritorio, "99999009001005", "Empresa Mudou");
+        avisoDo(mudou, "token-de-teste-mudou", agora).confirmar(hoje.plusDays(20), agora);
+        mudou.registrarPrazo(hoje, hoje.plusDays(13), List.of("Conta refeita."), "pessoa@escritorio.test");
+        //Caso ja resolvido nao mostra o aviso: nao ha mais o que esperar do cliente
+        Notificacao resolvido = casoComPrazo(escritorio, "99999009001006", "Empresa Resolvida");
+        avisoDo(resolvido, "token-de-teste-resolvido", agora);
+        resolvido.resolver(Desfecho.ARQUIVADO, "Arquivado pelo órgão.");
         notificacoes.flush();
 
         //Agir
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
 
-        //Conferir: cada linha diz a situação do aviso; quem pede ação do escritório vem com o alerta
-        assertThat(linhaDa(pagina, "Empresa Sem Aviso")).doesNotContain(">Aguardando o cliente<", ">Cliente confirmou",
+        //Conferir: cada linha diz a situação do aviso; só quem pede ação do escritório vem com o alerta
+        assertThat(linhaDa(pagina, "Empresa Sem Aviso")).doesNotContain(">Aguardando o cliente", ">Cliente confirmou",
                 ">Link vencido");
-        assertThat(linhaDa(pagina, "Empresa Aguardando")).contains(">Aguardando o cliente<")
+        assertThat(linhaDa(pagina, "Empresa Aguardando")).contains("etq\">Aguardando o cliente<")
                 .doesNotContain("Substituído");
+        assertThat(linhaDa(pagina, "Empresa Acertou")).contains("etq\">Cliente confirmou<");
         assertThat(linhaDa(pagina, "Empresa Errou")).contains("etq atencao\">Cliente confirmou, com a data errada<");
         assertThat(linhaDa(pagina, "Empresa Vencida")).contains("etq atencao\">Link vencido sem confirmação<");
+        assertThat(linhaDa(pagina, "Empresa Mudou"))
+                .contains("etq atencao\">Cliente confirmou, mas a data limite mudou<");
+        assertThat(linhaDa(pagina, "Empresa Resolvida")).doesNotContain(">Aguardando o cliente");
+    }
+
+    @Test
+    void buscaDosAvisosDaListaNaoTrazODeOutroEscritorio() {
+        //Arrumar: um aviso neste escritório e outro no vizinho
+        Escritorio vizinho = escritorios.save(new Escritorio("Outro Escritório"));
+        AvisoAoCliente daqui = avisoDo(casoComPrazo(escritorio, "99999009001000", "Empresa Daqui"),
+                "token-de-teste-daqui", Instant.now());
+        avisoDo(casoComPrazo(vizinho, "99999009001001", "Empresa do Vizinho"), "token-de-teste-vizinho", Instant.now());
+
+        //Agir e conferir: cada escritório recebe só o seu
+        assertThat(avisos.dosCasosAbertos(escritorio.getId())).containsExactly(daqui);
     }
 
     //O pedaço da pagina com a linha de uma empresa: do nome dela ate o fim do link
