@@ -43,6 +43,10 @@ public class Empresa {
         return id;
     }
 
+    public Escritorio getEscritorio() {
+        return escritorio;
+    }
+
     public String getCnpj() {
         return cnpj;
     }

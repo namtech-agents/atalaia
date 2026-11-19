@@ -207,3 +207,19 @@ html { scroll-padding-top: 92px; }
 
 /* página de erro */
 .engano { padding: 26px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+
+/* Página do cliente (cliente.html): uma coluna estreita, para ler no celular */
+.pagina.estreita { max-width: 620px; }
+.estreita main { display: flex; flex-direction: column; gap: 14px; }
+/* Quem lê é um leigo no celular: letra de leitura, não de painel */
+.estreita .cartao p, .estreita .motivos { font-size: 16px; }
+.estreita .confirmar .dica { font-size: 14px; }
+.cartao .erro { color: var(--vermelho); margin-top: 10px; }
+.cartao .recado, .estreita .recado { margin: 0; }
+/* A pergunta de conferência: cada data é uma linha inteira que dá para tocar (44px) */
+.confirmar { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.confirmar fieldset { border: 0; margin: 0; padding: 0; width: 100%; }
+.confirmar legend { padding: 0; }
+.confirmar label { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.confirmar input[type="radio"] { width: 20px; height: 20px; margin: 0; accent-color: var(--azul); }
+.confirmar .dica { font-size: 13px; color: var(--apagado); }

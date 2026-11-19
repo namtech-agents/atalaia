@@ -1,5 +1,6 @@
 package br.com.namtech.atalaia.painel;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -11,7 +12,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import br.com.namtech.atalaia.conta.UsuarioLogado;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
-import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoNaLista;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 
@@ -21,10 +21,12 @@ public class PainelController {
 
     private final NotificacaoRepository notificacoes;
     private final EmpresaRepository empresas;
+    private final Clock relogio;
 
-    public PainelController(NotificacaoRepository notificacoes, EmpresaRepository empresas) {
+    public PainelController(NotificacaoRepository notificacoes, EmpresaRepository empresas, Clock relogio) {
         this.notificacoes = notificacoes;
         this.empresas = empresas;
+        this.relogio = relogio;
     }
 
     @GetMapping("/")
@@ -40,7 +42,7 @@ public class PainelController {
                         Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
         //O "hoje" de Teresina, para a lista dizer quantos dias faltam
-        model.addAttribute("hoje", LocalDate.now(Notificacao.TERESINA));
+        model.addAttribute("hoje", LocalDate.now(relogio));
         model.addAttribute("precisaDeGente", abertas.stream().filter(NotificacaoNaLista::precisaDeRevisao).toList());
         model.addAttribute("conferidas", abertas.stream().filter(linha -> !linha.precisaDeRevisao()).toList());
         //As resolvidas mostram a data da resolução, entao a ordem delas segue essa data: a ultima resolvida em cima

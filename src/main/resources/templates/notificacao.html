@@ -105,6 +105,57 @@
           </form>
         </section>
 
+        <!-- O aviso ao cliente: o escritório escreve o resumo e os documentos, o Atalaia gera o link (AvisoController).
+             O cliente abre, responde uma pergunta e confirma: é o registro de ciência -->
+        <section class="vidro cartao" aria-labelledby="titulo-aviso">
+          <h2 class="rotulo" id="titulo-aviso">Aviso ao cliente</h2>
+          <strong class="grande" th:if="${aviso == null}">Cliente ainda não avisado</strong>
+          <p th:if="${aviso == null and notificacao.dataLimite == null and not notificacao.resolvida}">Calcule a data limite primeiro: o aviso leva ela junto.</p>
+
+          <th:block th:if="${aviso != null}">
+            <strong class="grande" th:text="${situacaoDoAviso.nome}"></strong>
+            <!-- O registro de ciência, com o resultado da pergunta de conferência -->
+            <th:block th:if="${situacaoDoAviso.name() == 'CONFIRMADO'}">
+              <p>Registro de ciência em <span class="num" th:text="${aviso.confirmadoEmPorExtenso}"></span>.</p>
+              <p th:if="${aviso.acertouOPrazo()}">Na pergunta de conferência, o cliente marcou a data limite certa.</p>
+              <p class="erro" th:unless="${aviso.acertouOPrazo()}">Na pergunta de conferência, o cliente marcou <span class="num" th:text="${#temporals.format(aviso.resposta, 'dd/MM/yyyy')}"></span>, e a data limite mostrada era <span class="num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></span>. Vale uma ligação.</p>
+            </th:block>
+            <p class="erro" th:if="${prazoMudou}">A data limite mudou depois deste aviso: o cliente viu <span class="num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></span>. Faça um aviso novo.</p>
+            <!-- O link só aparece enquanto ainda confirma -->
+            <div class="resolver" th:if="${situacaoDoAviso.name() == 'AGUARDANDO'}">
+              <div>
+                <label class="rotulo" for="link">Link para mandar ao cliente</label>
+                <input id="link" type="text" readonly th:value="${linkDoAviso}" aria-describedby="dica-link">
+                <p class="dica" id="dica-link">Copie e mande pelo canal que o escritório já usa com o cliente. Vale até <span class="num" th:text="${aviso.valeAtePorExtenso}"></span>.</p>
+              </div>
+            </div>
+            <p class="aviso-ia">Aviso feito por <span th:text="${aviso.criadoPor}"></span> em <span class="num" th:text="${aviso.criadoEmPorExtenso}"></span>. O cliente viu: <q th:text="${aviso.resumo}"></q></p>
+            <!-- Avisos anteriores que o cliente confirmou: o registro de ciência não some quando há um aviso mais novo -->
+            <ul class="motivos" th:unless="${registrosAnteriores.isEmpty()}" aria-label="Registros de ciência de avisos anteriores">
+              <li th:each="antigo : ${registrosAnteriores}">Aviso anterior confirmado em <span class="num" th:text="${antigo.confirmadoEmPorExtenso}"></span>, com a data limite <span class="num" th:text="${#temporals.format(antigo.prazo, 'dd/MM/yyyy')}"></span>.</li>
+            </ul>
+          </th:block>
+
+          <form class="resolver" method="post" th:if="${podeAvisar}" th:action="@{/notificacoes/{id}/aviso(id=${notificacao.id})}">
+            <p class="erro" id="erro-aviso" role="alert" th:if="${erroDoAviso}" th:text="${erroDoAviso}"></p>
+            <div>
+              <label class="rotulo" for="resumo">Resumo para o cliente</label>
+              <textarea id="resumo" name="resumo" rows="4" maxlength="600" required th:text="${resumoDigitado}"
+                        th:attr="aria-invalid=${campoDoAvisoComErro == 'resumo'} ? 'true', aria-describedby=${campoDoAvisoComErro == 'resumo'} ? 'erro-aviso dica-resumo' : 'dica-resumo'"></textarea>
+              <p class="dica" id="dica-resumo">Em palavras simples: o que chegou e o que a empresa precisa fazer. Até 600 letras. A data limite vai junto, sozinha.</p>
+            </div>
+            <div>
+              <label class="rotulo" for="documentos">Documentos que o cliente precisa separar (opcional)</label>
+              <textarea id="documentos" name="documentos" rows="3" maxlength="1000" th:text="${documentosDigitados}"
+                        th:attr="aria-invalid=${campoDoAvisoComErro == 'documentos'} ? 'true', aria-describedby=${campoDoAvisoComErro == 'documentos'} ? 'erro-aviso dica-documentos' : 'dica-documentos'"></textarea>
+              <p class="dica" id="dica-documentos">Um por linha.</p>
+            </div>
+            <button class="botao" th:classappend="${aviso == null} ? 'cheio'" type="submit"
+                    th:text="${aviso == null} ? 'Gerar o link do cliente' : 'Fazer um aviso novo'"></button>
+            <p class="dica" th:if="${aviso != null}">O link anterior deixa de valer.</p>
+          </form>
+        </section>
+
         <!-- Fechar o caso: o desfecho e uma observação curta, para todo mundo saber que já foi tratado -->
         <section class="vidro cartao" th:unless="${notificacao.resolvida}" aria-labelledby="titulo-resolver">
           <h2 class="rotulo" id="titulo-resolver">Fechar o caso</h2>

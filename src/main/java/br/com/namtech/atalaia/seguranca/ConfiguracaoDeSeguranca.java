@@ -16,10 +16,11 @@ public class ConfiguracaoDeSeguranca {
     SecurityFilterChain regras(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(pedidos -> pedidos
-                        //Abertos: entrar, criar conta, o que as telas carregam (css, letra, logo), a pagina de erro
-                        //e a saude do sistema. Todo o resto exige sessão
+                        //Abertos: entrar, criar conta, o que as telas carregam (css, letra, logo), a pagina de erro,
+                        //a saude do sistema e a pagina do cliente (/c/ + token: quem abre é o dono da empresa, que nao
+                        //tem conta; o segredo do link é a chave). Todo o resto exige sessão
                         .requestMatchers("/entrar", "/cadastro", "/css/**", "/fontes/**", "/logo/**", "/error",
-                                "/actuator/health")
+                                "/actuator/health", "/c/*")
                         .permitAll()
                         .anyRequest().authenticated())
                 //A tela de entrar é nossa (entrar.html); conferir e-mail e senha é com o Spring Security
