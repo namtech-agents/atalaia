@@ -4,6 +4,7 @@ import java.util.Locale;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -97,7 +98,8 @@ public class EmpresaController {
         Digitado digitado = Digitado.arrumar(nome, cnpj);
         Recusa recusa = conferir(digitado, usuario, empresa.getCnpj());
         if (recusa == null) {
-            //A empresa veio de uma busca com o escritório de quem entrou: o save só grava por cima dela
+            //O save nao leva o escritório: a cerca aqui é a busca acima, com o escritório de quem entrou.
+            //Do formulario só vem nome e CNPJ; o escritório da empresa nunca muda
             empresa.corrigir(digitado.cnpj(), digitado.nome());
             recusa = gravar(empresa);
         }
@@ -109,7 +111,8 @@ public class EmpresaController {
     }
 
     @PostMapping("/empresas/{id}/excluir")
-    public String excluir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
+    public String excluir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id, Model model,
+            HttpServletResponse resposta) {
         int apagadas;
         try {
             apagadas = empresas.excluirSemCasos(id, usuario.escritorioId());
@@ -118,10 +121,13 @@ public class EmpresaController {
             apagadas = 0;
         }
         if (apagadas == 0) {
-            //Nao apagou: ou a empresa nao é deste escritório (ou ja saiu, clique duplo), 404; ou tem casos, 409.
-            //A tela nem mostra o botão para empresa com casos: o 409 só aparece para quem forçou o pedido
-            buscar(id, usuario);
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
+            //Nao apagou: ou a empresa nao é deste escritório (ou ja saiu, clique duplo), e o empresa() abaixo
+            //responde 404; ou ela tem casos. A tela nem mostra o botão para empresa com casos, mas a pagina pode
+            //ter ficado aberta enquanto um colega enviava o primeiro caso: 409 (conflita com os casos) e a mesma
+            //tela, que agora explica por que ela nao sai
+            String tela = empresa(usuario, id, model);
+            resposta.setStatus(HttpStatus.CONFLICT.value());
+            return tela;
         }
         return "redirect:/empresas?excluida";
     }
@@ -160,6 +166,9 @@ public class EmpresaController {
             return null;
         } catch (DataIntegrityViolationException repetida) {
             return new Recusa("cnpj", CNPJ_REPETIDO);
+        } catch (ObjectOptimisticLockingFailureException excluidaNoMeio) {
+            //Correção e exclusão no mesmo instante: a empresa saiu entre a busca e o save. Responde como sumida
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }
 

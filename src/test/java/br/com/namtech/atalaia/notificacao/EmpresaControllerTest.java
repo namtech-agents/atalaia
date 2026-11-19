@@ -157,7 +157,10 @@ class EmpresaControllerTest {
         //Agir e conferir: a oficina não pode ficar com o CNPJ da padaria
         navegador.perform(post("/empresas/" + oficina.getId()).param("nome", "Oficina de Teste").param("cnpj", "99999009000115"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(containsString("já está cadastrado")));
+                .andExpect(content().string(containsString("já está cadastrado")))
+                //o título continua com o nome guardado, e o campo volta com o que a pessoa digitou
+                .andExpect(content().string(containsString("<h1>Oficina de Teste</h1>")))
+                .andExpect(content().string(containsString("value=\"99999009000115\"")));
         assertThat(empresas.findByIdAndEscritorioId(oficina.getId(), escritorio.getId()))
                 .hasValueSatisfying(salva -> assertThat(salva.getCnpj()).isEqualTo("11222333000181"));
     }
@@ -186,10 +189,13 @@ class EmpresaControllerTest {
         //Conferir: a tela de editar não oferece excluir e explica o porquê
         navegador.perform(get("/empresas/" + empresa.getId()))
                 .andExpect(content().string(containsString("tem 1 caso")))
-                .andExpect(content().string(not(containsString("Excluir empresa"))));
+                .andExpect(content().string(not(containsString("Excluir Padaria"))));
 
-        //Agir e conferir: mesmo forçando o pedido, a empresa fica (409: conflita com os casos dela)
-        navegador.perform(post("/empresas/" + empresa.getId() + "/excluir")).andExpect(status().isConflict());
+        //Agir e conferir: com a tela aberta de antes, o pedido chega mesmo assim; a empresa fica (409: conflita
+        //com os casos dela) e a tela explica o porquê
+        navegador.perform(post("/empresas/" + empresa.getId() + "/excluir"))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(containsString("tem 1 caso")));
         assertThat(empresas.findByIdAndEscritorioId(empresa.getId(), escritorio.getId())).isPresent();
     }
 

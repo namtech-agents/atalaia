@@ -30,7 +30,8 @@
       <th:block th:if="${casos == 0}">
         <p>Esta empresa ainda não tem nenhum caso. Se foi cadastrada por engano, pode sair da lista.</p>
         <form method="post" th:action="@{/empresas/{id}/excluir(id=${empresa.id})}">
-          <button class="botao" type="submit">Excluir empresa</button>
+          <!-- O nome no botão: o clique não tem volta, a pessoa vê o que vai sair -->
+          <button class="botao" type="submit" th:text="'Excluir ' + ${empresa.nome}">Excluir empresa</button>
         </form>
       </th:block>
     </section>
