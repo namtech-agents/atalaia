@@ -124,6 +124,21 @@ class RecepcaoControllerTest {
     }
 
     @Test
+    void telaDeEnvioSemEmpresaMostraOCaminhoSemFormulario() throws Exception {
+        //Arrumar: um escritório que ainda nao cadastrou empresa
+        Escritorio novo = escritorios.save(new Escritorio("Escritório Recém-criado"));
+
+        //Agir e conferir: aparece o aviso e o link para cadastrar, e nenhum formulário de envio
+        NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(novo.getId()))
+                .perform(get("/enviar"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Nenhuma empresa cadastrada ainda.")))
+                .andExpect(content().string(containsString("href=\"/empresas\"")))
+                .andExpect(content().string(not(containsString("multipart/form-data"))))
+                .andExpect(content().string(not(containsString("botao-enviar"))));
+    }
+
+    @Test
     void telaDeEnvioMostraAsEmpresasParaEscolher() throws Exception {
         //Agir e conferir: a tela abre e a empresa aparece na lista
         navegador.perform(get("/enviar"))

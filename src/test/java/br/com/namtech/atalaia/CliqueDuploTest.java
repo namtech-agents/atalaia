@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -92,6 +93,10 @@ class CliqueDuploTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Já existe uma conta com este e-mail.")));
 
+        //Conferir: o pedido passou mesmo pela pergunta trocada (se o controller mudar a pergunta, o espião
+        //deixa de agir e a mensagem viria da conferência comum, sem testar o banco)
+        verify(usuarios).existsByEmail("dupla@clique.test");
+
         //Conferir: nada ficou pela metade (o escritório do segundo clique foi desfeito junto com a conta)
         assertThat(banco.contar(Usuario.class)).isEqualTo(contas);
         assertThat(banco.contar(Escritorio.class)).isEqualTo(escritoriosAntes);
@@ -111,6 +116,8 @@ class CliqueDuploTest {
                 //Conferir: o formulário com a mensagem de CNPJ repetido
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Este CNPJ já está cadastrado no escritório.")));
+        //Conferir: o pedido passou mesmo pela pergunta trocada (veja o teste do cadastro)
+        verify(empresas).existsByEscritorioIdAndCnpj(escritorio.getId(), "99999009000115");
         assertThat(banco.contar(Empresa.class)).isEqualTo(antes);
     }
 }
