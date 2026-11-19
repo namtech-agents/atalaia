@@ -1,0 +1,150 @@
+package br.com.namtech.atalaia.aviso;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+
+import br.com.namtech.atalaia.notificacao.Notificacao;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+
+//Um aviso mandado ao cliente: o que ele viu (resumo, prazo e documentos) e o registro de ciência.
+//O que foi mostrado fica copiado aqui e nao muda mais: é isso que da valor ao registro.
+//Uma notificação pode ter varios avisos; o mais novo é o que vale
+@Entity
+public class AvisoAoCliente {
+
+    //O link vale 30 dias: tempo de sobra para o cliente abrir, sem deixar um endereço valendo para sempre
+    static final Duration VALIDADE = Duration.ofDays(30);
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private Notificacao notificacao;
+
+    private String token;
+
+    private String resumo;
+
+    //Um documento por linha. Vazio (null) se o escritório nao pediu nenhum
+    private String documentos;
+
+    private LocalDate prazo;
+
+    private Instant criadoEm;
+
+    //O e-mail de quem fez o aviso
+    private String criadoPor;
+
+    private Instant valeAte;
+
+    private Instant canceladoEm;
+
+    private Instant confirmadoEm;
+
+    //A data que o cliente marcou na pergunta de conferência
+    private LocalDate resposta;
+
+    protected AvisoAoCliente() {
+    }
+
+    //"agora" vem de fora (do relogio de quem chama) para o teste poder criar um aviso antigo
+    public AvisoAoCliente(Notificacao notificacao, String token, String resumo, String documentos, String quem,
+            Instant agora) {
+        this.notificacao = notificacao;
+        this.token = token;
+        this.resumo = resumo;
+        this.documentos = documentos;
+        //Copia a data limite que a notificação tem neste momento: é a que o cliente vai ver
+        this.prazo = notificacao.getDataLimite();
+        this.criadoPor = quem;
+        this.criadoEm = agora;
+        this.valeAte = agora.plus(VALIDADE);
+    }
+
+    public SituacaoDoAviso situacao(Instant agora) {
+        if (confirmadoEm != null) {
+            return SituacaoDoAviso.CONFIRMADO;
+        }
+        if (canceladoEm != null) {
+            return SituacaoDoAviso.SUBSTITUIDO;
+        }
+        return agora.isAfter(valeAte) ? SituacaoDoAviso.VENCIDO : SituacaoDoAviso.AGUARDANDO;
+    }
+
+    //O registro de ciência. Só o aviso que ainda aguarda pode ser confirmado, e uma vez só
+    public void confirmar(LocalDate resposta, Instant agora) {
+        if (situacao(agora) != SituacaoDoAviso.AGUARDANDO) {
+            throw new IllegalStateException("O aviso " + id + " não está aguardando confirmação");
+        }
+        this.resposta = resposta;
+        this.confirmadoEm = agora;
+    }
+
+    //O escritório fez um aviso novo: este link deixa de confirmar. Aviso ja confirmado fica como esta, é registro
+    public void substituir(Instant agora) {
+        if (confirmadoEm == null && canceladoEm == null) {
+            this.canceladoEm = agora;
+        }
+    }
+
+    //A pergunta de conferência: tres datas, uma delas a data limite. O codigo monta, a IA nao participa.
+    //A posição da certa muda de aviso para aviso (sai do token), para "a do meio" nao virar a resposta de sempre
+    public List<LocalDate> opcoesDePrazo() {
+        int semanasAntes = Math.floorMod(token.hashCode(), 3);
+        LocalDate primeira = prazo.minusWeeks(semanasAntes);
+        return List.of(primeira, primeira.plusWeeks(1), primeira.plusWeeks(2));
+    }
+
+    public boolean acertouOPrazo() {
+        return prazo.equals(resposta);
+    }
+
+    public List<String> getListaDeDocumentos() {
+        return documentos == null ? List.of() : documentos.lines().toList();
+    }
+
+    //As datas com hora, ja escritas no horario de Teresina, para as telas
+    public String getCriadoEmPorExtenso() {
+        return Notificacao.DIA_E_HORA.format(criadoEm);
+    }
+
+    public String getValeAtePorExtenso() {
+        return Notificacao.DIA_E_HORA.format(valeAte);
+    }
+
+    public String getConfirmadoEmPorExtenso() {
+        return confirmadoEm == null ? null : Notificacao.DIA_E_HORA.format(confirmadoEm);
+    }
+
+    public Notificacao getNotificacao() {
+        return notificacao;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public String getResumo() {
+        return resumo;
+    }
+
+    public LocalDate getPrazo() {
+        return prazo;
+    }
+
+    public String getCriadoPor() {
+        return criadoPor;
+    }
+
+    public LocalDate getResposta() {
+        return resposta;
+    }
+}

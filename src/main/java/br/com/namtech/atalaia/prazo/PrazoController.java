@@ -31,10 +31,11 @@ public class PrazoController {
     private final RegraCadastradaRepository regras;
     private final Clock relogio;
 
-    public PrazoController(NotificacaoRepository notificacoes, RegraCadastradaRepository regras) {
+    //O relogio é o do Atalaia (AtalaiaApplication), entregue pelo Spring
+    public PrazoController(NotificacaoRepository notificacoes, RegraCadastradaRepository regras, Clock relogio) {
         this.notificacoes = notificacoes;
         this.regras = regras;
-        this.relogio = Clock.system(Notificacao.TERESINA);
+        this.relogio = relogio;
     }
 
     //Transactional: a tranca do buscarParaAlterar dura ate a conta ser gravada, e a gravação é feita no fim do metodo.
