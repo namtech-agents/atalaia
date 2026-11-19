@@ -3,14 +3,18 @@ package br.com.namtech.atalaia.notificacao;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.Repository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import jakarta.persistence.LockModeType;
 
 //Toda busca leva o escritório de quem entrou: é isso que impede um escritório de ver a notificação de outro
-public interface NotificacaoRepository extends JpaRepository<Notificacao, Long> {
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
+//Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
+public interface NotificacaoRepository extends Repository<Notificacao, Long> {
+
+    Notificacao save(Notificacao notificacao);
 
     //A lista da tela inicial, da mais nova para a mais antiga. O "select new" monta cada linha só com as
     //colunas pedidas: o PDF e o texto ficam no banco

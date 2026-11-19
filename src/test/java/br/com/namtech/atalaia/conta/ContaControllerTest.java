@@ -117,7 +117,8 @@ class ContaControllerTest {
 
         //Conferir: só a primeira conta existe
         assertThat(usuarios.existsByEmail("bia@escritorio.test")).isFalse();
-        assertThat(usuarios.findAll()).filteredOn(usuario -> usuario.getEmail().equals("ana@escritorio.test")).hasSize(1);
+        //findByEmail estoura se houver duas "ana" (resultado não único)
+        assertThat(usuarios.findByEmail("ana@escritorio.test")).isPresent();
     }
 
     @Test

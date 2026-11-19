@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
@@ -39,6 +40,10 @@ class PainelControllerTest {
 
     //O navegador de mentira é montado antes de cada teste, ja com a sessão de uma pessoa do escritório de teste
     private MockMvc navegador;
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -115,7 +120,7 @@ class PainelControllerTest {
         avisoDo(casoComPrazo(escritorio, "99999009001001", "Empresa Aguardando"), "token-de-teste-aguardando", agora);
         avisoDo(casoComPrazo(escritorio, "99999009001002", "Empresa Confirmou"), "token-de-teste-confirmou", agora)
                 .confirmar(LocalDate.now(Notificacao.TERESINA).plusDays(20), agora);
-        notificacoes.flush();
+        banco.gravar();
 
         //Agir
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
@@ -141,7 +146,7 @@ class PainelControllerTest {
         Notificacao caso = casoComPrazo(escritorio, "99999009001000", "Empresa Perto");
         LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
         caso.registrarPrazo(hoje, hoje.plusDays(5), List.of("Conta de teste."), "pessoa@escritorio.test");
-        notificacoes.flush();
+        banco.gravar();
 
         //Agir e conferir: o nivel do meio da cor chega na pagina
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
@@ -174,7 +179,7 @@ class PainelControllerTest {
     void filtroDasResolvidasSemNenhumaCaiNasAbertas() throws Exception {
         //Arrumar: um caso aberto e nenhum resolvido
         casoComPrazo(escritorio, "99999009001000", "Empresa Aberta");
-        notificacoes.flush();
+        banco.gravar();
 
         //Agir: alguem abre o filtro das resolvidas por um link antigo
         String pagina = navegador.perform(get("/").param("ver", "resolvidas"))
@@ -236,7 +241,7 @@ class PainelControllerTest {
         longe.registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
         perto.registrarPrazo(hoje, hoje.plusDays(1), List.of("Conta de teste."), "pessoa@escritorio.test");
         //Grava ja: a lista do painel le direto do banco
-        notificacoes.flush();
+        banco.gravar();
 
         //Agir
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
@@ -284,7 +289,7 @@ class PainelControllerTest {
         Notificacao resolvido = casoComPrazo(escritorio, "99999009001006", "Empresa Resolvida");
         avisoDo(resolvido, "token-de-teste-resolvido", agora);
         resolvido.resolver(Desfecho.ARQUIVADO, "Arquivado pelo órgão.");
-        notificacoes.flush();
+        banco.gravar();
 
         //Agir
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();

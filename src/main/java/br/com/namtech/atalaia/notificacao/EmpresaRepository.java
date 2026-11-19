@@ -3,10 +3,14 @@ package br.com.namtech.atalaia.notificacao;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.Repository;
 
-//Repository: o Spring escreve o SQL sozinho a partir do nome do metodo
-public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
+//Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
+//O Spring escreve o SQL sozinho a partir do nome do metodo
+public interface EmpresaRepository extends Repository<Empresa, Long> {
+
+    Empresa save(Empresa empresa);
 
     //Toda busca leva o escritório de quem entrou: é isso que impede um escritório de ver a empresa de outro
 

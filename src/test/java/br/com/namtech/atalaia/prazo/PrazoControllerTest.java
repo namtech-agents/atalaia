@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.conta.Escritorio;
@@ -38,6 +39,10 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 @SpringBootTest
 @Transactional
 class PrazoControllerTest {
+
+    //Para mandar ao banco o que está só na mesa antes de ler direto com SQL
+    @Autowired
+    private BancoDeTeste bancoDeTeste;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -99,7 +104,7 @@ class PrazoControllerTest {
         assertThat(notificacao.getCiencia()).isEqualTo(LocalDate.of(2026, 3, 2));
         assertThat(notificacao.getPrazoCalculadoPor()).isEqualTo("pessoa@escritorio.test");
         //Le direto do banco: prova que gravou de verdade e que a restrição da V8 aceitou a linha
-        notificacoes.flush();
+        bancoDeTeste.gravar();
         assertThat(banco.queryForObject("select data_limite from notificacao where id = ?", LocalDate.class,
                 notificacao.getId())).isEqualTo(LocalDate.of(2026, 3, 9));
         //A tela mostra a data, a regra com o artigo e o aviso dos feriados que nao entram

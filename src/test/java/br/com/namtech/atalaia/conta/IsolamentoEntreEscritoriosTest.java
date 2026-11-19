@@ -9,12 +9,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.support.Repositories;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
@@ -35,6 +41,10 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 @SpringBootTest
 @Transactional
 class IsolamentoEntreEscritoriosTest {
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -113,13 +123,44 @@ class IsolamentoEntreEscritoriosTest {
         //e o teste passaria mesmo sem a proteção), e a contagem de antes
         MockMultipartFile pdf = new MockMultipartFile("arquivo", "teste.pdf", MediaType.APPLICATION_PDF_VALUE,
                 getClass().getResourceAsStream("/pdfs/notificacao-simples.pdf").readAllBytes());
-        long antes = notificacoes.count();
+        long antes = banco.contar(Notificacao.class);
 
         //Agir: envia trocando, no formulario, o numero da empresa pelo da empresa alheia
         deFora.perform(multipart("/enviar").file(pdf).param("empresaId", empresaAlheia.getId().toString()))
                 .andExpect(status().isBadRequest());
 
         //Conferir: nada foi guardado
-        assertThat(notificacoes.count()).isEqualTo(antes);
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
+    }
+
+    //Os únicos métodos de repositório que podem existir sem o escritório, cada um com o seu motivo:
+    //gravar; entrar e criar conta pelo e-mail; a página pública do cliente (o token sorteado é a chave);
+    //e a referência ao escritório de quem entrou (sempre com o id da sessão)
+    private static final Set<String> SEM_ESCRITORIO = Set.of("save", "UsuarioRepository.findByEmail",
+            "UsuarioRepository.existsByEmail", "AvisoAoClienteRepository.findByToken",
+            "AvisoAoClienteRepository.buscarParaConfirmar", "EscritorioRepository.getReferenceById");
+
+    @Test
+    void nenhumRepositorioTemBuscaSemOEscritorio() {
+        //Arrumar: todos os repositórios que o Spring Data montou para o sistema (sete hoje: um a mais ou a menos
+        //quer dizer que a lista mudou e este teste precisa ser olhado)
+        Repositories repositorios = new Repositories(aplicacao);
+        assertThat(repositorios).hasSize(7);
+
+        for (Class<?> entidade : repositorios) {
+            Class<?> repositorio = repositorios.getRequiredRepositoryInformation(entidade).getRepositoryInterface();
+            //Conferir, porta 1: herda só o Repository vazio. Nada de JpaRepository, paginação, Specification
+            //ou Example, que trazem buscas prontas sem o escritório
+            assertThat(repositorio.getInterfaces()).as(repositorio.getSimpleName()).containsExactly(Repository.class);
+            //Conferir, porta 2: todo método escrito no repositório recebe o escritorioId, ou está na lista acima.
+            //Um findAll() escrito à mão compila, mas cai aqui (o nome do parâmetro vem da compilação com -parameters)
+            for (Method metodo : repositorio.getDeclaredMethods()) {
+                String nome = repositorio.getSimpleName() + "." + metodo.getName();
+                boolean levaOEscritorio = Arrays.stream(metodo.getParameters())
+                        .anyMatch(parametro -> parametro.getName().equals("escritorioId"));
+                assertThat(levaOEscritorio || SEM_ESCRITORIO.contains(metodo.getName()) || SEM_ESCRITORIO.contains(nome))
+                        .as(nome).isTrue();
+            }
+        }
     }
 }
