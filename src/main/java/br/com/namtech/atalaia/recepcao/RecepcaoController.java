@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -260,6 +261,32 @@ public class RecepcaoController {
         }
         //Redireciona: recarregar a tela nao envia o formulario de novo
         return "redirect:/notificacoes/" + id;
+    }
+
+    //Reabre um caso resolvido. O desfecho e a observação saem da notificação, mas vão inteiros para o historico:
+    //quem olhar depois ve que o caso foi fechado, com o quê, e quem reabriu.
+    //fechadoEm: o carimbo do fechamento que a pessoa estava vendo na tela (milissegundos desde 1970)
+    @PostMapping("/notificacoes/{id}/reabrir")
+    @Transactional
+    public String reabrir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id,
+            @RequestParam(required = false) Long fechadoEm, RedirectAttributes recado) {
+        //Mesma tranca do resolver: reabrir e resolver ao mesmo tempo esperam um pelo outro
+        Notificacao notificacao = notificacoes.buscarParaAlterar(id, usuario.escritorioId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        //Ja aberto (clique duplo, ou outra aba reabriu antes): nada a fazer
+        if (notificacao.isResolvida()) {
+            //Aba velha: alguem reabriu e fechou de novo depois que esta tela foi aberta. Reabrir agora desfaria
+            //o fechamento novo, que esta pessoa nem viu. Volta para a tela, que mostra o fechamento atual
+            if (fechadoEm == null || fechadoEm != notificacao.getResolvidaEm().toEpochMilli()) {
+                recado.addFlashAttribute("erroDoReabrir", "O caso foi fechado de novo por outra pessoa. Confira antes de reabrir.");
+                return "redirect:/notificacoes/" + id;
+            }
+            historico.registrar(notificacao, usuario.email(), "Reabriu o caso. Desfecho anterior: "
+                    + notificacao.getDesfecho().getNome() + ". Observação: " + notificacao.getObservacao());
+            notificacao.reabrir();
+        }
+        //#titulo-resolver: a página abre direto no formulario de fechar, que acabou de voltar
+        return "redirect:/notificacoes/" + id + "#titulo-resolver";
     }
 
     //Entrega o PDF para a tela mostrar ao lado do texto lido. Se o original trazia scripts, vai a copia sem eles:

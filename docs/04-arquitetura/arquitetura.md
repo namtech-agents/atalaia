@@ -296,6 +296,7 @@ classDiagram
             String prazoCalculadoPor
             +registrarPrazo(LocalDate ciencia, LocalDate dataLimite, List~String~ passos, String quem)
             +resolver(Desfecho desfecho, String observacao)
+            +reabrir()
         }
         class Desfecho {
             <<enumeration>>
@@ -310,6 +311,7 @@ classDiagram
             +enviar(Long empresaId, MultipartFile arquivo)
             +notificacao(Long id)
             +resolver(Long id, Desfecho desfecho, String observacao)
+            +reabrir(Long id)
             +pdf(Long id)
         }
 
@@ -603,10 +605,17 @@ stateDiagram-v2
     AvisadaAoCliente --> Resolvida: caso fechado com o desfecho
     ClienteConfirmou --> Resolvida: caso fechado com o desfecho
     ComPrazo --> Resolvida: caso fechado com o desfecho
+    Resolvida --> PrecisaDeGente: pessoa reabre
+    Resolvida --> Conferida: pessoa reabre
+    Resolvida --> ComPrazo: pessoa reabre
+    Resolvida --> AvisadaAoCliente: pessoa reabre
+    Resolvida --> ClienteConfirmou: pessoa reabre
     Resolvida --> [*]
 ```
 
 O código já percorre todos os estados do desenho.
+
+Reabrir apaga o desfecho, a observação e `resolvidaEm` da notificação, mas antes grava tudo no histórico ("Reabriu o caso. Desfecho anterior: … Observação: …"). Nada do que foi registrado se perde, e o caso pode ser fechado de novo. O caso reaberto volta ao estado que os outros campos dizem (revisão, prazo, aviso mais novo). O formulário manda o carimbo do fechamento que a pessoa viu (`fechadoEm`): se outra pessoa reabriu e fechou de novo nesse meio tempo, o reabrir é recusado, e uma aba velha não desfaz o fechamento novo.
 
 O estado não é uma coluna do banco: sai dos campos da notificação (`precisaDeRevisao`, `dataLimite`, `resolvidaEm`) e do aviso mais novo do caso (`confirmado_em`, `cancelado_em`, `vale_ate`).
 
@@ -712,6 +721,7 @@ erDiagram
 | `V10__notificacao_guarda_o_resumo_sugerido.sql` | A notificação passa a guardar o rascunho do resumo escrito pela IA |
 | `V11__historico_do_caso.sql` | Cria `evento_do_caso`: quando, quem e o que aconteceu em cada caso. Só recebe linhas novas (refazer a conta do prazo não apaga a anterior). Os casos que já existiam ganham o histórico que dá para tirar das colunas |
 | `V12__notificacao_guarda_copia_sem_scripts.sql` | A notificação passa a guardar, só quando o PDF trazia scripts, uma cópia sem eles; é a que a tela mostra (o original continua em `arquivo`) |
+| `V13__historico_cabe_a_observacao.sql` | A frase do histórico passa de 300 para 600 letras: ao reabrir, ela leva o desfecho anterior e a observação inteira (até 500) |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Ficou vazio: com o login, cada escritório cadastra as próprias empresas. O arquivo continua porque o Flyway já registrou o nome dele |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.

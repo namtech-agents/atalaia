@@ -27,6 +27,14 @@
           <h2 class="rotulo" id="titulo-desfecho">Resolvida em <span class="num" th:text="${resolvidaEm}"></span></h2>
           <strong class="grande" th:text="${notificacao.desfecho.nome}"></strong>
           <p class="observacao" th:text="${notificacao.observacao}"></p>
+          <!-- Para corrigir um desfecho marcado errado. O que está acima não se perde: vai para o histórico -->
+          <form class="reabrir" method="post" th:action="@{/notificacoes/{id}/reabrir(id=${notificacao.id})}">
+            <p class="erro" role="alert" th:if="${erroDoReabrir}" th:text="${erroDoReabrir}"></p>
+            <!-- O fechamento que esta tela mostra: se outra pessoa fechar de novo nesse meio tempo, o reabrir é recusado -->
+            <input type="hidden" name="fechadoEm" th:value="${notificacao.resolvidaEm.toEpochMilli()}">
+            <button class="botao" type="submit">Reabrir o caso</button>
+            <p class="dica">O desfecho e a observação ficam guardados no histórico.</p>
+          </form>
         </section>
 
         <!-- Só aparece quando alguma peça desconfiou: diz por que uma pessoa precisa olhar -->
@@ -183,7 +191,7 @@
                         aria-describedby="dica-observacao" th:text="${observacao}"
                         th:autofocus="${campoComErro == 'observacao'}"
                         th:attr="aria-invalid=${campoComErro == 'observacao'} ? 'true', aria-describedby=${campoComErro == 'observacao'} ? 'erro-resolver dica-observacao' : 'dica-observacao'"></textarea>
-              <p class="dica" id="dica-observacao">O que foi feito, em poucas palavras. Até 500 letras. Depois de marcar, não dá para alterar.</p>
+              <p class="dica" id="dica-observacao">O que foi feito, em poucas palavras. Até 500 letras. Se marcar errado, dá para reabrir o caso.</p>
             </div>
             <button class="botao cheio" type="submit">Marcar como resolvida</button>
           </form>
