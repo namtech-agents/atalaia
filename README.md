@@ -39,7 +39,7 @@ A lista do que entra na prévia, do que vem depois e do que foi descartado está
 
 ## Situação
 
-O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, mostrar tudo na tela, listar as notificações (o que precisa de gente primeiro) e marcar um caso como resolvido, com o desfecho. A calculadora de prazo está pronta e testada, mas ainda não aparece na tela: nenhuma regra de prazo entra sem ser conferida na norma. O que falta para o caminho ficar inteiro: ligar o prazo e os avisos.
+O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: criar a conta do escritório e entrar com e-mail e senha, cadastrar as empresas clientes (cada escritório só vê as suas), enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, mostrar tudo na tela, listar as notificações (o que precisa de gente primeiro) e marcar um caso como resolvido, com o desfecho. A calculadora de prazo está pronta e testada, mas ainda não aparece na tela: nenhuma regra de prazo entra sem ser conferida na norma. O que falta para o caminho ficar inteiro: ligar o prazo e os avisos.
 
 Em 10/11 a pesquisa de concorrentes mostrou que só monitorar as caixas já existe. Em 11/11 o rumo mudou para o que vem depois do aviso, e o Canvas, o backlog e este README foram ajustados.
 
@@ -51,7 +51,8 @@ O que já está pronto:
 - Requisitos funcionais e não funcionais ([docs/03-requisitos](docs/03-requisitos/requisitos.md))
 - Backlog com 36 histórias de usuário nas Issues, organizado no Kanban
 - Projeto Spring Boot criado, com banco PostgreSQL e as tabelas criadas pelo Flyway
-- Leitor de PDF, Verificador e Calculadora de prazo, cada um com os seus testes
+- Leitor de PDF, Analista, Verificador e Calculadora de prazo, cada um com os seus testes
+- Login com cadastro do escritório, com teste de que um escritório não vê os dados de outro
 - Arquitetura e diagramas UML ([docs/04-arquitetura](docs/04-arquitetura/arquitetura.md))
 
 Próximos marcos:
@@ -72,9 +73,10 @@ Próximos marcos:
 - Git e GitHub com o Projects
 - PDFBox (ler PDF)
 - Flyway (criar e mudar as tabelas do banco)
+- LangChain4j com o Gemini (a IA que classifica e extrai os dados)
+- Spring Security (login, sessão e a separação entre escritórios)
 
 ### Vão entrar:
-- LangChain4j (a IA, Claude ou Gemini)
 - Spring Mail e Telegram (os avisos)
 - GitHub Actions (Testes automáticos)
 - Docker com um servidor VPS (colocar no ar)
