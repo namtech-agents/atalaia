@@ -11,7 +11,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
@@ -542,8 +544,8 @@ class RecepcaoControllerTest {
                 .param("desfecho", "ARQUIVADO").param("observacao", observacaoLonga))
                 .andExpect(status().is3xxRedirection());
 
-        //Agir: reabre
-        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir"))
+        //Agir: reabre, mandando o carimbo do fechamento que a tela mostrou
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir").param("fechadoEm", carimbo()))
                 .andExpect(status().is3xxRedirection());
 
         //Conferir: o caso voltou a ficar aberto, sem desfecho, e o formulario de fechar aparece de novo.
@@ -556,13 +558,73 @@ class RecepcaoControllerTest {
                 .andExpect(content().string(containsString("Marcar como resolvida")))
                 .andExpect(content().string(not(containsString("Reabrir o caso"))))
                 .andExpect(content().string(containsString(
-                        "Reabriu o caso. Desfecho anterior: Arquivado. Observação: " + observacaoLonga)));
+                        "Reabriu o caso. Desfecho anterior: Arquivado. Observação: " + observacaoLonga)))
+                //e quem reabriu
+                .andExpect(content().string(containsString("pessoa@escritorio.test")));
 
         //e o caso pode ser fechado de novo, com o desfecho certo
         navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
                 .param("desfecho", "MULTA_REDUZIDA").param("observacao", "Corrigido."))
                 .andExpect(status().is3xxRedirection());
         assertThat(ultimaGuardadaNoBanco().getDesfecho()).isEqualTo(Desfecho.MULTA_REDUZIDA);
+    }
+
+    //O carimbo do fechamento atual, como o formulario de reabrir manda
+    private String carimbo() {
+        return String.valueOf(ultimaGuardadaNoBanco().getResolvidaEm().toEpochMilli());
+    }
+
+    @Test
+    void abaVelhaNaoDesfazOFechamentoNovoDeOutraPessoa() throws Exception {
+        //Arrumar: a pessoa A abriu a tela do caso fechado e guardou o carimbo que viu.
+        //Nesse meio tempo, a pessoa B reabriu e fechou de novo, com o desfecho certo
+        Notificacao aberta = notificacaoAberta();
+        aberta.resolver(Desfecho.ARQUIVADO, "Primeiro fechamento.");
+        String carimboQueAViu = String.valueOf(aberta.getResolvidaEm().minusMillis(1000).toEpochMilli());
+
+        //Agir: A clica em reabrir com o carimbo velho (e alguem manda sem carimbo nenhum)
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir").param("fechadoEm", carimboQueAViu))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("erroDoReabrir",
+                        "O caso foi fechado de novo por outra pessoa. Confira antes de reabrir."));
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir"))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o fechamento de B continua valendo, e nada entrou no historico
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isResolvida()).isTrue();
+        assertThat(guardada.getObservacao()).isEqualTo("Primeiro fechamento.");
+        navegador.perform(get("/notificacoes/" + aberta.getId()))
+                .andExpect(content().string(not(containsString("Reabriu o caso"))));
+    }
+
+    @Test
+    void casoReabertoVoltaParaATelaInicialEPodeAvisarOClienteDeNovo() throws Exception {
+        //Arrumar: um caso com a data limite calculada e depois fechado
+        Notificacao aberta = notificacaoAberta();
+        aberta.registrarPrazo(LocalDate.of(2026, 3, 2), LocalDate.of(2026, 3, 9), List.of("Conta de teste."),
+                "pessoa@escritorio.test");
+        aberta.resolver(Desfecho.OUTRO, "Fechado cedo demais.");
+
+        //Agir: reabre
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir").param("fechadoEm", carimbo()))
+                .andExpect(redirectedUrl("/notificacoes/" + aberta.getId() + "#titulo-resolver"));
+
+        //Conferir: a tela inicial lista o caso de novo entre os abertos, o filtro das resolvidas ficou sem ele
+        //(cai nas abertas), e a tela do caso volta a oferecer o link do cliente
+        String inicial = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+        assertThat(inicial).contains("/notificacoes/" + aberta.getId() + "\"");
+        String filtro = navegador.perform(get("/").param("ver", "resolvidas"))
+                .andReturn().getResponse().getContentAsString();
+        //(sem nenhuma resolvida, a tela nem mostra o filtro: lista as abertas, com o caso de volta)
+        assertThat(filtro).contains("/notificacoes/" + aberta.getId() + "\"", "Recebida em").doesNotContain("Desfecho: Outro");
+        navegador.perform(get("/notificacoes/" + aberta.getId()))
+                .andExpect(content().string(containsString("Gerar o link do cliente")));
+        //e a conta do prazo pode ser refeita (com o caso fechado, registrarPrazo recusaria)
+        //(relida do banco: o carimbo() acima desliga o objeto "aberta" da sessão, e ele ficou com o estado antigo)
+        Notificacao reaberta = ultimaGuardadaNoBanco();
+        reaberta.registrarPrazo(LocalDate.of(2026, 3, 3), LocalDate.of(2026, 3, 10), List.of("Refeita."), "pessoa@escritorio.test");
+        assertThat(reaberta.getDataLimite()).isEqualTo(LocalDate.of(2026, 3, 10));
     }
 
     @Test
@@ -574,7 +636,9 @@ class RecepcaoControllerTest {
         //Agir e conferir: a tela oferece reabrir, com o formulario que aponta para a rota certa
         navegador.perform(get("/notificacoes/" + aberta.getId()))
                 .andExpect(content().string(containsString("Reabrir o caso")))
-                .andExpect(content().string(containsString("/notificacoes/" + aberta.getId() + "/reabrir")));
+                .andExpect(content().string(containsString("/notificacoes/" + aberta.getId() + "/reabrir")))
+                .andExpect(content().string(containsString(
+                        "name=\"fechadoEm\" value=\"" + aberta.getResolvidaEm().toEpochMilli() + "\"")));
     }
 
     @Test

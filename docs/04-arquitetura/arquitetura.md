@@ -605,14 +605,17 @@ stateDiagram-v2
     AvisadaAoCliente --> Resolvida: caso fechado com o desfecho
     ClienteConfirmou --> Resolvida: caso fechado com o desfecho
     ComPrazo --> Resolvida: caso fechado com o desfecho
-    Resolvida --> Reaberta: pessoa reabre (desfecho errado ou o caso voltou a andar)
-    Reaberta --> [*]: volta ao estado que os outros campos dizem (PrecisaDeGente, Conferida, ComPrazo...)
+    Resolvida --> PrecisaDeGente: pessoa reabre
+    Resolvida --> Conferida: pessoa reabre
+    Resolvida --> ComPrazo: pessoa reabre
+    Resolvida --> AvisadaAoCliente: pessoa reabre
+    Resolvida --> ClienteConfirmou: pessoa reabre
     Resolvida --> [*]
 ```
 
 O código já percorre todos os estados do desenho.
 
-Reabrir apaga o desfecho, a observação e `resolvidaEm` da notificação, mas antes grava tudo no histórico ("Reabriu o caso. Desfecho anterior: … Observação: …"). Nada do que foi registrado se perde, e o caso pode ser fechado de novo.
+Reabrir apaga o desfecho, a observação e `resolvidaEm` da notificação, mas antes grava tudo no histórico ("Reabriu o caso. Desfecho anterior: … Observação: …"). Nada do que foi registrado se perde, e o caso pode ser fechado de novo. O caso reaberto volta ao estado que os outros campos dizem (revisão, prazo, aviso mais novo). O formulário manda o carimbo do fechamento que a pessoa viu (`fechadoEm`): se outra pessoa reabriu e fechou de novo nesse meio tempo, o reabrir é recusado, e uma aba velha não desfaz o fechamento novo.
 
 O estado não é uma coluna do banco: sai dos campos da notificação (`precisaDeRevisao`, `dataLimite`, `resolvidaEm`) e do aviso mais novo do caso (`confirmado_em`, `cancelado_em`, `vale_ate`).
 

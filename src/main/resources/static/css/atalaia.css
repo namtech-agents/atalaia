@@ -170,7 +170,7 @@ html { scroll-padding-top: 92px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 /* Texto de apoio pequeno: abaixo de um campo ou da moldura do PDF */
-.formulario .dica, .resolver .dica, .mesa .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
+.formulario .dica, .resolver .dica, .reabrir .dica, .mesa .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
 .formulario .botao { align-self: flex-start; }
 .erro { border-radius: var(--raio-m); background: var(--lacre); color: var(--vermelho); padding: 12px 14px; font-weight: 600; }
 /* recado bom (conta criada, saiu): o mesmo formato do erro, na cor da marca */
@@ -236,7 +236,8 @@ html { scroll-padding-top: 92px; }
 .resolver .botao { align-self: flex-start; }
 /* histórico do caso: uma linha por evento, a data em cima, quem fez embaixo em cinza */
 .historico { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-.historico li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+/* pre-wrap: a observação levada ao histórico ao reabrir guarda as quebras de linha que a pessoa digitou */
+.historico li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; white-space: pre-wrap; }
 .historico .quando, .historico .quem { font-size: 13px; color: var(--apagado); }
 .cartao .observacao { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); }
 .reabrir { margin-top: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
