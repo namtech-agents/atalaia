@@ -142,6 +142,7 @@ Decisões:
 - **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
 - **A senha nunca é guardada.** Só o embaralhado dela (bcrypt). Quem confere e-mail e senha é o Spring Security; a sessão anda só pelo cookie, todo formulário leva o código contra pedido forjado (CSRF) e sair é por POST.
 - **Toda resposta sai com cabeçalhos de segurança** (filtro `CabecalhosDeSeguranca`): a página só carrega o que é do próprio Atalaia e não pode ser mostrada dentro de outro site.
+- **Tentar adivinhar senha trava** (filtro `TravaDeTentativas`, conta no `LimiteDeTentativas`): 10 senhas erradas ou 10 cadastros por endereço a cada 15 minutos. A vaga é reservada antes de conferir a senha, numa operação só (uma rajada não passa), e entrar certo devolve a vaga. A conta fica na memória do servidor.
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
 - **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
 - **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
@@ -387,8 +388,16 @@ classDiagram
         +cadastrar(String escritorio, String email, String senha, String senhaRepetida)
     }
     class ConfiguracaoDeSeguranca {
-        +regras(HttpSecurity http) SecurityFilterChain
+        +regras(HttpSecurity http, LimiteDeTentativas limite) SecurityFilterChain
         +embaralhador() PasswordEncoder
+    }
+    class TravaDeTentativas {
+        <<filtro>>
+        #doFilterInternal(pedido, resposta, proximo)
+    }
+    class LimiteDeTentativas {
+        +reservar(String endereco) boolean
+        +devolver(String endereco)
     }
     class EmpresaController {
         +lista()
@@ -409,6 +418,9 @@ classDiagram
     Contas ..> Escritorio : grava
     Contas ..> UsuarioLogado : devolve
     ConfiguracaoDeSeguranca ..> Contas : pergunta quem é
+    ConfiguracaoDeSeguranca ..> TravaDeTentativas : põe antes de conferir a senha
+    TravaDeTentativas ..> LimiteDeTentativas : reserva a vaga
+    ConfiguracaoDeSeguranca ..> LimiteDeTentativas : devolve a vaga ao entrar certo
     EmpresaController ..> UsuarioLogado : recebe
     PainelController ..> UsuarioLogado : recebe
     RecepcaoController ..> UsuarioLogado : recebe
