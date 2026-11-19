@@ -40,10 +40,13 @@ public class ContaController {
     //nao confere), ?saiu e ?travado (a TravaDeTentativas). Aqui cada um vira um sim ou nao para a tela
     @GetMapping("/entrar")
     public String entrar(@RequestParam(required = false) String erro, @RequestParam(required = false) String saiu,
-            @RequestParam(required = false) String travado, Model model) {
+            @RequestParam(required = false) String travado, @RequestParam(required = false) String expirou,
+            Model model) {
         model.addAttribute("erro", erro != null);
         model.addAttribute("saiu", saiu != null);
         model.addAttribute("travado", travado != null);
+        //?expirou: a sessão venceu no meio de um envio de arquivo (ArquivoSoComSessao)
+        model.addAttribute("expirou", expirou != null);
         return "entrar";
     }
 

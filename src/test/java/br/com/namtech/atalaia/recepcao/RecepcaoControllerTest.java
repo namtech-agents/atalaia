@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -42,6 +43,7 @@ import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import br.com.namtech.atalaia.seguranca.LimiteDeTentativas;
 import br.com.namtech.atalaia.verificador.DadoExtraido;
 import jakarta.persistence.EntityManager;
 
@@ -74,6 +76,11 @@ class RecepcaoControllerTest {
     //Assim os testes nao dependem de internet nem gastam a chave
     @MockitoBean
     private ModeloDeIA ia;
+
+    //A conta de envios por escritório, a mesma que o RecepcaoController usa
+    @Autowired
+    @Qualifier("limiteDeEnvios")
+    private LimiteDeTentativas limiteDeEnvios;
 
     private Empresa empresa;
 
@@ -301,6 +308,26 @@ class RecepcaoControllerTest {
                 .andExpect(content().string(containsString("aria-describedby=\"erro-envio dica-arquivo\"")))
                 //a empresa escolhida volta marcada, para a pessoa nao escolher de novo
                 .andExpect(content().string(containsString("selected=\"selected\"")));
+        assertThat(notificacoes.count()).isEqualTo(antes);
+    }
+
+    @Test
+    void escritorioQueEnviouDemaisEmPoucoTempoEsperaSemGastarAIa() throws Exception {
+        //Arrumar: o escritório já gastou todos os envios da janela (cada envio custa uma chamada à IA)
+        while (limiteDeEnvios.reservar(String.valueOf(empresa.getEscritorio().getId()))) {
+            //gasta a próxima vaga
+        }
+        long antes = notificacoes.count();
+
+        //Agir e conferir: o envio seguinte é recusado com 429 (pedidos demais), a IA não é chamada e nada é guardado
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                        .param("empresaId", empresa.getId().toString()))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "900"))
+                //o problema não é o arquivo: o campo dele não fica marcado como inválido
+                .andExpect(content().string(not(containsString("aria-invalid"))))
+                .andExpect(content().string(containsString("Muitos PDFs enviados em pouco tempo.")));
+        verify(ia, never()).responder(anyString());
         assertThat(notificacoes.count()).isEqualTo(antes);
     }
 

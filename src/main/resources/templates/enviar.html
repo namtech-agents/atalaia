@@ -36,16 +36,18 @@
       <div th:unless="${empresas.isEmpty()}">
         <label class="rotulo" for="arquivo">PDF da notificação</label>
         <input id="arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required aria-describedby="dica-arquivo"
-               th:attr="aria-invalid=${erro != null} ? 'true', aria-describedby=${erro != null} ? 'erro-envio dica-arquivo' : 'dica-arquivo'"
+               th:attr="aria-invalid=${erro != null and erroNaoEDoArquivo == null} ? 'true', aria-describedby=${erro != null} ? 'erro-envio dica-arquivo' : 'dica-arquivo'"
                th:autofocus="${erro != null}">
         <p class="dica" id="dica-arquivo">Só PDF, até 10 MB.</p>
       </div>
 
-      <button class="botao cheio" type="submit" th:unless="${empresas.isEmpty()}">Enviar PDF</button>
+      <!-- O enviar.js desliga o botão enquanto o Atalaia lê o PDF: o clique duplo criaria dois casos -->
+      <button class="botao cheio" id="botao-enviar" type="submit" th:unless="${empresas.isEmpty()}">Enviar PDF</button>
 
       <p class="aviso" th:unless="${empresas.isEmpty()}">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
     </form>
   </main>
 </div>
+<script th:src="@{/js/enviar.js}" defer></script>
 </body>
 </html>
