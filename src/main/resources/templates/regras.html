@@ -39,7 +39,7 @@
     </section>
 
     <form class="vidro formulario" method="post" th:action="@{/regras}" aria-labelledby="titulo-nova">
-      <h2 class="rotulo" id="titulo-nova" th:text="${regras.isEmpty()} ? 'Cadastre a primeira regra' : 'Cadastrar outra regra'"></h2>
+      <h2 id="titulo-nova" th:text="${regras.isEmpty()} ? 'Cadastre a primeira regra' : 'Cadastrar outra regra'"></h2>
       <p class="erro" id="erro-regra" role="alert" th:if="${erro}" th:text="${erro}"></p>
 
       <div>

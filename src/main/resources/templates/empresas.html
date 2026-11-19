@@ -32,7 +32,7 @@
     </section>
 
     <form class="vidro formulario" method="post" th:action="@{/empresas}" aria-labelledby="titulo-nova">
-      <h2 class="rotulo" id="titulo-nova" th:text="${empresas.isEmpty()} ? 'Cadastre a primeira empresa' : 'Cadastrar outra empresa'"></h2>
+      <h2 id="titulo-nova" th:text="${empresas.isEmpty()} ? 'Cadastre a primeira empresa' : 'Cadastrar outra empresa'"></h2>
       <p class="erro" id="erro-empresa" role="alert" th:if="${erro}" th:text="${erro}"></p>
 
       <th:block th:replace="~{fragmentos :: camposDaEmpresa}"></th:block>

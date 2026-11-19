@@ -15,7 +15,7 @@
 
     <!-- Corrigir: nome ou CNPJ digitado errado no cadastro -->
     <form class="vidro formulario" method="post" th:action="@{/empresas/{id}(id=${empresa.id})}" aria-labelledby="titulo-corrigir">
-      <h2 class="rotulo" id="titulo-corrigir">Corrigir os dados</h2>
+      <h2 id="titulo-corrigir">Corrigir os dados</h2>
       <p class="erro" id="erro-empresa" role="alert" th:if="${erro}" th:text="${erro}"></p>
       <th:block th:replace="~{fragmentos :: camposDaEmpresa}"></th:block>
       <button class="botao cheio" type="submit">Salvar</button>
@@ -24,7 +24,7 @@
     <!-- Excluir: só empresa sem casos. Os casos são o histórico do escritório e a prova do que o cliente confirmou
          (decisão da dona do projeto, 19/11) -->
     <section class="vidro formulario" aria-labelledby="titulo-excluir">
-      <h2 class="rotulo" id="titulo-excluir">Excluir</h2>
+      <h2 id="titulo-excluir">Excluir</h2>
       <p th:if="${casos > 0}"
          th:text="${'Esta empresa tem ' + casos + (casos == 1 ? ' caso' : ' casos') + ' no Atalaia, por isso não pode ser excluída: os casos são o histórico do escritório e a prova do que o cliente confirmou.'}"></p>
       <th:block th:if="${casos == 0}">

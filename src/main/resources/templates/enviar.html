@@ -13,16 +13,22 @@
       <p th:unless="${empresas.isEmpty()}">Envie o PDF que chegou para o cliente. O Atalaia lê o documento e guarda o original para conferência.</p>
     </div>
 
+    <!-- Sem empresa nao ha o que enviar: só o aviso e o caminho para cadastrar (sem formulário vazio em volta).
+         Também chega aqui quem enviou para a única empresa e ela foi excluída no meio: o erro conta o que houve -->
+    <section class="vidro formulario" th:if="${empresas.isEmpty()}">
+      <p class="erro" role="alert" th:if="${erro}" th:text="${erro}"></p>
+      <p>Nenhuma empresa cadastrada ainda. Sem empresa não dá para enviar.</p>
+      <a class="botao cheio" th:href="@{/empresas}">Cadastrar empresa</a>
+    </section>
+
     <!-- enctype multipart: é o que deixa o formulário carregar um arquivo -->
-    <form class="vidro formulario" method="post" th:action="@{/enviar}" enctype="multipart/form-data">
+    <form class="vidro formulario" method="post" th:action="@{/enviar}" enctype="multipart/form-data"
+          th:unless="${empresas.isEmpty()}">
       <!-- A mensagem de erro. O campo do arquivo aponta para ela (aria-describedby) e recebe o foco,
            então quem usa leitor de tela ouve o erro ao chegar no campo -->
       <p class="erro" id="erro-envio" role="alert" th:if="${erro}" th:text="${erro}"></p>
 
-      <p th:if="${empresas.isEmpty()}">Nenhuma empresa cadastrada ainda. Sem empresa não dá para enviar.</p>
-      <a class="botao cheio" th:if="${empresas.isEmpty()}" th:href="@{/empresas}">Cadastrar empresa</a>
-
-      <div th:unless="${empresas.isEmpty()}">
+      <div>
         <label class="rotulo" for="empresaId">Empresa</label>
         <select id="empresaId" name="empresaId" required>
           <option value="">Escolha a empresa</option>
@@ -33,7 +39,7 @@
         </select>
       </div>
 
-      <div th:unless="${empresas.isEmpty()}">
+      <div>
         <label class="rotulo" for="arquivo">PDF da notificação</label>
         <input id="arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required aria-describedby="dica-arquivo"
                th:attr="aria-invalid=${erro != null and erroNaoEDoArquivo == null} ? 'true', aria-describedby=${erro != null} ? 'erro-envio dica-arquivo' : 'dica-arquivo'"
@@ -42,9 +48,9 @@
       </div>
 
       <!-- O enviar.js desliga o botão enquanto o Atalaia lê o PDF: o clique duplo criaria dois casos -->
-      <button class="botao cheio" id="botao-enviar" type="submit" th:unless="${empresas.isEmpty()}">Enviar PDF</button>
+      <button class="botao cheio" id="botao-enviar" type="submit">Enviar PDF</button>
 
-      <p class="aviso" th:unless="${empresas.isEmpty()}">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
+      <p class="aviso">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
     </form>
   </main>
 </div>
