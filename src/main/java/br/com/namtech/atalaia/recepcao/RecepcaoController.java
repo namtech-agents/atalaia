@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,6 +45,7 @@ import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 import br.com.namtech.atalaia.prazo.FeriadosNacionais;
 import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
+import br.com.namtech.atalaia.seguranca.LimiteDeTentativas;
 import br.com.namtech.atalaia.verificador.Verificador;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -56,6 +58,8 @@ public class RecepcaoController {
 
     //Acima de 15 MB quem barra é o servidor, antes de chegar aqui: a pessoa ve a pagina de erro (error.html, caso 413)
     static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.";
+
+    static final String ENVIOS_DEMAIS = "Muitos PDFs enviados em pouco tempo. Espere alguns minutos e envie de novo.";
 
     //O tamanho da coluna observacao no banco (V4)
     static final int OBSERVACAO_MAXIMA = 500;
@@ -74,11 +78,13 @@ public class RecepcaoController {
     private final Verificador verificador = new Verificador();
     private final Historico historico;
     private final TransactionTemplate transacao;
+    private final LimiteDeTentativas limiteDeEnvios;
 
     //O Spring entrega os repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
     public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes,
             RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia,
             Historico historico, TransactionTemplate transacao,
+            @Qualifier("limiteDeEnvios") LimiteDeTentativas limiteDeEnvios,
             @Value("${atalaia.endereco-publico:}") String enderecoPublico) {
         //Sem a barra do fim, para montar o link sempre do mesmo jeito
         this.enderecoPublico = enderecoPublico.strip().replaceAll("/+$", "");
@@ -90,6 +96,7 @@ public class RecepcaoController {
         this.analista = new Analista(ia);
         this.historico = historico;
         this.transacao = transacao;
+        this.limiteDeEnvios = limiteDeEnvios;
     }
 
     //AuthenticationPrincipal: o Spring Security entrega quem esta com a sessão aberta.
@@ -107,6 +114,11 @@ public class RecepcaoController {
         Empresa empresa = empresas.findByIdAndEscritorioId(empresaId, usuario.escritorioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
+        //Cada envio pode custar uma chamada à IA: o escritório tem uma conta de envios por janela (ConfiguracaoDeSeguranca).
+        //429 = pedidos demais. Confere antes de trazer o arquivo para a memória
+        if (!limiteDeEnvios.reservar(String.valueOf(usuario.escritorioId()))) {
+            return recusar(HttpStatus.TOO_MANY_REQUESTS, ENVIOS_DEMAIS, usuario, empresaId, model, resposta);
+        }
         //Confere o tamanho antes de trazer o arquivo para a memoria
         if (arquivo.getSize() > TAMANHO_MAXIMO) {
             return recusar(GRANDE_DEMAIS, usuario, empresaId, model, resposta);
@@ -291,9 +303,15 @@ public class RecepcaoController {
     }
 
     //Volta para o formulario com a mensagem, mantendo a empresa escolhida, e responde 400 (pedido recusado)
+    //ou a situação dada
     private String recusar(String mensagem, UsuarioLogado usuario, Long empresaId, Model model,
             HttpServletResponse resposta) {
-        resposta.setStatus(HttpStatus.BAD_REQUEST.value());
+        return recusar(HttpStatus.BAD_REQUEST, mensagem, usuario, empresaId, model, resposta);
+    }
+
+    private String recusar(HttpStatus situacao, String mensagem, UsuarioLogado usuario, Long empresaId, Model model,
+            HttpServletResponse resposta) {
+        resposta.setStatus(situacao.value());
         model.addAttribute("erro", mensagem);
         model.addAttribute("empresaEscolhida", empresaId);
         return formulario(usuario, model);

@@ -1,5 +1,9 @@
 package br.com.namtech.atalaia.seguranca;
 
+import java.time.Clock;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 //As regras de quem entra onde. O Spring Security fica na frente de todo pedido:
 //sem sessão aberta, a pessoa é levada para a tela de entrar
@@ -15,7 +20,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class ConfiguracaoDeSeguranca {
 
     @Bean
-    SecurityFilterChain regras(HttpSecurity http, LimiteDeTentativas limite) throws Exception {
+    SecurityFilterChain regras(HttpSecurity http, @Qualifier("limiteDeTentativas") LimiteDeTentativas limite)
+            throws Exception {
         //O que o Spring faria sozinho depois de entrar: voltar para a página que a pessoa tentou abrir, ou para a inicial
         SavedRequestAwareAuthenticationSuccessHandler voltarParaAPagina = new SavedRequestAwareAuthenticationSuccessHandler();
         http
@@ -40,6 +46,8 @@ public class ConfiguracaoDeSeguranca {
                         }))
                 //A trava roda dentro do Spring Security (depois do firewall dele) e logo antes de conferir a senha
                 .addFilterBefore(new TravaDeTentativas(limite), UsernamePasswordAuthenticationFilter.class)
+                //Envio de arquivo de quem não entrou para antes do CSRF, que leria o arquivo inteiro atrás do código
+                .addFilterBefore(new ArquivoSoComSessao(), CsrfFilter.class)
                 //Sair é por POST (um link nao serve: outro site poderia deslogar a pessoa com uma imagem)
                 .logout(saida -> saida
                         .logoutUrl("/sair")
@@ -49,6 +57,14 @@ public class ConfiguracaoDeSeguranca {
                 .headers(cabecalhos -> cabecalhos.frameOptions(moldura -> moldura.sameOrigin()));
         //A proteção CSRF ja vem ligada: todo formulario leva um codigo escondido que só a nossa pagina conhece
         return http.build();
+    }
+
+    //A conta de envios de PDF por escritório (issue #144): cada envio custa uma chamada à IA. Usa a mesma peça da
+    //trava do login, com outra chave (o número do escritório, em vez do endereço) e outro máximo: 60 a cada 15 min
+    //dá folga para um escritório que despeja a remessa do mês e para quem tenta gastar a IA à toa
+    @Bean
+    LimiteDeTentativas limiteDeEnvios(@Value("${atalaia.envios.maximo:60}") int maximo, Clock relogio) {
+        return new LimiteDeTentativas(maximo, LimiteDeTentativas.TETO_PADRAO, relogio);
     }
 
     //Embaralha a senha com bcrypt antes de guardar, e sabe conferir depois

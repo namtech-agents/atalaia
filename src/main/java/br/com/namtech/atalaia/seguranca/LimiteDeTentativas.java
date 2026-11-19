@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 //A conta de quantas tentativas cada endereço (IP) fez na janela de 15 minutos. Quem usa é a TravaDeTentativas.
+//A mesma peça conta os envios de PDF de cada escritório (bean limiteDeEnvios, na ConfiguracaoDeSeguranca).
 //Fica na memória do servidor, não no banco: se o Atalaia reiniciar, a conta zera. Para um servidor só, basta;
 //com mais de um servidor, cada um teria a sua conta e o limite valeria por servidor
 @Component
