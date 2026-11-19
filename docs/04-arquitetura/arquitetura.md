@@ -139,6 +139,7 @@ Decisões:
 - **Um relógio só.** Todo controller pede ao Spring o mesmo relógio, no fuso de Teresina, em vez de olhar a hora do servidor.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
 - **Os clientes do escritório num painel só (US18 e US62).** A tela inicial tem a escolha do cliente quando o escritório atende duas empresas ou mais; cada opção diz quantos casos abertos o cliente tem, e escolher um deixa só os casos dele (`/?empresa=id`, formulário GET sem JavaScript). Número de empresa de outro escritório no endereço é ignorado. A tela de empresas mostra quantos casos cada cliente teve nos últimos 30 dias, 90 dias ou 12 meses (`NotificacaoRepository.contarPorEmpresa`, que devolve `CasosDaEmpresa`), para o escritório rever a cobrança de quem dá mais trabalho.
+- **Faxina da semana (US32).** A tela `/faxina` (`FaxinaController`) lista os casos abertos sem nenhum evento no histórico há mais de 7 dias (`NotificacaoRepository.parados`, que devolve `CasoParado`; caso sem evento conta a data de chegada), com o vencido primeiro. "Resolvido" leva ao cartão "Fechar o caso", porque fechar pede desfecho e observação; "Segue aberto" e "Adiar uma semana" gravam um evento no histórico, e esse evento tira o caso da faxina por mais 7 dias.
 - **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos. Os repositórios estendem `Repository` (e não `JpaRepository`): não existe `findAll` nem `findById` sem o escritório, e um teste confere que todo método de repositório recebe o `escritorioId` ou está numa lista curta de exceções com motivo (gravar, entrar pelo e-mail, a página do cliente pelo token).
 - **Empresa com caso não é excluída.** Nome e CNPJ podem ser corrigidos a qualquer momento; excluir só vale para empresa sem nenhum caso, numa operação só no banco (`excluirSemCasos`). Os casos são o histórico do escritório e a prova do que o cliente confirmou.
 - **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
@@ -435,6 +436,10 @@ classDiagram
         +cadastrar(String nome, String cnpj)
         +corrigir(Long id, String nome, String cnpj)
         +excluir(Long id)
+    }
+    class FaxinaController {
+        +faxina()
+        +anotar(Long id, String acao)
     }
     class PainelController {
         +painel(String ver, Long empresa)

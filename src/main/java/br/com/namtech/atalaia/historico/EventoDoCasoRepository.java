@@ -1,6 +1,8 @@
 package br.com.namtech.atalaia.historico;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -11,6 +13,13 @@ import org.springframework.data.repository.Repository;
 interface EventoDoCasoRepository extends Repository<EventoDoCaso, Long> {
 
     EventoDoCaso save(EventoDoCaso evento);
+
+    //Quando foi o evento mais novo do caso (vazio se nao tem nenhum). Só a data, lida do banco
+    @Query("""
+            select max(e.quando) from EventoDoCaso e
+            where e.notificacao.id = ?1 and e.notificacao.empresa.escritorio.id = ?2
+            """)
+    Optional<Instant> ultimoMovimento(Long notificacaoId, Long escritorioId);
 
     //Os eventos de um caso, do mais antigo para o mais novo. O id desempata dois eventos no mesmo instante
     @Query("""

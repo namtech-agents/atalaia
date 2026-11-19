@@ -38,6 +38,20 @@ public interface NotificacaoRepository extends Repository<Notificacao, Long> {
             """)
     List<CasosDaEmpresa> contarPorEmpresa(Long escritorioId, Instant desde);
 
+    //A faxina de sexta: os casos abertos em que ninguem mexe desde antes da data dada. O "movimento" é o evento
+    //mais novo do historico do caso. Todo caso tem ao menos o "Enviou o PDF" (o envio grava junto, e a V11 preencheu
+    //os antigos); o coalesce com a chegada é só uma defesa barata para um caso sem evento, que nao deveria existir.
+    //"left join ... on": junta os eventos sem precisar de uma lista de eventos dentro da Notificacao
+    @Query("""
+            select new br.com.namtech.atalaia.notificacao.CasoParado(
+                n.id, emp.nome, n.tipo, n.dataLimite, coalesce(max(e.quando), n.recebidaEm))
+            from Notificacao n join n.empresa emp left join EventoDoCaso e on e.notificacao = n
+            where emp.escritorio.id = ?1 and n.resolvidaEm is null
+            group by n.id, emp.nome, n.tipo, n.dataLimite, n.recebidaEm
+            having coalesce(max(e.quando), n.recebidaEm) < ?2
+            """)
+    List<CasoParado> parados(Long escritorioId, Instant semMovimentoDesde);
+
     //Quantos casos a empresa tem: a tela de editar explica por que empresa com caso nao sai
     @Query("select count(n) from Notificacao n where n.empresa.id = ?1 and n.empresa.escritorio.id = ?2")
     long casosDaEmpresa(Long empresaId, Long escritorioId);

@@ -3,6 +3,7 @@ package br.com.namtech.atalaia.historico;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,11 @@ public class Historico {
     //se o pedido falhar, o evento tambem nao fica
     public void registrar(Notificacao caso, String quem, String acao) {
         eventos.save(new EventoDoCaso(caso, quem, acao, Instant.now(relogio)));
+    }
+
+    //Quando alguém mexeu pela última vez no caso (a faxina usa para não anotar duas vezes)
+    public Optional<Instant> ultimoMovimento(Long notificacaoId, Long escritorioId) {
+        return eventos.ultimoMovimento(notificacaoId, escritorioId);
     }
 
     public List<EventoDoCaso> doCaso(Long notificacaoId, Long escritorioId) {
