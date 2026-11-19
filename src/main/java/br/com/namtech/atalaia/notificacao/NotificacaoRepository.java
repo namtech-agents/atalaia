@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import jakarta.persistence.LockModeType;
 
-//Toda busca leva o escritório de quem entrou: é isso que impede um escritório de ver a notificação de outro
+//Toda busca leva o escritório de quem entrou: é isso que impede um escritório de ver a notificação de outro.
 //Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
 //Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
 public interface NotificacaoRepository extends Repository<Notificacao, Long> {
@@ -26,6 +26,10 @@ public interface NotificacaoRepository extends Repository<Notificacao, Long> {
             order by n.recebidaEm desc, n.id desc
             """)
     List<NotificacaoNaLista> listar(Long escritorioId);
+
+    //Quantos casos a empresa tem: a tela de editar explica por que empresa com caso nao sai
+    @Query("select count(n) from Notificacao n where n.empresa.id = ?1 and n.empresa.escritorio.id = ?2")
+    long casosDaEmpresa(Long empresaId, Long escritorioId);
 
     //Vazio se a notificação nao existe ou é de outro escritório (quem chama nao fica sabendo qual dos dois)
     @Query("select n from Notificacao n where n.id = ?1 and n.empresa.escritorio.id = ?2")

@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +59,8 @@ public class RecepcaoController {
 
     //Acima de 15 MB quem barra é o servidor, antes de chegar aqui: a pessoa ve a pagina de erro (error.html, caso 413)
     static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.";
+
+    static final String EMPRESA_EXCLUIDA = "Esta empresa foi excluída enquanto o PDF era lido. Cadastre a empresa de novo e envie outra vez.";
 
     static final String ENVIOS_DEMAIS = "Muitos PDFs enviados em pouco tempo. Espere alguns minutos e envie de novo.";
 
@@ -149,11 +152,18 @@ public class RecepcaoController {
         Notificacao analisada = analisar(empresa, pdf, leitura);
         //A notificação e o evento "Enviou o PDF" sao gravados juntos (o metodo nao é Transactional por causa da IA):
         //se o evento falhar, a notificação tambem nao fica, e a pessoa pode enviar de novo sem duplicar o caso
-        Notificacao notificacao = transacao.execute(conversa -> {
-            Notificacao gravada = notificacoes.save(analisada);
-            historico.registrar(gravada, usuario.email(), "Enviou o PDF");
-            return gravada;
-        });
+        Notificacao notificacao;
+        try {
+            notificacao = transacao.execute(conversa -> {
+                Notificacao gravada = notificacoes.save(analisada);
+                historico.registrar(gravada, usuario.email(), "Enviou o PDF");
+                return gravada;
+            });
+        } catch (DataIntegrityViolationException empresaSaiu) {
+            //Enquanto a IA lia, outra pessoa do escritório excluiu a empresa (só sai empresa sem casos):
+            //o banco recusa o caso sem dono. A pessoa ve o que houve, em vez de uma pagina de erro
+            return recusar(EMPRESA_EXCLUIDA, usuario, empresaId, model, resposta);
+        }
         //Redireciona para a pagina da notificação: recarregar a tela nao envia o arquivo de novo
         return "redirect:/notificacoes/" + notificacao.getId();
     }

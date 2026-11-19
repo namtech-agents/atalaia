@@ -148,5 +148,25 @@
            defer: roda depois de a página ser lida, quando as peças acima já existem */-->
     <script th:src="@{/js/plantao.js}" defer></script>
   </div>
+  <!--/* Os campos de nome e CNPJ da empresa, no cadastro (empresas.html) e na correção (empresa.html).
+         Leem nome, cnpj e campoComErro do que o EmpresaController põe na tela */-->
+  <th:block th:fragment="camposDaEmpresa">
+    <div>
+      <label class="rotulo" for="nome">Nome da empresa</label>
+      <!--/* Só o campo que falhou recebe o foco e o aviso de erro (campoComErro vem do EmpresaController) */-->
+      <input id="nome" name="nome" type="text" maxlength="200" required th:value="${nome}"
+             th:autofocus="${campoComErro == 'nome'}"
+             th:attr="aria-invalid=${campoComErro == 'nome'} ? 'true', aria-describedby=${campoComErro == 'nome'} ? 'erro-empresa'">
+    </div>
+    <div>
+      <label class="rotulo" for="cnpj">CNPJ</label>
+      <!--/* 24: folga para a pontuação e para um espaço que venha junto ao colar; o servidor limpa */-->
+      <input id="cnpj" name="cnpj" type="text" maxlength="24" required th:value="${cnpj}"
+             aria-describedby="dica-cnpj" th:autofocus="${campoComErro == 'cnpj'}"
+             th:attr="aria-invalid=${campoComErro == 'cnpj'} ? 'true', aria-describedby=${campoComErro == 'cnpj'} ? 'erro-empresa dica-cnpj' : 'dica-cnpj'">
+      <p class="dica" id="dica-cnpj">Com ou sem pontuação.</p>
+    </div>
+  </th:block>
+
 </body>
 </html>
