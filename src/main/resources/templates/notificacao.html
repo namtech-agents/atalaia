@@ -68,7 +68,9 @@
 
           <!-- A conta passo a passo, com a regra e o artigo, para conferir ao lado do documento -->
           <th:block th:if="${notificacao.ciencia != null}">
-            <ol class="motivos">
+            <!-- A única ressalva da data fica colada nela, e não no meio da conta -->
+            <p th:text="${avisoDosFeriados}"></p>
+            <ol class="motivos" aria-label="Conta passo a passo">
               <li th:each="passo : ${notificacao.passosDoPrazo}" th:text="${passo}"></li>
             </ol>
             <p class="aviso-ia">Calculado por código em <span class="num" th:text="${prazoCalculadoEm}"></span>, a pedido de <span th:text="${notificacao.prazoCalculadoPor}"></span>.</p>
@@ -83,14 +85,16 @@
             <p class="erro" id="erro-prazo" role="alert" th:if="${erroDoPrazo}" th:text="${erroDoPrazo}"></p>
             <div>
               <label class="rotulo" for="ciencia">Dia da ciência</label>
-              <input id="ciencia" name="ciencia" type="date" required aria-describedby="dica-ciencia"
+              <!-- Só o campo que falhou recebe o aviso de erro (campoDoPrazoComErro vem do PrazoController) -->
+              <input id="ciencia" name="ciencia" type="date" required th:max="${hoje}"
                      th:value="${cienciaDigitada != null} ? ${cienciaDigitada} : ${notificacao.ciencia}"
-                     th:attr="aria-describedby=${erroDoPrazo} ? 'erro-prazo dica-ciencia' : 'dica-ciencia'">
+                     th:attr="aria-invalid=${campoDoPrazoComErro == 'ciencia'} ? 'true', aria-describedby=${campoDoPrazoComErro == 'ciencia'} ? 'erro-prazo dica-ciencia' : 'dica-ciencia'">
               <p class="dica" id="dica-ciencia">O dia em que a empresa tomou ciência do documento. O dia da ciência não entra na conta.</p>
             </div>
             <div>
               <label class="rotulo" for="regraId">Regra de prazo</label>
-              <select id="regraId" name="regraId" required>
+              <select id="regraId" name="regraId" required
+                      th:attr="aria-invalid=${campoDoPrazoComErro == 'regraId'} ? 'true', aria-describedby=${campoDoPrazoComErro == 'regraId'} ? 'erro-prazo'">
                 <option value="">Escolha a regra</option>
                 <option th:each="regra : ${regras}" th:value="${regra.id}" th:text="${regra.nome}"
                         th:selected="${regra.id == regraEscolhida}"></option>

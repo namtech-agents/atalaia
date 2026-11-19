@@ -2,6 +2,7 @@ package br.com.namtech.atalaia.recepcao;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +33,7 @@ import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import br.com.namtech.atalaia.prazo.FeriadosNacionais;
 import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
 import br.com.namtech.atalaia.verificador.Verificador;
 import jakarta.servlet.http.HttpServletResponse;
@@ -124,6 +126,9 @@ public class RecepcaoController {
         model.addAttribute("desfechos", Desfecho.values());
         //As regras do escritório, para o cartão do prazo (quem calcula é o PrazoController)
         model.addAttribute("regras", regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
+        //O campo da ciência nao deixa escolher dia no futuro; o aviso dos feriados fica logo abaixo da data
+        model.addAttribute("hoje", LocalDate.now(Notificacao.TERESINA));
+        model.addAttribute("avisoDosFeriados", FeriadosNacionais.AVISO);
         if (notificacao.getPrazoCalculadoEm() != null) {
             model.addAttribute("prazoCalculadoEm", Notificacao.DIA_E_HORA.format(notificacao.getPrazoCalculadoEm()));
         }
