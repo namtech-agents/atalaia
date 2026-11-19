@@ -66,6 +66,22 @@
           <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Tipo sugerido por inteligência artificial, ainda sem conferência. Os dados não aparecem porque o documento foi para revisão.</p>
         </section>
 
+        <!-- O degrau (US28): a gravidade e o que costuma vir se ninguém agir. A IA sugere, o contador corrige com um clique
+             (DegrauController), e a correção vai para o histórico -->
+        <section class="vidro cartao" aria-labelledby="titulo-degrau">
+          <h2 class="rotulo" id="titulo-degrau">Degrau</h2>
+          <strong class="grande" th:text="${notificacao.degrau != null} ? ${notificacao.degrau.nome} : 'Sem degrau'"></strong>
+          <p th:if="${notificacao.degrau != null}"
+             th:text="${notificacao.degrau.seguinte() != null} ? 'Se ninguém agir, costuma vir em seguida: ' + ${notificacao.degrau.seguinte().nome} + '.' : 'É o degrau mais alto da escada.'"></p>
+          <form class="degraus" method="post" th:unless="${notificacao.resolvida}"
+                th:action="@{/notificacoes/{id}/degrau(id=${notificacao.id})}">
+            <p class="dica" th:text="${notificacao.degrau != null} ? 'Sugerido por inteligência artificial. Para corrigir, toque no degrau certo:' : 'Escolha o degrau:'"></p>
+            <!-- Cada botão envia o próprio degrau; aria-pressed diz ao leitor de tela qual é o atual -->
+            <button class="botao" type="submit" name="degrau" th:each="opcao : ${degraus}" th:value="${opcao}"
+                    th:text="${opcao.nome}" th:attr="aria-pressed=${opcao == notificacao.degrau}"></button>
+          </form>
+        </section>
+
         <!-- O prazo: a pessoa informa a ciência e escolhe a regra; a conta é feita por código (PrazoController), nunca pela IA -->
         <section class="vidro cartao" aria-labelledby="titulo-prazo">
           <h2 class="rotulo" id="titulo-prazo">Data limite</h2>

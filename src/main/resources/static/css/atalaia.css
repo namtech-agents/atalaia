@@ -252,6 +252,10 @@ html { scroll-padding-top: 92px; }
 /* filtro abertas/resolvidas: dois links simples; o escolhido fica em negrito e sublinhado (não só pela cor) */
 /* Uma escolha numa linha só (o cliente na tela inicial, o período em Empresas): rótulo, lista e botão.
    No celular a lista ocupa o que sobra; o resto do estilo da lista vem da regra comum dos campos */
+/* Degrau: os cinco botões quebram linha no celular; o atual fica com o azul da marca */
+.degraus { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.degraus .dica { flex-basis: 100%; margin: 0; }
+.degraus .botao[aria-pressed="true"] { background: var(--azul); color: #fff; }
 .escolha-linha { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .escolha-linha select { flex: 1 1 220px; max-width: 420px; }
 .escolha-linha .rotulo { margin-bottom: 0; }

@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import br.com.namtech.atalaia.analista.Degrau;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.verificador.DadoExtraido;
 import jakarta.persistence.CollectionTable;
@@ -56,6 +57,10 @@ public class Notificacao {
     //O tipo que o Analista deu. STRING: guarda o nome (INTIMACAO), nao a posição na lista. Vazio se nao classificou
     @Enumerated(EnumType.STRING)
     private TipoDeDocumento tipo;
+
+    //A gravidade (US28): sugerida pela IA, corrigida pelo contador. Vazio se ninguém deu um ainda
+    @Enumerated(EnumType.STRING)
+    private Degrau degrau;
 
     //Os dados que o Analista tirou do documento. Ficam numa tabela propria (dado_extraido), ligada por notificacao_id
     @ElementCollection
@@ -117,6 +122,15 @@ public class Notificacao {
     //se nem os dados dele sao mostrados, um resumo feito em cima deles tambem nao é
     public void sugerirResumo(String resumo) {
         this.resumoSugerido = precisaDeRevisao ? null : resumo;
+    }
+
+    //Muda o degrau. Quem chama grava no histórico quando a mudança é de uma pessoa (DegrauController)
+    public void definirDegrau(Degrau degrau) {
+        this.degrau = degrau;
+    }
+
+    public Degrau getDegrau() {
+        return degrau;
     }
 
     public String getResumoSugerido() {

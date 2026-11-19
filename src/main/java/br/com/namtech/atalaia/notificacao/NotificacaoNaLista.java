@@ -5,12 +5,14 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
+import br.com.namtech.atalaia.analista.Degrau;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 
 //Uma linha da lista de notificações: só o que a lista mostra.
 //Buscar a Notificacao inteira traria junto o PDF e o texto de cada uma, que a lista nao usa.
 //empresaId: o filtro por cliente da tela inicial separa as linhas por ele
-public record NotificacaoNaLista(Long id, Long empresaId, String empresa, TipoDeDocumento tipo, boolean precisaDeRevisao,
+public record NotificacaoNaLista(Long id, Long empresaId, String empresa, TipoDeDocumento tipo, Degrau degrau,
+        boolean precisaDeRevisao,
         Instant recebidaEm, Desfecho desfecho, Instant resolvidaEm, LocalDate dataLimite) {
 
     //Resolvida é a que ja tem a data da resolução, igual na Notificacao
