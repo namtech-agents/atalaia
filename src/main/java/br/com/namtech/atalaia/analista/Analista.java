@@ -1,6 +1,7 @@
 package br.com.namtech.atalaia.analista;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import br.com.namtech.atalaia.verificador.DadoExtraido;
 import br.com.namtech.atalaia.verificador.Verificador;
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.cfg.EnumFeature;
 import tools.jackson.databind.json.JsonMapper;
@@ -84,7 +86,8 @@ public class Analista {
               cortado, "____ dias") ou depende de um anexo que não veio junto;
             - uma data do documento contradiz outra (a ciência antes da emissão, o vencimento antes da emissão).
             Não é dúvida: erro de digitação que não muda prazo, valor, processo nem destinatário; documento que só
-            informa, sem prazo e sem valor; dado que o documento simplesmente não traz porque não precisa.
+            informa, sem prazo e sem valor; dado que o documento simplesmente não traz porque não precisa;
+            data no passado ou no futuro (você não sabe a data de hoje: compare as datas só entre si).
 
             "trecho": com dúvida, a frase do documento que causou a dúvida, copiada letra por letra, sem corrigir
             nem resumir. Sem dúvida, deixe vazio.
@@ -129,7 +132,9 @@ public class Analista {
 
     //Le o JSON da resposta e monta os objetos Java (o Jackson ja vem com o Spring Boot).
     //A opção ligada recusa tipo escrito como numero ("tipo": 1), que o Jackson aceitaria pela posição na lista
-    private final ObjectMapper json = JsonMapper.builder().enable(EnumFeature.FAIL_ON_NUMBERS_FOR_ENUMS).build();
+    private final ObjectMapper json = JsonMapper.builder().enable(EnumFeature.FAIL_ON_NUMBERS_FOR_ENUMS)
+            //Chave repetida ({"duvida": true, "duvida": false}) é recusada: sem isto o Jackson fica com a última
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build();
 
     public Analista(ModeloDeIA modelo) {
         this.modelo = modelo;
@@ -143,9 +148,7 @@ public class Analista {
         //nem chega nela, vai direto para uma pessoa
         //A comparação ignora maiuscula e tira tudo que separa sem aparecer: espaços de todo tipo (\p{Z}),
         //caracteres invisiveis (\p{Cf}) e, com o NFKC, as letras "parecidas". "<<< documento" tambem conta
-        String semEspacos = Normalizer.normalize(textoDoDocumento, Normalizer.Form.NFKC)
-                .replaceAll("[\\s\\p{Z}\\p{Cf}]", "").toUpperCase();
-        if (semEspacos.contains(ABRE) || semEspacos.contains(FECHA)) {
+        if (trazAsMarcas(textoDoDocumento)) {
             return paraRevisao("O documento contém as marcas que o Atalaia usa para falar com a IA. Não foi analisado.");
         }
 
@@ -194,41 +197,89 @@ public class Analista {
         return new Analise(lida.tipo(), dados, false, null, resumoQueServe(lida.resumo(), textoDoDocumento));
     }
 
+    //O documento traz as marcas que cercam o texto dentro do pedido? (Ver o comentário no analisar)
+    private static boolean trazAsMarcas(String textoDoDocumento) {
+        String semEspacos = Normalizer.normalize(textoDoDocumento, Normalizer.Form.NFKC)
+                .replaceAll("[\\s\\p{Z}\\p{Cf}]", "").toUpperCase();
+        return semEspacos.contains(ABRE) || semEspacos.contains(FECHA);
+    }
+
     //A segunda passada: devolve o motivo da dúvida, pronto para a tela, ou null se a IA disse que nada falta e
-    //nada se contradiz. Na dúvida sobre a propria resposta, desconfia: IA fora do ar, resposta fora do formato ou
-    //sem o "duvida" viram motivo tambem. Melhor uma pessoa olhar um documento bom do que um prazo nascer de dado errado.
-    //So é chamada depois do analisar, com o texto que ja passou pela checagem das marcas
+    //nada se contradiz. Na dúvida sobre a propria resposta, desconfia: IA fora do ar, resposta fora do formato,
+    //sem o "duvida" ou que se contradiz viram motivo tambem. Melhor uma pessoa olhar um documento bom do que um
+    //prazo nascer de dado errado
     public String procurarDuvida(String textoDoDocumento) {
+        //A mesma porta do analisar: documento com as marcas nem chega na IA
+        if (trazAsMarcas(textoDoDocumento)) {
+            return "O documento contém as marcas que o Atalaia usa para falar com a IA. Não foi conferido.";
+        }
         RespostaDaDuvida lida;
         try {
             String resposta = modelo.responder(PEDIDO_DA_DUVIDA.formatted(textoDoDocumento));
             lida = resposta == null || resposta.contains("\\u0000") ? null : json.readValue(resposta, RespostaDaDuvida.class);
         } catch (RuntimeException erro) {
-            //JacksonException tambem é RuntimeException. O registro nao leva a resposta: ela pode citar o documento
-            registro.warn("A segunda passada da IA falhou");
+            //JacksonException tambem é RuntimeException. O registro leva só o tipo do erro (tempo esgotado, JSON torto...):
+            //a mensagem e a resposta podem citar o documento
+            registro.warn("A segunda passada da IA falhou: {}", erro.getClass().getSimpleName());
             lida = null;
         }
         if (lida == null || lida.duvida() == null) {
             return "A segunda leitura (falta algo ou há conflito?) não respondeu. Confira o documento.";
         }
-        if (!lida.duvida()) {
+        boolean trechoNoDocumento = verificador.estaNoTexto(textoDoDocumento, lida.trecho());
+        boolean explicou = lida.porque() != null && !lida.porque().isBlank();
+        //"Sem dúvida" com um porquê escrito ou um trecho apontado é uma resposta que se contradiz: conta como dúvida
+        if (!lida.duvida() && !explicou && !trechoNoDocumento) {
             return null;
         }
-        String porque = curto(lida.porque());
+        //O porquê é texto livre de uma IA que leu um documento de fora: passa pela mesma regra do resumo (sem prazo,
+        //sem data, sem link, todo numero escrito igual no documento). Se nao passar, fica só a frase fixa
+        String porque = resumoQueServe(lida.porque(), textoDoDocumento);
         String motivo = "A segunda leitura achou algo faltando ou em conflito"
-                + (porque.isEmpty() ? "." : ": " + porque);
+                + (porque == null ? "." : ". Explicação da IA, não conferida: " + curto(porque));
         //O trecho só vai para a tela se estiver mesmo no documento (a mesma regra dos dados): um trecho inventado
         //apontaria a pessoa para o lugar errado. A dúvida fica de pé do mesmo jeito.
         //Confere o trecho inteiro e só depois encurta: o "…" do fim nao esta no documento
-        return verificador.estaNoTexto(textoDoDocumento, lida.trecho())
+        return trechoNoDocumento
                 ? motivo + " Trecho: \"" + curto(lida.trecho()) + "\""
                 : motivo + " A IA não apontou um trecho que esteja no documento.";
     }
 
-    //Uma linha só (o motivo é guardado um por linha), sem espaços repetidos e com o tamanho limitado
+    //Junta os motivos de revisão de um documento lido, na ordem do envio: o que o Analista disse, os dados que o
+    //Verificador nao achou no texto, o "informativo" que fala em obrigação e, só se nada disso apareceu, a segunda
+    //passada. Lista vazia = o caso segue sem revisão. Um lugar só para o envio e para o teste com a IA de verdade
+    public List<String> motivosDaRevisao(Analise analise, String textoDoDocumento) {
+        List<String> motivos = new ArrayList<>();
+        if (analise.motivo() != null) {
+            motivos.add(analise.motivo());
+        }
+        //So confere os dados se a IA chegou a classificar; senao o motivo dela ja diz tudo
+        if (analise.tipo() != null) {
+            motivos.addAll(verificador.conferir(textoDoDocumento, analise.dados()).motivos());
+        }
+        //"Informativo" é o unico tipo que ninguem precisa responder: se o texto fala em prazo ou multa, uma pessoa confere
+        if (analise.tipo() == TipoDeDocumento.INFORMATIVO && verificador.falaEmObrigacao(textoDoDocumento)) {
+            motivos.add("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
+        }
+        //A segunda passada (US25). Só quando o resto passou: se uma peça ja mandou o caso para uma pessoa, ela vai
+        //olhar o documento de qualquer jeito, e a chamada à IA seria gasta à toa
+        if (motivos.isEmpty()) {
+            String duvida = procurarDuvida(textoDoDocumento);
+            if (duvida != null) {
+                motivos.add(duvida);
+            }
+        }
+        return motivos;
+    }
+
+    //Uma linha só (o motivo é guardado um por linha), sem espaços repetidos e com o tamanho limitado.
+    //Corta por letra inteira: um emoji (duas "metades" no Java) nao fica pela metade antes do "…"
     private static String curto(String texto) {
         String linha = texto == null ? "" : texto.replaceAll("\\s+", " ").strip();
-        return linha.length() > TRECHO_MAXIMO ? linha.substring(0, TRECHO_MAXIMO) + "…" : linha;
+        if (linha.codePointCount(0, linha.length()) <= TRECHO_MAXIMO) {
+            return linha;
+        }
+        return linha.substring(0, linha.offsetByCodePoints(0, TRECHO_MAXIMO)) + "…";
     }
 
     //O resumo é só um rascunho para a pessoa do escritório, mas mesmo o rascunho tem regra: a IA nao escreve

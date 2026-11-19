@@ -5,7 +5,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 //Teto de chamadas à IA ao mesmo tempo (achado do pentest, issue #144). Cada chamada segura uma linha do servidor
-//por até 60 s (2 tentativas de 30 s no Gemini): muitas juntas ocupariam todas as linhas e o Atalaia pararia para
+//por até 60 s (2 tentativas de 30 s no Gemini), e um envio faz até duas (a leitura e a segunda passada): muitas juntas ocupariam todas as linhas e o Atalaia pararia para
 //todo mundo. Envolve a IA de verdade (ConfiguracaoDaIA) e, para quem usa, continua sendo um ModeloDeIA
 public class TetoDeChamadas implements ModeloDeIA {
 
