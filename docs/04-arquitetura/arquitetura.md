@@ -1,4 +1,4 @@
-# Arquitetura e diagramas · Atalaia (Marco 2, 18/11/2026, já com o login)
+# Arquitetura e diagramas · Atalaia (Marco 2, 18/11/2026, já com o login e o prazo na tela)
 
 Como o Atalaia é montado por dentro e como as peças conversam. Os desenhos são feitos em Mermaid, que o GitHub desenha sozinho.
 
@@ -23,9 +23,10 @@ flowchart LR
     subgraph Atalaia
         conta["Criar a conta do escritório e entrar"]
         empresas["Cadastrar as empresas clientes"]
+        regras["Cadastrar as regras de prazo que o escritório conferiu"]
         enviar["Enviar o PDF de uma notificação"]
         ver["Ver a notificação: original, texto lido e dados conferidos"]
-        conferir["Conferir e confirmar o prazo"]
+        conferir["Informar a ciência, escolher a regra e ver o prazo calculado"]
         fila["Ver o que precisa de alguém hoje"]
         resolver["Abrir um caso e marcar resolvido"]
         areas["Definir quem cuida de cada área"]
@@ -36,6 +37,7 @@ flowchart LR
 
     contador --> conta
     contador --> empresas
+    contador --> regras
     contador --> enviar
     contador --> ver
     contador --> conferir
@@ -49,8 +51,8 @@ flowchart LR
 
     classDef pronto fill:#dfe5ff,stroke:#2438a6,color:#141922
     classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
-    class conta,empresas,enviar,ver,fila,resolver,extrair pronto
-    class conferir,areas,ciencia,resumo planejado
+    class conta,empresas,regras,enviar,ver,conferir,fila,resolver,extrair pronto
+    class areas,ciencia,resumo planejado
 ```
 
 Azul: já dá para fazer. Tracejado: planejado.
@@ -74,6 +76,8 @@ flowchart TB
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
         analista["Analista<br/>classifica e extrai os dados com o trecho de cada um"]
         verificador["Verificador<br/>confere cada trecho no texto do PDF"]
+        regras["Regras de prazo<br/>cadastradas pelo escritório, com artigo e data da conferência"]
+        prazo["Prazo<br/>recebe a ciência e a regra, grava a conta na notificação"]
         calculadora["Calculadora de prazo<br/>conta de dois jeitos, mostra os passos"]
         avisos["Avisos (planejado)<br/>e-mail e Telegram"]
         revisao["Fila 'precisa de gente'<br/>(primeiro grupo do Painel)"]
@@ -87,6 +91,12 @@ flowchart TB
     seguranca -->|cadastra um cliente| empresas
     seguranca -->|abre a lista| painel
     seguranca -->|envia o PDF| recepcao
+    seguranca -->|cadastra uma regra| regras
+    seguranca -->|informa a ciência e escolhe a regra| prazo
+    prazo --> regras
+    prazo --> calculadora
+    prazo --> banco
+    regras --> banco
     conta --> banco
     empresas --> banco
     painel --> banco
@@ -94,13 +104,11 @@ flowchart TB
     recepcao --> analista
     analista --> ia
     recepcao --> verificador
-    verificador -.-> calculadora
     calculadora -.-> avisos
     recepcao --> banco
     leitor -->|PDF sem texto| revisao
     analista -->|IA em dúvida ou fora do ar| revisao
     verificador -->|dado não bate| revisao
-    calculadora -.->|contas diferentes ou regra não conferida| revisao
 
     classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
     class avisos planejado
@@ -111,6 +119,9 @@ Seta cheia: ligação que já funciona. Seta tracejada: a peça existe (ou está
 Decisões:
 
 - **A IA nunca calcula prazo.** O prazo sai da Calculadora, que é só `java.time`.
+- **Nenhuma regra de prazo vem no código.** Cada escritório cadastra as regras que ele mesmo leu na norma, com o artigo e a data da conferência (RNF09). Seis meses depois, a regra aparece como vencida, pedindo nova conferência.
+- **O prazo nasce de uma pessoa.** Ela informa o dia da ciência e escolhe a regra; a Calculadora faz a conta de dois jeitos e a notificação guarda a data com a conta inteira, o artigo, quem pediu e quando. A conta é uma cópia: excluir a regra depois não muda o que foi mostrado. Se as duas contas não baterem, a notificação fica sem data e mostra o motivo.
+- **Feriados: só os nacionais de data fixa.** Toda conta avisa que feriado estadual, municipal, ponto facultativo e Sexta-feira Santa não entram, para a pessoa conferir.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
 - **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos.
 - **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
@@ -124,7 +135,7 @@ Decisões:
 
 ## 3. Classes
 
-O que está no código hoje. Os pacotes são `leitor`, `analista`, `verificador`, `prazo`, `notificacao`, `recepcao`, `painel`, `conta` e `seguranca`: cada peça mora no pacote com o nome dela.
+O que está no código hoje (o `PainelController` e os controllers da conta estão no 3.2). Os pacotes são `leitor`, `analista`, `verificador`, `prazo`, `notificacao`, `recepcao`, `painel`, `conta` e `seguranca`: cada peça mora no pacote com o nome dela.
 
 São dois desenhos, para caber na tela: primeiro o caminho do PDF, depois a conta e a cerca do escritório.
 
@@ -172,6 +183,7 @@ classDiagram
             boolean suspendeNoRecesso
             String artigo
             LocalDate conferidaEm
+            +prazoPorExtenso() String
             +proximaConferencia() LocalDate
             +conferenciaVencida(LocalDate hoje) boolean
         }
@@ -185,6 +197,21 @@ classDiagram
             LocalDate dataLimite
             List~String~ passos
             boolean precisaDeRevisao
+        }
+        class RegraCadastrada {
+            Long id
+            +paraAConta() RegraDePrazo
+        }
+        class RegraController {
+            +lista()
+            +cadastrar(String nome, String dias, String contagem, String artigo, String conferidaEm)
+            +excluir(Long id)
+        }
+        class PrazoController {
+            +calcular(Long id, Long regraId, String ciencia)
+        }
+        class FeriadosNacionais {
+            +entre(int primeiroAno, int ultimoAno) Set~LocalDate~
         }
 
         class Analista {
@@ -231,6 +258,11 @@ classDiagram
             Instant resolvidaEm
             Desfecho desfecho
             String observacao
+            LocalDate ciencia
+            String contaDoPrazo
+            Instant prazoCalculadoEm
+            String prazoCalculadoPor
+            +registrarPrazo(LocalDate ciencia, LocalDate dataLimite, List~String~ passos, String quem)
             +resolver(Desfecho desfecho, String observacao)
         }
         class Desfecho {
@@ -255,6 +287,12 @@ classDiagram
     CalculadoraDePrazo ..> RegraDePrazo : recebe
     CalculadoraDePrazo ..> PrazoCalculado : devolve
     RegraDePrazo --> TipoDeContagem
+    RegraCadastrada ..> RegraDePrazo : entrega
+    RegraController ..> RegraCadastrada : guarda
+    PrazoController ..> RegraCadastrada : busca
+    PrazoController ..> CalculadoraDePrazo : usa
+    PrazoController ..> FeriadosNacionais : usa
+    PrazoController ..> Notificacao : grava o prazo
     Notificacao "*" --> "1" Empresa
     RecepcaoController ..> LeitorPdf : usa
     RecepcaoController ..> Analista : usa
@@ -318,8 +356,10 @@ classDiagram
         +painel()
     }
     class RecepcaoController
+    class RegraCadastrada
 
     Usuario "*" --> "1" Escritorio
+    RegraCadastrada "*" --> "1" Escritorio
     Empresa "*" --> "1" Escritorio
     Notificacao "*" --> "1" Empresa
     ContaController ..> Contas : cria a conta
@@ -382,6 +422,8 @@ Escritório novo ainda não tem empresa: o Painel aponta para a tela Empresas, q
 
 ### 4.2 Do PDF enviado até o prazo
 
+No desenho, "Recepção" é a tela da notificação: o pedido do prazo é atendido pelo `PrazoController`.
+
 ```mermaid
 sequenceDiagram
     actor Contador
@@ -410,17 +452,20 @@ sequenceDiagram
         Recepcao-->>Contador: mostra a notificação (tipo e dados, ou por que precisa de gente)
     end
 
-    Note over Verificador,Calculadora: Daqui para baixo a Calculadora existe, mas a ligação é planejada
+    Note over Contador,Calculadora: O prazo é pedido por uma pessoa, na tela da notificação
 
-    alt algum motivo de revisão
-        Recepcao-->>Contador: precisa de gente, com o motivo
-    else tudo confere
-        Recepcao-->>Calculadora: calcular(regra, ciência)
-        alt contas diferentes ou regra não conferida
-            Calculadora-->>Contador: precisa de gente, sem data
+    Contador->>Recepcao: informa o dia da ciência e escolhe uma regra do escritório
+    alt ciência inválida ou regra que não é do escritório
+        Recepcao-->>Contador: mostra o erro, nada é gravado
+    else tudo certo
+        Recepcao->>Calculadora: calcular(regra, ciência), com os feriados nacionais
+        alt as duas contas deram datas diferentes
+            Calculadora-->>Recepcao: sem data, com os passos e o motivo
         else contas iguais
-            Calculadora-->>Contador: data limite + conta passo a passo + artigo
+            Calculadora-->>Recepcao: data limite e a conta passo a passo, com o artigo
         end
+        Recepcao->>Banco: grava a ciência, a data, a conta, quem pediu e quando
+        Recepcao-->>Contador: mostra a data limite com a conta ao lado do documento
     end
 ```
 
@@ -433,9 +478,8 @@ stateDiagram-v2
     Recebida --> Lida: texto tirado do PDF
     Lida --> PrecisaDeGente: IA em dúvida ou fora do ar, dado não confere
     Lida --> Conferida: tipo e dados conferidos com o texto
-    Conferida --> PrecisaDeGente: contas diferentes ou regra não conferida
-    Conferida --> ComPrazo: prazo calculado (planejado)
-    PrecisaDeGente --> ComPrazo: pessoa confere e confirma (planejado)
+    Conferida --> ComPrazo: pessoa informa a ciência e a regra, o código calcula
+    PrecisaDeGente --> ComPrazo: pessoa confere o documento, informa a ciência e a regra
     PrecisaDeGente --> Resolvida: pessoa fecha o caso com o desfecho
     Conferida --> Resolvida: pessoa fecha o caso com o desfecho
     ComPrazo --> AvisadaAoCliente: link enviado
@@ -444,7 +488,7 @@ stateDiagram-v2
     Resolvida --> [*]
 ```
 
-Hoje o código chega a **Conferida** ou **Precisa de gente** (pelo aviso `precisaDeRevisao`) e, das duas, a **Resolvida**. **Com prazo** e **Avisada ao cliente** são o plano do Marco 3.
+Hoje o código chega a **Conferida** ou **Precisa de gente** (pelo aviso `precisaDeRevisao`), das duas a **Com prazo**, e de qualquer uma a **Resolvida**. **Avisada ao cliente** é o plano do Marco 3.
 
 O estado não é uma coluna do banco: sai dos campos da notificação (`precisaDeRevisao`, `dataLimite`, `resolvidaEm`).
 
@@ -454,6 +498,7 @@ O estado não é uma coluna do banco: sai dos campos da notificação (`precisaD
 erDiagram
     escritorio ||--o{ usuario : "tem"
     escritorio ||--o{ empresa : "atende"
+    escritorio ||--o{ regra_de_prazo : "conferiu"
     empresa ||--o{ notificacao : "recebe"
     notificacao ||--o{ dado_extraido : "tem"
 
@@ -487,6 +532,20 @@ erDiagram
         timestamptz resolvida_em
         varchar desfecho
         varchar observacao
+        date ciencia
+        text conta_do_prazo
+        timestamptz prazo_calculado_em
+        varchar prazo_calculado_por
+    }
+    regra_de_prazo {
+        bigint id PK
+        bigint escritorio_id FK
+        varchar nome "único dentro do escritório"
+        int dias "de 1 a 365"
+        varchar contagem
+        boolean suspende_no_recesso
+        varchar artigo
+        date conferida_em
     }
     dado_extraido {
         bigint notificacao_id FK
@@ -505,6 +564,8 @@ erDiagram
 | `V4__notificacao_resolvida.sql` | A notificação pode ser resolvida: quando, o desfecho e a observação (os três vazios ou os três preenchidos) |
 | `V5__desfecho_so_aceita_os_quatro.sql` | O banco só aceita os quatro desfechos que existem no Java |
 | `V6__escritorio_e_usuario.sql` | Cria `escritorio` e `usuario` (e-mail único, senha embaralhada); cada empresa passa a ser de um escritório, e o CNPJ deixa de ser único no sistema inteiro para ser único dentro do escritório |
+| `V7__regra_de_prazo.sql` | Cria `regra_de_prazo`: as regras que cada escritório conferiu na norma, com artigo e data da conferência |
+| `V8__notificacao_guarda_a_conta_do_prazo.sql` | A notificação passa a guardar a ciência, a conta passo a passo, quem pediu e quando (os quatro vazios ou os quatro preenchidos) |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Ficou vazio: com o login, cada escritório cadastra as próprias empresas. O arquivo continua porque o Flyway já registrou o nome dele |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -156,5 +157,29 @@ class PainelControllerTest {
         //Conferir: a que chegou por ultimo aparece em cima (aspas no fim: "/notificacoes/1" nao casa com "/notificacoes/10")
         assertThat(pagina.indexOf("/notificacoes/" + segunda.getId() + "\""))
                 .isLessThan(pagina.indexOf("/notificacoes/" + primeira.getId() + "\""));
+    }
+
+    @Test
+    void prazoMaisPertoVemEmCimaESemPrazoFicaEmbaixo() throws Exception {
+        //Arrumar: tres notificações abertas e conferidas. A do meio chegou primeiro e tem o prazo mais perto
+        Notificacao longe = notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "99999009000100",
+                "Empresa Longe")), PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        Notificacao perto = notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "99999009000281",
+                "Empresa Perto")), PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "99999009000362",
+                "Empresa Sem Prazo")), PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        longe.registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
+        perto.registrarPrazo(hoje, hoje.plusDays(1), List.of("Conta de teste."), "pessoa@escritorio.test");
+        //Grava ja: a lista do painel le direto do banco
+        notificacoes.flush();
+
+        //Agir
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: perto, longe, sem prazo; e a de amanhã vem com o alerta
+        assertThat(pagina.indexOf("Empresa Perto")).isLessThan(pagina.indexOf("Empresa Longe"));
+        assertThat(pagina.indexOf("Empresa Longe")).isLessThan(pagina.indexOf("Empresa Sem Prazo"));
+        assertThat(pagina).contains("Vence amanhã").contains("Vence em 20 dias");
     }
 }

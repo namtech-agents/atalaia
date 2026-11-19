@@ -57,6 +57,8 @@
     <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
     <!-- "Desfecho:" na frente: sem isso, duas etiquetas lado a lado ("Cobrança", "Arquivado") se confundem -->
     <span class="etq" th:if="${linha.resolvida()}" th:text="'Desfecho: ' + ${linha.desfecho.nome}"></span>
+    <!-- O prazo, quando já foi calculado: em vermelho se faltam 3 dias ou menos. O texto já diz a situação -->
+    <span class="etq num" th:if="${linha.temPrazo()}" th:classappend="${linha.prazoApertado(hoje)} ? 'atencao'" th:text="${linha.prazo(hoje)}"></span>
     <!-- Caso fechado mostra quando foi resolvido; caso aberto, quando chegou -->
     <span class="quando"><th:block th:text="${linha.resolvida()} ? 'Resolvida em ' : 'Recebida em '"></th:block><span class="num" th:text="${linha.quando}"></span></span>
   </a>

@@ -3,6 +3,7 @@ package br.com.namtech.atalaia.notificacao;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,14 +19,43 @@ class NotificacaoNaListaTest {
     void linhaAbertaMostraQuandoChegouEResolvidaMostraQuandoFoiResolvida() {
         //Arrumar: a mesma notificação, aberta e depois resolvida
         NotificacaoNaLista aberta = new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false,
-                CHEGOU, null, null);
+                CHEGOU, null, null, null);
         NotificacaoNaLista resolvida = new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false,
-                CHEGOU, Desfecho.ARQUIVADO, RESOLVEU);
+                CHEGOU, Desfecho.ARQUIVADO, RESOLVEU, null);
 
         //Agir e conferir: cada uma mostra a sua data
         assertThat(aberta.resolvida()).isFalse();
         assertThat(aberta.getQuando()).isEqualTo("10/11/2026 às 12:00");
         assertThat(resolvida.resolvida()).isTrue();
         assertThat(resolvida.getQuando()).isEqualTo("17/11/2026 às 12:00");
+    }
+
+    @Test
+    void prazoDizQuantoFaltaEAvisaQuandoEstaApertado() {
+        //Arrumar: hoje é 18/11/2026
+        LocalDate hoje = LocalDate.of(2026, 11, 18);
+
+        //Agir e conferir: vencido, hoje, amanhã, no limite do alerta e com folga
+        assertThat(comPrazo(hoje.minusDays(1)).prazo(hoje)).isEqualTo("Venceu em 17/11/2026");
+        assertThat(comPrazo(hoje).prazo(hoje)).isEqualTo("Vence hoje");
+        assertThat(comPrazo(hoje.plusDays(1)).prazo(hoje)).isEqualTo("Vence amanhã");
+        assertThat(comPrazo(hoje.plusDays(3)).prazo(hoje)).isEqualTo("Vence em 3 dias, 21/11/2026");
+        assertThat(comPrazo(hoje.minusDays(1)).prazoApertado(hoje)).isTrue();
+        assertThat(comPrazo(hoje.plusDays(3)).prazoApertado(hoje)).isTrue();
+        assertThat(comPrazo(hoje.plusDays(4)).prazoApertado(hoje)).isFalse();
+    }
+
+    @Test
+    void casoResolvidoOuSemDataNaoMostraPrazo() {
+        //Agir e conferir
+        assertThat(comPrazo(null).temPrazo()).isFalse();
+        assertThat(new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false, CHEGOU,
+                Desfecho.ARQUIVADO, RESOLVEU, LocalDate.of(2026, 11, 20)).temPrazo()).isFalse();
+        assertThat(comPrazo(LocalDate.of(2026, 11, 20)).temPrazo()).isTrue();
+    }
+
+    private NotificacaoNaLista comPrazo(LocalDate dataLimite) {
+        return new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false, CHEGOU, null, null,
+                dataLimite);
     }
 }
