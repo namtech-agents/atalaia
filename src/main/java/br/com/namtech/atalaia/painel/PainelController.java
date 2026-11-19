@@ -79,10 +79,12 @@ public class PainelController {
         model.addAttribute("faltas", faltas);
 
         //As resolvidas mostram a data da resolução, entao a ordem delas segue essa data: a ultima resolvida em cima
-        model.addAttribute("resolvidas", todas.stream().filter(NotificacaoNaLista::resolvida)
-                .sorted(Comparator.comparing(NotificacaoNaLista::resolvidaEm).reversed()).toList());
-        model.addAttribute("verResolvidas", "resolvidas".equals(ver));
-        model.addAttribute("temAbertas", !abertas.isEmpty());
+        List<NotificacaoNaLista> resolvidas = todas.stream().filter(NotificacaoNaLista::resolvida)
+                .sorted(Comparator.comparing(NotificacaoNaLista::resolvidaEm).reversed()).toList();
+        model.addAttribute("resolvidas", resolvidas);
+        //Sem nenhuma resolvida, "ver=resolvidas" (favorito, link antigo) cai nas abertas: senao a tela ficaria
+        //vazia e sem o filtro para voltar
+        model.addAttribute("verResolvidas", "resolvidas".equals(ver) && !resolvidas.isEmpty());
         model.addAttribute("nenhuma", todas.isEmpty());
         model.addAttribute("avisos", avisosDosCasos);
         //"agora" serve para saber se o link do aviso venceu; o "hoje" de Teresina, para dizer quantos dias faltam

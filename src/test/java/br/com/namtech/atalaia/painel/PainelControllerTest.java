@@ -131,6 +131,21 @@ class PainelControllerTest {
         assertThat(pagina.indexOf("Empresa Aguardando")).isBetween(cliente, fechar);
         assertThat(pagina.indexOf("Empresa Confirmou")).isGreaterThan(fechar);
         assertThat(linhaDa(pagina, "Empresa Sem Aviso")).contains("etq falta\">Avisar o cliente<");
+        //Um caso em cada grupo: a contagem no singular
+        assertThat(pagina).contains("1 notificação");
+    }
+
+    @Test
+    void prazoDaProximaSemanaSaiEmAmarelo() throws Exception {
+        //Arrumar: um caso que vence daqui a 5 dias
+        Notificacao caso = casoComPrazo(escritorio, "99999009001000", "Empresa Perto");
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        caso.registrarPrazo(hoje, hoje.plusDays(5), List.of("Conta de teste."), "pessoa@escritorio.test");
+        notificacoes.flush();
+
+        //Agir e conferir: o nivel do meio da cor chega na pagina
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+        assertThat(linhaDa(pagina, "Empresa Perto")).contains("etq num perto\">Vence em 5 dias");
     }
 
     @Test
@@ -149,9 +164,24 @@ class PainelControllerTest {
         //Conferir: a tela inicial diz que nada precisa de gente e aponta para o filtro, sem listar o caso;
         //no filtro ele aparece com o desfecho e a data em que foi resolvido
         assertThat(inicial).doesNotContain("/notificacoes/" + resolvida.getId() + "\"", "Precisa de gente")
-                .contains("Nada precisa de gente", "href=\"/?ver=resolvidas\"");
+                .contains("Nada precisa de gente", "href=\"/?ver=resolvidas\"", "aria-current=\"page\">Abertas");
         assertThat(filtro).contains("/notificacoes/" + resolvida.getId() + "\"", "Desfecho: Arquivado", "Resolvida em")
-                .doesNotContain("Nada precisa de gente", "Recebida em");
+                .doesNotContain("Nada precisa de gente", "Recebida em")
+                .contains("aria-current=\"page\">Resolvidas");
+    }
+
+    @Test
+    void filtroDasResolvidasSemNenhumaCaiNasAbertas() throws Exception {
+        //Arrumar: um caso aberto e nenhum resolvido
+        casoComPrazo(escritorio, "99999009001000", "Empresa Aberta");
+        notificacoes.flush();
+
+        //Agir: alguem abre o filtro das resolvidas por um link antigo
+        String pagina = navegador.perform(get("/").param("ver", "resolvidas"))
+                .andReturn().getResponse().getContentAsString();
+
+        //Conferir: a tela mostra as abertas, em vez de ficar vazia
+        assertThat(pagina).contains("Empresa Aberta", "Precisa de gente");
     }
 
     @Test

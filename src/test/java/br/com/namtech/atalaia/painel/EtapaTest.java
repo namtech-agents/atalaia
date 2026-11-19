@@ -42,6 +42,8 @@ class EtapaTest {
         assertThat(Etapa.de(linha(false, PRAZO), aguardando, AGORA)).isEqualTo(Etapa.ESPERANDO_O_CLIENTE);
         assertThat(Etapa.de(linha(false, PRAZO), confirmado, AGORA)).isEqualTo(Etapa.PRONTO_PARA_FECHAR);
         assertThat(Etapa.oQueFalta(linha(false, PRAZO), aguardando)).isNull();
+        //A leitura que foi para revisao ja foi olhada por quem calculou o prazo e avisou: segue o aviso
+        assertThat(Etapa.de(linha(true, PRAZO), aguardando, AGORA)).isEqualTo(Etapa.ESPERANDO_O_CLIENTE);
     }
 
     @Test
