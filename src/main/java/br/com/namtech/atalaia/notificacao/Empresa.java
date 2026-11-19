@@ -33,6 +33,33 @@ public class Empresa {
     protected Empresa() {
     }
 
+    //Pesos da conta de cada digito de conferencia (módulo 11), da Receita Federal
+    private static final int[] PESOS_DO_PRIMEIRO = {5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
+    private static final int[] PESOS_DO_SEGUNDO = {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};
+
+    //Confere os dois ultimos digitos, que sao calculados a partir dos outros: pega erro de digitação.
+    //Recebe o CNPJ ja arrumado (14 posições, maiusculas). Vale para o CNPJ novo, com letras: cada posição
+    //vale o codigo dela menos 48 ('0' vale 0, '9' vale 9, 'A' vale 17)
+    public static boolean cnpjValido(String cnpj) {
+        //Todas as posições iguais (00000000000000) passam na conta, mas nao sao CNPJ de ninguem
+        if (cnpj.chars().distinct().count() == 1) {
+            return false;
+        }
+        char primeiro = digitoDeConferencia(cnpj.substring(0, 12), PESOS_DO_PRIMEIRO);
+        char segundo = digitoDeConferencia(cnpj.substring(0, 12) + primeiro, PESOS_DO_SEGUNDO);
+        return cnpj.charAt(12) == primeiro && cnpj.charAt(13) == segundo;
+    }
+
+    //Soma cada posição vezes o seu peso; resto da divisão por 11 menor que 2 da 0, senao 11 menos o resto
+    private static char digitoDeConferencia(String base, int[] pesos) {
+        int soma = 0;
+        for (int i = 0; i < pesos.length; i++) {
+            soma += (base.charAt(i) - '0') * pesos[i];
+        }
+        int resto = soma % 11;
+        return (char) ('0' + (resto < 2 ? 0 : 11 - resto));
+    }
+
     public Empresa(Escritorio escritorio, String cnpj, String nome) {
         this.escritorio = escritorio;
         this.cnpj = cnpj;

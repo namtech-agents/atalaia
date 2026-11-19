@@ -68,7 +68,7 @@ class ContaControllerTest {
 
         //Conferir: o que ela cadastra cai no escritório dela (a sessão de verdade carrega o escritório certo)
         navegador.perform(post("/empresas").session(sessao).with(csrf())
-                .param("nome", "Padaria de Teste").param("cnpj", "99999009000100"));
+                .param("nome", "Padaria de Teste").param("cnpj", "99999009000115"));
         assertThat(empresas.findAllByEscritorioIdOrderByNome(guardada.getEscritorio().getId())).hasSize(1);
 
         //Conferir: noutro dia, com o e-mail e a senha, a pessoa entra
