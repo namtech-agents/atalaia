@@ -28,6 +28,7 @@ import org.springframework.web.context.WebApplicationContext;
 import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.analista.IaDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
@@ -88,7 +89,7 @@ class HistoricoDoCasoTest {
         empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
         escritorioNavegando = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
         cliente = MockMvcBuilders.webAppContextSetup(aplicacao).apply(SecurityMockMvcConfigurers.springSecurity()).build();
-        when(ia.responder(anyString())).thenReturn("""
+        IaDeTeste.responde(ia, """
                 {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
                   {"campo": "prazo", "valor": "30 dias", "trecho": "Prazo: 30 dias a contar da ciência"}],
                  "resumo": "A Receita pediu os livros da empresa."}

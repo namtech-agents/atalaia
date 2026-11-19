@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.analista.IaDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
@@ -77,7 +78,7 @@ class CaminhoInteiroTest {
         //e o link do cliente pode ser gerado
         LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
         //A IA de mentira lê o PDF de exemplo: um dado que está mesmo no texto, e o resumo para o cliente
-        when(ia.responder(anyString())).thenReturn("""
+        IaDeTeste.responde(ia, """
                 {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
                   {"campo": "prazo", "valor": "30 dias", "trecho": "Prazo: 30 dias a contar da ciência"}],
                  "resumo": "A Receita pediu os livros da empresa. Separe os livros e avise o escritório."}

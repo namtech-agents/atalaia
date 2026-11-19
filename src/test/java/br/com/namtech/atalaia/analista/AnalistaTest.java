@@ -312,4 +312,88 @@ class AnalistaTest {
         //Agir e conferir: documento que vai para revisao nao leva rascunho
         assertThat(new Analista(ia).analisar(TEXTO).resumoSugerido()).isNull();
     }
+
+    //A segunda passada (US25): "falta algo ou há conflito?"
+
+    @Test
+    void segundaPassadaSemDuvidaNaoDaMotivo() {
+        //Arrumar: a IA diz que o documento está em ordem
+        ModeloDeIA ia = pergunta -> IaDeTeste.SEM_DUVIDA;
+
+        //Agir e conferir: sem motivo, o caso segue sem revisão
+        assertThat(new Analista(ia).procurarDuvida(TEXTO)).isNull();
+    }
+
+    @Test
+    void segundaPassadaComDuvidaDizOQueNaoBateEMostraOTrecho() {
+        //Arrumar: a IA aponta um conflito, com um trecho que está no documento
+        ModeloDeIA ia = pergunta -> """
+                {"duvida": true, "trecho": "Prazo: 30 dias a contar da ciência.", "porque": "O prazo por extenso não bate."}
+                """;
+
+        //Agir
+        String motivo = new Analista(ia).procurarDuvida(TEXTO);
+
+        //Conferir: o motivo diz o porquê e traz o trecho para a pessoa achar no PDF
+        assertThat(motivo).isEqualTo("A segunda leitura achou algo faltando ou em conflito: O prazo por extenso não bate."
+                + " Trecho: \"Prazo: 30 dias a contar da ciência.\"");
+    }
+
+    @Test
+    void trechoQueNaoEstaNoDocumentoNaoVaiParaATelaMasADuvidaFica() {
+        //Arrumar: a IA inventa o trecho
+        ModeloDeIA ia = pergunta -> "{\"duvida\": true, \"trecho\": \"Prazo: 15 dias.\", \"porque\": \"Prazo em conflito.\"}";
+
+        //Agir
+        String motivo = new Analista(ia).procurarDuvida(TEXTO);
+
+        //Conferir: a dúvida continua (o caso vai para uma pessoa), mas sem apontar para um lugar que não existe
+        assertThat(motivo).isEqualTo("A segunda leitura achou algo faltando ou em conflito: Prazo em conflito."
+                + " A IA não apontou um trecho que esteja no documento.");
+    }
+
+    //Cada resposta que não dá para confiar vira dúvida: melhor uma pessoa olhar um documento bom
+    @ParameterizedTest
+    @ValueSource(strings = { "Está tudo certo!", "{\"trecho\": \"\", \"porque\": \"\"}", "{\"duvida\": \"talvez\"}",
+            "", "{\"duvida\": false, \"porque\": \"\\u0000\"}" })
+    void segundaPassadaForaDoFormatoContaComoDuvida(String resposta) {
+        //Arrumar: a IA responde fora do combinado
+        ModeloDeIA ia = pergunta -> resposta;
+
+        //Agir e conferir
+        assertThat(new Analista(ia).procurarDuvida(TEXTO))
+                .isEqualTo("A segunda leitura (falta algo ou há conflito?) não respondeu. Confira o documento.");
+    }
+
+    @Test
+    void segundaPassadaComAIaForaDoArContaComoDuvida() {
+        //Arrumar: a IA dá erro (sem internet, limite estourado) ou não devolve nada
+        ModeloDeIA foraDoAr = pergunta -> {
+            throw new IllegalStateException("fora do ar");
+        };
+
+        //Agir e conferir
+        assertThat(new Analista(foraDoAr).procurarDuvida(TEXTO)).startsWith("A segunda leitura");
+        assertThat(new Analista(pergunta -> null).procurarDuvida(TEXTO)).startsWith("A segunda leitura");
+    }
+
+    @Test
+    void segundaPassadaLevaODocumentoEntreAsMarcasEOMotivoFicaNumaLinhaCurta() {
+        //Arrumar: uma IA que guarda a pergunta e responde com um porquê de várias linhas e longo demais
+        String[] perguntaRecebida = new String[1];
+        String longo = "não bate\\n".repeat(100);
+        ModeloDeIA ia = pergunta -> {
+            perguntaRecebida[0] = pergunta;
+            return "{\"duvida\": true, \"trecho\": \"\", \"porque\": \"" + longo + "\"}";
+        };
+
+        //Agir
+        String motivo = new Analista(ia).procurarDuvida(TEXTO);
+
+        //Conferir: o texto foi entre as marcas, no pedido da segunda passada; o motivo saiu numa linha, encurtado
+        assertThat(IaDeTeste.ehSegundaPassada(perguntaRecebida[0])).isTrue();
+        assertThat(perguntaRecebida[0]).contains("<<<DOCUMENTO\n" + TEXTO + "\nDOCUMENTO>>>");
+        assertThat(motivo).doesNotContain("\n").contains("…");
+        assertThat(motivo.length()).isLessThan(Analista.TRECHO_MAXIMO + 150);
+    }
 }

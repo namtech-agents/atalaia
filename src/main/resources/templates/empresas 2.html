@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro · Empresas' : 'Empresas')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo('empresas')}"></header>
+
+  <main id="conteudo">
+    <div class="titulo">
+      <a class="volta" th:href="@{/}">Notificações</a>
+      <h1>Empresas</h1>
+      <p>As empresas que o escritório atende. Cada notificação enviada fica ligada a uma delas.</p>
+    </div>
+
+    <!-- Logo depois de cadastrar: confirma e mostra o próximo passo -->
+    <p class="recado" role="status" th:if="${cadastrada}">Empresa cadastrada. <a th:href="@{/enviar}">Enviar notificação</a></p>
+
+    <section class="grupo" th:unless="${empresas.isEmpty()}" aria-labelledby="titulo-empresas">
+      <h2 id="titulo-empresas" th:text="${empresas.size() == 1} ? '1 empresa' : ${empresas.size() + ' empresas'}"></h2>
+      <ul class="vidro lista">
+        <li th:each="empresa : ${empresas}">
+          <div class="linha">
+            <strong th:text="${empresa.nome}"></strong>
+            <span class="quando">CNPJ <span class="num" th:text="${empresa.cnpjFormatado}"></span></span>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <form class="vidro formulario" method="post" th:action="@{/empresas}" aria-labelledby="titulo-nova">
+      <h2 class="rotulo" id="titulo-nova" th:text="${empresas.isEmpty()} ? 'Cadastre a primeira empresa' : 'Cadastrar outra empresa'"></h2>
+      <p class="erro" id="erro-empresa" role="alert" th:if="${erro}" th:text="${erro}"></p>
+
+      <div>
+        <label class="rotulo" for="nome">Nome da empresa</label>
+        <!-- Só o campo que falhou recebe o foco e o aviso de erro (campoComErro vem do EmpresaController) -->
+        <input id="nome" name="nome" type="text" maxlength="200" required th:value="${nome}"
+               th:autofocus="${campoComErro == 'nome'}"
+               th:attr="aria-invalid=${campoComErro == 'nome'} ? 'true', aria-describedby=${campoComErro == 'nome'} ? 'erro-empresa'">
+      </div>
+      <div>
+        <label class="rotulo" for="cnpj">CNPJ</label>
+        <!-- 24: folga para a pontuação e para um espaço que venha junto ao colar; o servidor limpa -->
+        <input id="cnpj" name="cnpj" type="text" maxlength="24" required th:value="${cnpj}"
+               aria-describedby="dica-cnpj" th:autofocus="${campoComErro == 'cnpj'}"
+               th:attr="aria-invalid=${campoComErro == 'cnpj'} ? 'true', aria-describedby=${campoComErro == 'cnpj'} ? 'erro-empresa dica-cnpj' : 'dica-cnpj'">
+        <p class="dica" id="dica-cnpj">Com ou sem pontuação.</p>
+      </div>
+
+      <button class="botao cheio" type="submit">Cadastrar empresa</button>
+    </form>
+  </main>
+</div>
+</body>
+</html>

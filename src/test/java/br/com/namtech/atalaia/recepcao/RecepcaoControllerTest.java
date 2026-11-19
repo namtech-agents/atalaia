@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,6 +39,7 @@ import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
+import br.com.namtech.atalaia.analista.IaDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.leitor.LeitorPdfTest;
@@ -105,7 +107,7 @@ class RecepcaoControllerTest {
     }
 
     private void iaResponde(String prazo) {
-        when(ia.responder(anyString())).thenReturn("""
+        IaDeTeste.responde(ia, """
                 {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
                   {"campo": "prazo", "valor": "%s", "trecho": "Prazo: 30 dias a contar da ciência"}],
                  "resumo": "A Receita pediu os livros da empresa. Separe os livros e avise o escritório."}
@@ -279,7 +281,7 @@ class RecepcaoControllerTest {
     @Test
     void informativoQueFalaEmPrazoVaiParaRevisao() throws Exception {
         //Arrumar: a IA chama de informativo um documento que tem prazo (engano, ou documento feito para enganar)
-        when(ia.responder(anyString())).thenReturn("""
+        IaDeTeste.responde(ia, """
                 {"tipo": "INFORMATIVO", "confianca": "alta", "dados": [
                   {"campo": "prazo", "valor": "30 dias", "trecho": "Prazo: 30 dias a contar da ciência"}]}
                 """);
@@ -294,6 +296,48 @@ class RecepcaoControllerTest {
         assertThat(guardada.isPrecisaDeRevisao()).isTrue();
         assertThat(guardada.getMotivosDaRevisao())
                 .containsExactly("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
+    }
+
+    @Test
+    void duvidaDaSegundaLeituraMandaOCasoParaGenteComOTrechoEOPdfAoLado() throws Exception {
+        //Arrumar: a leitura passa em tudo, mas a segunda passada acha um conflito no prazo
+        IaDeTeste.responde(ia, """
+                {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
+                  {"campo": "prazo", "valor": "30 dias", "trecho": "Prazo: 30 dias a contar da ciência"}]}
+                """, """
+                {"duvida": true, "trecho": "Prazo: 30 dias a contar da ciência", "porque": "O prazo aparece de dois jeitos."}
+                """);
+
+        //Agir: envia
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o caso foi para uma pessoa, com o motivo e o trecho; a tela mostra o motivo e o PDF ao lado
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isPrecisaDeRevisao()).isTrue();
+        assertThat(guardada.getDataLimite()).isNull();
+        assertThat(guardada.getMotivosDaRevisao()).containsExactly("A segunda leitura achou algo faltando ou em conflito:"
+                + " O prazo aparece de dois jeitos. Trecho: \"Prazo: 30 dias a contar da ciência\"");
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Precisa de gente")))
+                .andExpect(content().string(containsString("O prazo aparece de dois jeitos.")))
+                .andExpect(content().string(containsString("/notificacoes/" + guardada.getId() + "/pdf")));
+    }
+
+    @Test
+    void casoQueJaFoiParaGenteNaoGastaASegundaLeitura() throws Exception {
+        //Arrumar: a leitura já pede revisão (a IA ficou em dúvida sobre o tipo)
+        IaDeTeste.responde(ia, "{\"tipo\": \"INTIMACAO\", \"confianca\": \"baixa\", \"dados\": []}");
+
+        //Agir: envia
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: uma pergunta só à IA (a leitura); a pessoa vai olhar o documento de qualquer jeito
+        verify(ia, times(1)).responder(anyString());
     }
 
     @Test

@@ -40,7 +40,7 @@ public class Verificador {
             //Trecho ou valor sem nenhuma letra ou numero "aparece" em qualquer texto, entao é rejeitado antes de procurar
             if (semConteudo(trecho) || semConteudo(valor)) {
                 motivos.add("O dado \"" + dado.rotulo() + "\" veio sem valor ou sem trecho.");
-            } else if (!contemInteiro(texto, trecho)) {
+            } else if (!estaNoTexto(texto, trecho)) {
                 motivos.add("O trecho do dado \"" + dado.rotulo() + "\" não está no texto do PDF.");
             } else if (!contemInteiro(trecho, valor)) {
                 motivos.add("O valor do dado \"" + dado.rotulo() + "\" não aparece no trecho de onde ele diz ter saído.");
@@ -52,6 +52,13 @@ public class Verificador {
             }
         }
         return new ResultadoVerificacao(!motivos.isEmpty(), motivos);
+    }
+
+    //O trecho aparece inteiro no texto do PDF? A mesma regra para os dados e para o trecho da dúvida (Analista).
+    //Trecho sem nenhuma letra ou numero nao conta: "aparece" em qualquer texto
+    public boolean estaNoTexto(String textoDoPdf, String trecho) {
+        String procurado = arrumar(trecho);
+        return !semConteudo(procurado) && contemInteiro(arrumar(textoDoPdf), procurado);
     }
 
     //Deixa os dois lados comparaveis: dado que nao veio (null) vira vazio; o NFKC troca os caracteres "parecidos"

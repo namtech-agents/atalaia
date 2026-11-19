@@ -331,6 +331,14 @@ public class RecepcaoController {
         if (analise.tipo() == TipoDeDocumento.INFORMATIVO && verificador.falaEmObrigacao(leitura.texto())) {
             motivos.add("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
         }
+        //A segunda passada (US25): "falta algo ou há conflito?". Só quando o resto passou: se uma peça ja mandou o caso
+        //para uma pessoa, ela vai olhar o documento de qualquer jeito, e a chamada à IA seria gasta à toa
+        if (motivos.isEmpty()) {
+            String duvida = analista.procurarDuvida(leitura.texto());
+            if (duvida != null) {
+                motivos.add(duvida);
+            }
+        }
         Notificacao notificacao = new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
         notificacao.sugerirResumo(analise.resumoSugerido());
         return notificacao;
