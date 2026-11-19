@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
+import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.NotificacaoNaLista;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
@@ -42,12 +43,23 @@ public class PainelController {
     }
 
     //"ver=resolvidas" troca a lista: em vez dos casos abertos, mostra só os ja resolvidos.
-    //A tela inicial fica com o que pede ação; o historico esta a um clique
+    //A tela inicial fica com o que pede ação; o historico esta a um clique.
+    //"empresa" filtra os casos de um cliente só (o resto da tela funciona igual, só com menos linhas)
     @GetMapping("/")
     public String painel(@AuthenticationPrincipal UsuarioLogado usuario,
-            @RequestParam(defaultValue = "") String ver, Model model) {
+            @RequestParam(defaultValue = "") String ver, @RequestParam(defaultValue = "") String empresa, Model model) {
         //Só as notificações do escritório de quem entrou
-        List<NotificacaoNaLista> todas = notificacoes.listar(usuario.escritorioId());
+        List<NotificacaoNaLista> doEscritorio = notificacoes.listar(usuario.escritorioId());
+        List<Empresa> clientes = empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId());
+        //Quantos casos abertos cada cliente tem, contados antes do filtro: a escolha do cliente mostra o numero de todos
+        Map<Long, Long> abertasPorCliente = doEscritorio.stream().filter(linha -> !linha.resolvida())
+                .collect(Collectors.groupingBy(NotificacaoNaLista::empresaId, Collectors.counting()));
+        //Só vale filtrar por uma empresa do proprio escritório. Numero de outra, ou texto (endereço mexido), é ignorado
+        //(chega como texto para "abc" nao virar erro 400):
+        //a tela mostra todos os clientes, e nada da outra empresa aparece, porque a lista já é só do escritório
+        Long filtro = clientes.stream().map(Empresa::getId).filter(id -> id.toString().equals(empresa)).findFirst().orElse(null);
+        List<NotificacaoNaLista> todas = filtro == null ? doEscritorio
+                : doEscritorio.stream().filter(linha -> linha.empresaId().equals(filtro)).toList();
         Instant agora = Instant.now(relogio);
         //O aviso ao cliente de cada caso aberto, guardado pelo numero da notificação: decide o grupo do caso e
         //a etiqueta da linha. (um, outro) -> um: dois avisos do mesmo caso criados no mesmo instante viriam os dois;
@@ -85,13 +97,18 @@ public class PainelController {
         //Sem nenhuma resolvida, "ver=resolvidas" (favorito, link antigo) cai nas abertas: senao a tela ficaria
         //vazia e sem o filtro para voltar
         model.addAttribute("verResolvidas", "resolvidas".equals(ver) && !resolvidas.isEmpty());
-        model.addAttribute("nenhuma", todas.isEmpty());
+        //"nenhuma" fala do escritório (nunca recebeu nada); "nadaDoCliente", do filtro (o cliente escolhido nao tem casos)
+        model.addAttribute("nenhuma", doEscritorio.isEmpty());
+        model.addAttribute("nadaDoCliente", filtro != null && todas.isEmpty());
+        model.addAttribute("clientes", clientes);
+        model.addAttribute("abertasPorCliente", abertasPorCliente);
+        model.addAttribute("filtro", filtro);
         model.addAttribute("avisos", avisosDosCasos);
         //"agora" serve para saber se o link do aviso venceu; o "hoje" de Teresina, para dizer quantos dias faltam
         model.addAttribute("agora", agora);
         model.addAttribute("hoje", LocalDate.now(relogio));
         //Escritório novo, ainda sem empresa: o primeiro passo é cadastrar uma, e a tela aponta para la
-        model.addAttribute("semEmpresa", !empresas.existsByEscritorioId(usuario.escritorioId()));
+        model.addAttribute("semEmpresa", clientes.isEmpty());
         return "painel";
     }
 }

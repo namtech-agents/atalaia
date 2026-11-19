@@ -21,10 +21,28 @@
       <p>Nenhuma notificação recebida ainda. Envie o PDF que chegou para o cliente e ele aparece aqui.</p>
     </section>
 
-    <!-- O filtro: abertas (o que pede ação) ou resolvidas (o histórico). Só aparece quando há resolvidas -->
+    <!-- Escolher um cliente: com duas empresas ou mais. Formulário GET sem JavaScript: o endereço guarda a escolha
+         (dá para favoritar), e o botão "Mostrar" envia. Cada opção diz quantos casos abertos o cliente tem -->
+    <form class="escolha-linha" method="get" th:action="@{/}" th:if="${clientes.size() > 1 and not nenhuma}">
+      <input type="hidden" name="ver" value="resolvidas" th:if="${verResolvidas}">
+      <label class="rotulo" for="empresa">Cliente</label>
+      <select id="empresa" name="empresa">
+        <option value="">Todos os clientes</option>
+        <option th:each="cliente : ${clientes}" th:value="${cliente.id}" th:selected="${cliente.id == filtro}"
+                th:with="abertas=${abertasPorCliente.getOrDefault(cliente.id, 0L)}"
+                th:text="${cliente.nome} + ' · ' + (${abertas == 0} ? 'nenhuma aberta' : (${abertas == 1} ? '1 aberta' : ${abertas} + ' abertas'))"></option>
+      </select>
+      <button class="botao" type="submit">Mostrar</button>
+    </form>
+    <section class="vidro vazio" th:if="${nadaDoCliente}">
+      <p>Nenhuma notificação deste cliente. <a th:href="@{/}">Ver todos os clientes</a></p>
+    </section>
+
+    <!-- O filtro: abertas (o que pede ação) ou resolvidas (o histórico). Só aparece quando há resolvidas.
+         Os dois links levam o cliente escolhido junto; sem cliente, o endereço fica sem ele (e não com "empresa=" vazio) -->
     <nav class="filtro" aria-label="Quais casos mostrar" th:unless="${resolvidas.isEmpty()}">
-      <a th:href="@{/}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas</a>
-      <a th:href="@{/(ver='resolvidas')}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
+      <a th:href="${filtro == null} ? @{/} : @{/(empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas</a>
+      <a th:href="${filtro == null} ? @{/(ver='resolvidas')} : @{/(ver='resolvidas',empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
     </nav>
 
     <th:block th:unless="${verResolvidas}">
@@ -32,7 +50,7 @@
       <section th:replace="~{:: grupo('gente', 'Precisa de gente', ${precisaDeGente})}"></section>
 
       <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
-      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma}">Nada precisa de gente agora.</p>
+      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma and not nadaDoCliente}">Nada precisa de gente agora.</p>
 
       <section th:replace="~{:: grupo('cliente', 'Esperando o cliente', ${esperandoOCliente})}"></section>
       <section th:replace="~{:: grupo('fechar', 'Pronto para fechar', ${prontoParaFechar})}"></section>

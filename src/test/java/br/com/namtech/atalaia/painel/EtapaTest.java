@@ -61,7 +61,7 @@ class EtapaTest {
     }
 
     private static NotificacaoNaLista linha(boolean precisaDeRevisao, LocalDate dataLimite) {
-        return new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.INTIMACAO, precisaDeRevisao, AGORA,
+        return new NotificacaoNaLista(1L, 1L, "Empresa de Teste", TipoDeDocumento.INTIMACAO, precisaDeRevisao, AGORA,
                 null, null, dataLimite);
     }
 

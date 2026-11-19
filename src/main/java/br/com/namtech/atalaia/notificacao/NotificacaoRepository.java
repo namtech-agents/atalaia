@@ -1,5 +1,6 @@
 package br.com.namtech.atalaia.notificacao;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,12 +21,22 @@ public interface NotificacaoRepository extends Repository<Notificacao, Long> {
     //colunas pedidas: o PDF e o texto ficam no banco
     @Query("""
             select new br.com.namtech.atalaia.notificacao.NotificacaoNaLista(
-                n.id, e.nome, n.tipo, n.precisaDeRevisao, n.recebidaEm, n.desfecho, n.resolvidaEm, n.dataLimite)
+                n.id, e.id, e.nome, n.tipo, n.precisaDeRevisao, n.recebidaEm, n.desfecho, n.resolvidaEm, n.dataLimite)
             from Notificacao n join n.empresa e
             where e.escritorio.id = ?1
             order by n.recebidaEm desc, n.id desc
             """)
     List<NotificacaoNaLista> listar(Long escritorioId);
+
+    //Quantos casos cada empresa do escritório recebeu desde a data dada (tela de empresas, para rever a cobrança).
+    //Empresa sem nenhum caso no periodo nao vem na lista: a tela mostra zero para ela
+    @Query("""
+            select new br.com.namtech.atalaia.notificacao.CasosDaEmpresa(n.empresa.id, count(n))
+            from Notificacao n
+            where n.empresa.escritorio.id = ?1 and n.recebidaEm >= ?2
+            group by n.empresa.id
+            """)
+    List<CasosDaEmpresa> contarPorEmpresa(Long escritorioId, Instant desde);
 
     //Quantos casos a empresa tem: a tela de editar explica por que empresa com caso nao sai
     @Query("select count(n) from Notificacao n where n.empresa.id = ?1 and n.empresa.escritorio.id = ?2")
