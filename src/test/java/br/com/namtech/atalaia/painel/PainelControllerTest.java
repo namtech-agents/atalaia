@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.aviso.AvisoAoCliente;
+import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
@@ -55,6 +59,9 @@ class PainelControllerTest {
 
     @Autowired
     private NotificacaoRepository notificacoes;
+
+    @Autowired
+    private AvisoAoClienteRepository avisos;
 
     private static final byte[] PDF = "%PDF-teste".getBytes();
 
@@ -181,5 +188,48 @@ class PainelControllerTest {
         assertThat(pagina.indexOf("Empresa Perto")).isLessThan(pagina.indexOf("Empresa Longe"));
         assertThat(pagina.indexOf("Empresa Longe")).isLessThan(pagina.indexOf("Empresa Sem Prazo"));
         assertThat(pagina).contains("Vence amanhã").contains("Vence em 20 dias");
+    }
+
+    @Test
+    void listaMostraSeOClienteFoiAvisadoESeJaConfirmou() throws Exception {
+        //Arrumar: quatro casos com prazo. Um sem aviso, um aguardando, um confirmado com a data errada e um com o link vencido
+        Instant agora = Instant.now();
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        Notificacao[] casos = new Notificacao[4];
+        String[] nomes = { "Empresa Sem Aviso", "Empresa Aguardando", "Empresa Errou", "Empresa Vencida" };
+        for (int i = 0; i < casos.length; i++) {
+            casos[i] = notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "9999900900" + (1000 + i),
+                    nomes[i])), PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+            casos[i].registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
+        }
+        //No caso que aguarda, um aviso antigo foi substituído: na lista vale o mais novo
+        AvisoAoCliente substituido = avisos.save(new AvisoAoCliente(casos[1], "token-de-teste-antigo", "Resumo.", null,
+                "pessoa@escritorio.test", agora.minusSeconds(60)));
+        substituido.substituir(agora);
+        avisos.save(new AvisoAoCliente(casos[1], "token-de-teste-aguardando", "Resumo.", null,
+                "pessoa@escritorio.test", agora));
+        AvisoAoCliente errou = avisos.save(new AvisoAoCliente(casos[2], "token-de-teste-errou", "Resumo.", null,
+                "pessoa@escritorio.test", agora));
+        errou.confirmar(hoje.plusDays(27), agora);
+        avisos.save(new AvisoAoCliente(casos[3], "token-de-teste-vencido", "Resumo.", null,
+                "pessoa@escritorio.test", agora.minus(31, ChronoUnit.DAYS)));
+        notificacoes.flush();
+
+        //Agir
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: cada linha diz a situação do aviso; quem pede ação do escritório vem com o alerta
+        assertThat(linhaDa(pagina, "Empresa Sem Aviso")).doesNotContain(">Aguardando o cliente<", ">Cliente confirmou",
+                ">Link vencido");
+        assertThat(linhaDa(pagina, "Empresa Aguardando")).contains(">Aguardando o cliente<")
+                .doesNotContain("Substituído");
+        assertThat(linhaDa(pagina, "Empresa Errou")).contains("etq atencao\">Cliente confirmou, com a data errada<");
+        assertThat(linhaDa(pagina, "Empresa Vencida")).contains("etq atencao\">Link vencido sem confirmação<");
+    }
+
+    //O pedaço da pagina com a linha de uma empresa: do nome dela ate o fim do link
+    private static String linhaDa(String pagina, String empresa) {
+        int comeco = pagina.indexOf(empresa);
+        return pagina.substring(comeco, pagina.indexOf("</a>", comeco));
     }
 }

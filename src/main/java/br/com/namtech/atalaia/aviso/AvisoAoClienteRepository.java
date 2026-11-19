@@ -30,6 +30,14 @@ public interface AvisoAoClienteRepository extends JpaRepository<AvisoAoCliente, 
             """)
     List<AvisoAoCliente> doCasoParaSubstituir(Long notificacaoId, Long escritorioId);
 
+    //Para a lista da tela inicial: o aviso que vale (o mais novo) de cada caso aberto do escritório, numa busca só
+    @Query("""
+            select a from AvisoAoCliente a
+            where a.notificacao.empresa.escritorio.id = ?1 and a.notificacao.resolvidaEm is null
+              and a.criadoEm = (select max(outro.criadoEm) from AvisoAoCliente outro where outro.notificacao = a.notificacao)
+            """)
+    List<AvisoAoCliente> dosCasosAbertos(Long escritorioId);
+
     //A pagina do cliente nao tem login: quem tem o token ve só aquele aviso, e nada mais
     Optional<AvisoAoCliente> findByToken(String token);
 

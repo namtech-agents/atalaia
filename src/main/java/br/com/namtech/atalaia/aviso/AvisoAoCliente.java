@@ -107,6 +107,18 @@ public class AvisoAoCliente {
         return prazo.equals(resposta);
     }
 
+    //Na lista da tela inicial, o aviso aparece em vermelho quando o escritório precisa agir:
+    //o link venceu sem resposta, ou o cliente confirmou marcando a data errada (vale uma ligação)
+    public boolean pedeAtencao(Instant agora) {
+        SituacaoDoAviso situacao = situacao(agora);
+        return situacao == SituacaoDoAviso.VENCIDO || (situacao == SituacaoDoAviso.CONFIRMADO && !acertouOPrazo());
+    }
+
+    //De qual notificação é o aviso, para a lista juntar um com o outro
+    public Long getNotificacaoId() {
+        return notificacao.getId();
+    }
+
     public List<String> getListaDeDocumentos() {
         return documentos == null ? List.of() : documentos.lines().toList();
     }
