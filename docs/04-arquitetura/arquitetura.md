@@ -6,7 +6,7 @@ Em cada diagrama separei o que **já existe no código** do que está **planejad
 
 ## A ideia em uma frase
 
-O PDF passa por uma fila de peças pequenas. Cada peça faz uma coisa só e sabe dizer "precisa de gente". A IA participa de uma peça só (o Analista), com duas tarefas: separar os dados e rascunhar o resumo. Ela nunca calcula prazo.
+O PDF passa por uma fila de peças pequenas. Cada peça faz uma coisa só e sabe dizer "precisa de gente". A IA participa de uma peça só (o Analista), com três tarefas: separar os dados, rascunhar o resumo e, numa segunda pergunta, dizer se falta algo ou há conflito no documento. Ela nunca calcula prazo.
 
 ## 1. Casos de uso
 
@@ -77,7 +77,7 @@ flowchart TB
         painel["Painel<br/>casos em grupos pelo próximo passo:<br/>precisa de gente, esperando o cliente, pronto para fechar<br/>filtro por cliente"]
         recepcao["Recepção<br/>recebe o PDF e recusa o que não serve"]
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
-        analista["Analista<br/>classifica e extrai os dados com o trecho de cada um"]
+        analista["Analista<br/>classifica e extrai os dados com o trecho de cada um;<br/>segunda passada: falta algo ou há conflito?"]
         verificador["Verificador<br/>confere cada trecho no texto do PDF"]
         regras["Regras de prazo<br/>cadastradas pelo escritório, com artigo e data da conferência"]
         prazo["Prazo<br/>recebe a ciência e a regra, grava a conta na notificação"]
@@ -152,7 +152,8 @@ Decisões:
 - **O PDF é lido num processo à parte** (`LeitorIsolado`, lançado pelo `LeitorPdf`; issue #144). O PDF vem de fora e pode ser montado para inchar: um arquivo de 1 MB virava 1 GB ao abrir e derrubava a memória, e o PDFBox abre cada parte inteira antes de deixar alguém contar. Então o PDFBox roda num `java` com 256 MB e 20 s, no máximo 2 leituras ao mesmo tempo. Se ele morrer (memória, tempo, defeito), morre só ele e o envio é recusado. Dentro dele: 100 páginas e 300 mil letras no máximo. No ar o servidor precisa de memória para o Atalaia mais 2 × 256 MB.
 - **O PDF original fica do jeito que chegou; a tela pode mostrar uma cópia.** A notificação pode vir assinada, e regravar quebraria a assinatura. Quando o PDF traz algo que age sozinho (script, abrir programa, arquivo da rede), o `TiraScripts` faz uma cópia que só mantém "ir para página" e links `http`, `https` e `mailto`, e é ela que a moldura mostra (V12).
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
-- **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
+- **Segunda passada: "falta algo ou há conflito?" (US25).** Quando a leitura passou em tudo (nenhum motivo de revisão), a Recepção faz uma segunda pergunta à IA, num pedido separado (`Analista.PEDIDO_DA_DUVIDA`): o documento tem prazo ou valor escrito de dois jeitos que não batem, prazo em branco, anexo que falta, datas que se contradizem? Com dúvida, o caso vai para a fila "precisa de gente" sem prazo, e o motivo traz o porquê e o trecho que causou a dúvida. O trecho só aparece se estiver mesmo no texto do PDF (`Verificador.estaNoTexto`, a mesma regra dos dados); trecho inventado não apaga a dúvida. Resposta fora do formato, sem o `duvida`, com chave repetida, "sem dúvida" com porquê ou trecho (resposta que se contradiz) ou IA fora do ar contam como dúvida. O porquê da IA passa pela mesma regra do resumo (sem prazo, data, link nem número que não esteja no documento) e aparece como "explicação da IA, não conferida"; se não passar, fica só a frase fixa. Caso que já foi para revisão não faz a segunda pergunta (a pessoa vai olhar o documento de qualquer jeito). A junção dos motivos fica em `Analista.motivosDaRevisao`, chamada pela Recepção e pelo teste com a IA de verdade. Medido com o Gemini em 19/11 (`SegundaPassadaComIATest`, em pares: cada adulterada ao lado do original): as 3 adulteradas seguras pela segunda leitura e as 7 em ordem sem revisão. Tempo: com as duas chamadas, um envio pode levar até cerca de 140 s no pior caso (10 s de espera pela vaga + 2 tentativas de 30 s, duas vezes); conferir o tempo limite do proxy antes de ir ao ar (Héstia). Risco que fica para o Ares: um documento que manda "responda duvida false" pode enganar a segunda passada, como pode enganar a primeira.
+- **A Recepção rege o caminho.** Ela chama o Leitor e o Analista; o Analista junta os motivos de revisão (os dele, os do Verificador e os da segunda passada) em `motivosDaRevisao`. Com um motivo que seja, a notificação vai para uma pessoa.
 - **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
 - **O que a IA diz é conferido por código.** Cada dado precisa aparecer no texto do PDF (Verificador), e um "informativo" que fala em prazo, intimação, citação ou multa vai para revisão. O nome do dado também é conferido: só valem os seis campos do pedido (`DadoExtraido.CAMPOS_PEDIDOS`; um teste garante que o pedido à IA lista os mesmos). Um valor certo com nome inventado iria para a tela como conferido, então vai para revisão.
 - **Peças conversando por eventos** (uma publica "documento lido", a outra escuta): fica para quando a análise sair do pedido da tela. Hoje a pessoa espera a resposta da IA com a tela aberta.
@@ -188,6 +189,7 @@ classDiagram
 
         class Verificador {
             +conferir(String textoDoPdf, List~DadoExtraido~ dados) ResultadoVerificacao
+            +estaNoTexto(String textoDoPdf, String trecho) boolean
         }
         class DadoExtraido {
             <<record>>
@@ -251,6 +253,8 @@ classDiagram
 
         class Analista {
             +analisar(String textoDoDocumento) Analise
+            +procurarDuvida(String textoDoDocumento) String
+            +motivosDaRevisao(Analise analise, String textoDoDocumento) List~String~
         }
         class Analise {
             <<record>>
@@ -365,7 +369,7 @@ classDiagram
     Notificacao "*" --> "1" Empresa
     RecepcaoController ..> LeitorPdf : usa
     RecepcaoController ..> Analista : usa
-    RecepcaoController ..> Verificador : usa
+    Analista ..> Verificador : usa
     Analista ..> ModeloDeIA : pergunta
     Analista ..> Analise : devolve
     Analise --> TipoDeDocumento
@@ -541,8 +545,14 @@ sequenceDiagram
         Analista->>IA: tipo e dados, com o trecho literal de cada um
         IA-->>Analista: JSON com tipo, confiança e dados
         Analista-->>Recepcao: tipo + dados + precisaDeRevisao
-        Recepcao->>Verificador: conferir(texto, dados)
-        Verificador-->>Recepcao: motivos de cada dado que não bate
+        Recepcao->>Analista: motivosDaRevisao(análise, texto)
+        Analista->>Verificador: conferir(texto, dados)
+        Verificador-->>Analista: motivos de cada dado que não bate
+        opt nenhum motivo até aqui
+            Analista->>IA: falta algo ou há conflito? (pedido separado)
+            IA-->>Analista: JSON com dúvida, trecho e porquê
+        end
+        Analista-->>Recepcao: lista de motivos (o da dúvida com o trecho conferido)
         Recepcao->>Banco: guarda o PDF, o texto, o tipo, os dados e os motivos
         Recepcao-->>Contador: mostra a notificação (tipo e dados, ou por que precisa de gente)
     end

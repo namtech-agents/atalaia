@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,7 +30,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import br.com.namtech.atalaia.analista.Analise;
 import br.com.namtech.atalaia.analista.Analista;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
-import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.aviso.SituacaoDoAviso;
@@ -50,7 +48,6 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 import br.com.namtech.atalaia.prazo.FeriadosNacionais;
 import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
 import br.com.namtech.atalaia.seguranca.LimiteDeTentativas;
-import br.com.namtech.atalaia.verificador.Verificador;
 import jakarta.servlet.http.HttpServletResponse;
 
 //Recepção: a porta de entrada. O escritório envia o PDF de uma notificação e o Atalaia le, analisa, confere e guarda
@@ -81,7 +78,6 @@ public class RecepcaoController {
     private final String enderecoPublico;
     private final LeitorPdf leitor = new LeitorPdf();
     private final Analista analista;
-    private final Verificador verificador = new Verificador();
     private final Historico historico;
     private final TransactionTemplate transacao;
     private final LimiteDeTentativas limiteDeEnvios;
@@ -120,7 +116,7 @@ public class RecepcaoController {
         Empresa empresa = empresas.findByIdAndEscritorioId(empresaId, usuario.escritorioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
-        //Cada envio pode custar uma chamada à IA: o escritório tem uma conta de envios por janela (ConfiguracaoDeSeguranca).
+        //Cada envio pode custar até duas chamadas à IA (a leitura e a segunda passada): o escritório tem uma conta de envios por janela (ConfiguracaoDeSeguranca).
         //Conta também o envio que vai ser recusado (grande, não é PDF): ler um PDF ruim também custa ao servidor.
         //O arquivo já chegou ao servidor a esta altura; o que se poupa é o PDFBox e a IA.
         //429 = pedidos demais; Retry-After diz em quantos segundos tentar de novo (a janela inteira, no pior caso)
@@ -310,8 +306,8 @@ public class RecepcaoController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
-    //O caminho do documento depois de lido: Analista (IA) e Verificador (codigo). Cada peça que desconfia
-    //acrescenta o seu motivo; com um motivo que seja, a notificação vai para uma pessoa
+    //O caminho do documento depois de lido: Analista (IA), Verificador (codigo) e a segunda passada, juntados em
+    //Analista.motivosDaRevisao. Com um motivo que seja, a notificação vai para uma pessoa
     private Notificacao analisar(Empresa empresa, byte[] pdf, ResultadoLeitura leitura) {
         if (leitura.precisaDeRevisao()) {
             //Sem texto nao ha o que mandar para a IA
@@ -319,18 +315,7 @@ public class RecepcaoController {
                     List.of("Este PDF não tem texto que dê para ler (parece escaneado)."));
         }
         Analise analise = analista.analisar(leitura.texto());
-        List<String> motivos = new ArrayList<>();
-        if (analise.motivo() != null) {
-            motivos.add(analise.motivo());
-        }
-        //So confere os dados se a IA chegou a classificar; senao o motivo dela ja diz tudo
-        if (analise.tipo() != null) {
-            motivos.addAll(verificador.conferir(leitura.texto(), analise.dados()).motivos());
-        }
-        //"Informativo" é o unico tipo que ninguem precisa responder: se o texto fala em prazo ou multa, uma pessoa confere
-        if (analise.tipo() == TipoDeDocumento.INFORMATIVO && verificador.falaEmObrigacao(leitura.texto())) {
-            motivos.add("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
-        }
+        List<String> motivos = analista.motivosDaRevisao(analise, leitura.texto());
         Notificacao notificacao = new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
         notificacao.sugerirResumo(analise.resumoSugerido());
         return notificacao;
