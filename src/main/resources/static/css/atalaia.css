@@ -238,6 +238,8 @@ html { scroll-padding-top: 92px; }
 .historico { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 /* pre-wrap: a observação levada ao histórico ao reabrir guarda as quebras de linha que a pessoa digitou */
 .historico li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.historico + .trilha, .historico + .erro { margin: 16px 0 0; font-size: 13.5px; }
+.historico + .trilha { color: var(--apagado); }
 .historico .quando, .historico .quem { font-size: 13px; color: var(--apagado); }
 .cartao .observacao { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); }
 .reabrir { margin-top: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
