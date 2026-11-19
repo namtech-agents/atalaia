@@ -44,6 +44,9 @@ public class Notificacao {
     //O PDF original, do jeito que chegou
     private byte[] arquivo;
 
+    //Só existe quando o original trazia scripts: a mesma notificação sem eles, que é a que a tela mostra
+    private byte[] arquivoSemScripts;
+
     //Texto que o Leitor tirou do PDF (no banco a coluna é do tipo text, sem limite de tamanho)
     private String texto;
 
@@ -186,6 +189,24 @@ public class Notificacao {
 
     public byte[] getArquivo() {
         return arquivo;
+    }
+
+    public byte[] getArquivoSemScripts() {
+        return arquivoSemScripts;
+    }
+
+    //Guarda a copia sem scripts que o Leitor fez (null quando nao havia script)
+    public void guardarCopiaSemScripts(byte[] copia) {
+        this.arquivoSemScripts = copia;
+    }
+
+    //O PDF que vai para a tela: a copia sem scripts, se o original tinha algum; senao o proprio original
+    public byte[] getArquivoParaMostrar() {
+        return arquivoSemScripts != null ? arquivoSemScripts : arquivo;
+    }
+
+    public boolean isTinhaScripts() {
+        return arquivoSemScripts != null;
     }
 
     public String getTexto() {

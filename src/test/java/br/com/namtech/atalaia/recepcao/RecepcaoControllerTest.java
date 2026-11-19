@@ -176,7 +176,8 @@ class RecepcaoControllerTest {
                 //(o nome do campo, ja com o rotulo da tela, so aparece no cartão dos dados; "30 dias" apareceria tambem no texto lido)
                 .andExpect(content().string(containsString("<dt>Prazo</dt>")))
                 .andExpect(content().string(containsString("conferido com o texto do PDF")))
-                .andExpect(content().string(containsString("Texto lido")));
+                .andExpect(content().string(containsString("Texto lido")))
+                .andExpect(content().string(not(containsString("Este PDF trazia scripts."))));
         navegador.perform(get("/notificacoes/" + guardada.getId() + "/pdf"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF))
@@ -387,6 +388,43 @@ class RecepcaoControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Este PDF tem páginas demais")));
         assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
+    }
+
+    @Test
+    void pdfQueInchaERecusadoComMensagem() throws Exception {
+        //Arrumar: o arquivo pequeno que vira 1 GB quando aberto
+        MockMultipartFile pdf = new MockMultipartFile("arquivo", "bomba.pdf", MediaType.APPLICATION_PDF_VALUE,
+                LeitorPdfTest.pdfBomba());
+
+        //Agir e conferir: recusa com a mensagem e nao guarda nada
+        long antes = banco.contar(Notificacao.class);
+        navegador.perform(multipart("/enviar").file(pdf).param("empresaId", empresa.getId().toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Este PDF é pesado demais para ser lido. Escolha outro arquivo.")));
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
+    }
+
+    @Test
+    void pdfComScriptsGuardaOOriginalEMostraACopiaSemEles() throws Exception {
+        //Arrumar: um PDF com scripts escondidos
+        byte[] original = LeitorPdfTest.pdfComScripts();
+        MockMultipartFile pdf = new MockMultipartFile("arquivo", "scripts.pdf", MediaType.APPLICATION_PDF_VALUE, original);
+
+        //Agir
+        navegador.perform(multipart("/enviar").file(pdf).param("empresaId", empresa.getId().toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o original ficou guardado igual e existe uma copia diferente dele
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.getArquivo()).isEqualTo(original);
+        assertThat(guardada.getArquivoSemScripts()).isNotNull().isNotEqualTo(original);
+
+        //Conferir: a moldura recebe a copia, e a tela conta que é uma copia
+        navegador.perform(get("/notificacoes/" + guardada.getId() + "/pdf"))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(guardada.getArquivoSemScripts()));
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(content().string(containsString("Este PDF trazia scripts.")));
     }
 
     //Guarda direto no banco uma notificação conferida, para os testes de resolver
