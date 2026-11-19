@@ -1,4 +1,4 @@
-# Arquitetura e diagramas · Atalaia (Marco 2, 18/11/2026)
+# Arquitetura e diagramas · Atalaia (Marco 2, 18/11/2026, já com o login)
 
 Como o Atalaia é montado por dentro e como as peças conversam. Os desenhos são feitos em Mermaid, que o GitHub desenha sozinho.
 
@@ -21,8 +21,10 @@ flowchart LR
     ia(["IA (serviço de fora)"])
 
     subgraph Atalaia
+        conta["Criar a conta do escritório e entrar"]
+        empresas["Cadastrar as empresas clientes"]
         enviar["Enviar o PDF de uma notificação"]
-        ver["Ver a notificação: original, texto lido e prazo"]
+        ver["Ver a notificação: original, texto lido e dados conferidos"]
         conferir["Conferir e confirmar o prazo"]
         fila["Ver o que precisa de alguém hoje"]
         resolver["Abrir um caso e marcar resolvido"]
@@ -32,6 +34,8 @@ flowchart LR
         resumo["Escrever o resumo simples"]
     end
 
+    contador --> conta
+    contador --> empresas
     contador --> enviar
     contador --> ver
     contador --> conferir
@@ -45,11 +49,13 @@ flowchart LR
 
     classDef pronto fill:#dfe5ff,stroke:#2438a6,color:#141922
     classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
-    class enviar,ver pronto
-    class conferir,fila,resolver,areas,ciencia,extrair,resumo planejado
+    class conta,empresas,enviar,ver,fila,resolver,extrair pronto
+    class conferir,areas,ciencia,resumo planejado
 ```
 
 Azul: já dá para fazer. Tracejado: planejado.
+
+Hoje toda pessoa que entra pode o mesmo, dentro do próprio escritório. Os papéis (responsável pela área, dono) entram junto com "definir quem cuida de cada área".
 
 ## 2. Arquitetura: as peças e quem chama quem
 
@@ -60,6 +66,9 @@ flowchart TB
     navegador["Navegador do escritório"]
 
     subgraph app["Atalaia (Spring Boot, Java 21)"]
+        seguranca["Segurança (Spring Security)<br/>fica na frente de todo pedido:<br/>sem sessão, leva para a tela de entrar"]
+        conta["Conta<br/>entrar e criar a conta do escritório"]
+        empresas["Empresas<br/>os clientes do escritório"]
         painel["Painel<br/>lista: precisa de gente, conferidas, resolvidas"]
         recepcao["Recepção<br/>recebe o PDF e recusa o que não serve"]
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
@@ -73,9 +82,14 @@ flowchart TB
     banco[("PostgreSQL<br/>tabelas criadas pelo Flyway")]
     ia["Serviço de IA (Gemini)"]
 
-    navegador -->|abre a lista| painel
+    navegador -->|todo pedido| seguranca
+    seguranca -->|entra ou cria a conta| conta
+    seguranca -->|cadastra um cliente| empresas
+    seguranca -->|abre a lista| painel
+    seguranca -->|envia o PDF| recepcao
+    conta --> banco
+    empresas --> banco
     painel --> banco
-    navegador -->|envia o PDF| recepcao
     recepcao --> leitor
     recepcao --> analista
     analista --> ia
@@ -98,6 +112,9 @@ Decisões:
 
 - **A IA nunca calcula prazo.** O prazo sai da Calculadora, que é só `java.time`.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
+- **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos.
+- **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
+- **A senha nunca é guardada.** Só o embaralhado dela (bcrypt). Quem confere e-mail e senha é o Spring Security; a sessão anda só pelo cookie, todo formulário leva o código contra pedido forjado (CSRF) e sair é por POST.
 - **Toda resposta sai com cabeçalhos de segurança** (filtro `CabecalhosDeSeguranca`): a página só carrega o que é do próprio Atalaia e não pode ser mostrada dentro de outro site.
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
 - **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
@@ -107,7 +124,11 @@ Decisões:
 
 ## 3. Classes
 
-O que está no código hoje. Os pacotes são `leitor`, `verificador`, `prazo`, `notificacao` e `recepcao`: cada peça mora no pacote com o nome dela.
+O que está no código hoje. Os pacotes são `leitor`, `analista`, `verificador`, `prazo`, `notificacao`, `recepcao`, `painel`, `conta` e `seguranca`: cada peça mora no pacote com o nome dela.
+
+São dois desenhos, para caber na tela: primeiro o caminho do PDF, depois a conta e a cerca do escritório.
+
+### 3.1 O caminho do PDF
 
 ```mermaid
 classDiagram
@@ -207,12 +228,24 @@ classDiagram
             boolean precisaDeRevisao
             String motivoDaRevisao
             Instant recebidaEm
+            Instant resolvidaEm
+            Desfecho desfecho
+            String observacao
+            +resolver(Desfecho desfecho, String observacao)
+        }
+        class Desfecho {
+            <<enumeration>>
+            ARQUIVADO
+            MULTA_REDUZIDA
+            MULTA_CHEIA
+            OUTRO
         }
 
         class RecepcaoController {
             +formulario()
             +enviar(Long empresaId, MultipartFile arquivo)
             +notificacao(Long id)
+            +resolver(Long id, Desfecho desfecho, String observacao)
             +pdf(Long id)
         }
 
@@ -231,12 +264,123 @@ classDiagram
     Analise --> TipoDeDocumento
     Gemini ..|> ModeloDeIA
     Notificacao "1" --> "*" DadoExtraido
+    Notificacao --> Desfecho
     RecepcaoController ..> Notificacao : guarda
 ```
 
+### 3.2 A conta e a cerca do escritório
+
+```mermaid
+classDiagram
+    direction LR
+
+    class Escritorio {
+        Long id
+        String nome
+    }
+    class Usuario {
+        Long id
+        String email
+        String senha
+    }
+    class Empresa {
+        Long id
+        String cnpj
+        String nome
+    }
+    class Notificacao
+
+    class UsuarioLogado {
+        <<record>>
+        String email
+        String senha
+        Long escritorioId
+    }
+    class Contas {
+        <<service>>
+        +loadUserByUsername(String email) UsuarioLogado
+        +criar(String nomeDoEscritorio, String email, String senhaEmbaralhada)
+    }
+    class ContaController {
+        +entrar()
+        +formulario()
+        +cadastrar(String escritorio, String email, String senha, String senhaRepetida)
+    }
+    class ConfiguracaoDeSeguranca {
+        +regras(HttpSecurity http) SecurityFilterChain
+        +embaralhador() PasswordEncoder
+    }
+    class EmpresaController {
+        +lista()
+        +cadastrar(String nome, String cnpj)
+    }
+    class PainelController {
+        +painel()
+    }
+    class RecepcaoController
+
+    Usuario "*" --> "1" Escritorio
+    Empresa "*" --> "1" Escritorio
+    Notificacao "*" --> "1" Empresa
+    ContaController ..> Contas : cria a conta
+    Contas ..> Usuario : busca e grava
+    Contas ..> Escritorio : grava
+    Contas ..> UsuarioLogado : devolve
+    ConfiguracaoDeSeguranca ..> Contas : pergunta quem é
+    EmpresaController ..> UsuarioLogado : recebe
+    PainelController ..> UsuarioLogado : recebe
+    RecepcaoController ..> UsuarioLogado : recebe
+    EmpresaController ..> Empresa : guarda
+```
+
+`Usuario.senha` guarda só o embaralhado (bcrypt). O `UsuarioLogado` é o que o Spring Security mantém enquanto a sessão está aberta: os três controllers recebem esse objeto e usam o `escritorioId` dele em toda busca. A notificação não tem escritório próprio: chega nele pela empresa.
+
 Quando o arquivo passa da trava do servidor (15 MB), o pedido é barrado antes do controller e a pessoa vê a página de erro (`error.html`) com a mensagem do limite.
 
-## 4. Sequência: do PDF enviado até o prazo
+## 4. Sequências
+
+### 4.1 Criar a conta e entrar
+
+```mermaid
+sequenceDiagram
+    actor Pessoa
+    participant Seguranca as Segurança (Spring Security)
+    participant Conta
+    participant Banco
+    participant Painel
+
+    Pessoa->>Seguranca: abre qualquer tela sem sessão
+    Seguranca-->>Pessoa: leva para a tela de entrar
+
+    alt ainda não tem conta
+        Pessoa->>Conta: nome do escritório, e-mail e a senha duas vezes
+        alt dado inválido ou e-mail já usado
+            Conta-->>Pessoa: mostra o erro no campo que falhou
+        else tudo certo
+            Conta->>Banco: grava o escritório e o usuário juntos, com a senha embaralhada
+            Conta->>Seguranca: abre a sessão da conta nova
+            Seguranca-->>Pessoa: sessão aberta, vai para o Painel
+        end
+    else já tem conta
+        Pessoa->>Seguranca: e-mail e senha
+        Seguranca->>Conta: quem é a pessoa deste e-mail?
+        Conta->>Banco: busca o usuário
+        Conta-->>Seguranca: e-mail, senha embaralhada e escritório
+        alt senha não confere ou conta não existe
+            Seguranca-->>Pessoa: volta para a tela de entrar, com o aviso
+        else senha confere
+            Seguranca-->>Pessoa: sessão aberta, vai para o Painel
+        end
+    end
+
+    Pessoa->>Painel: abre a lista
+    Painel->>Banco: busca só as notificações do escritório de quem entrou
+    Painel-->>Pessoa: precisa de gente, conferidas e resolvidas
+```
+
+Escritório novo ainda não tem empresa: o Painel aponta para a tela Empresas, que é o primeiro passo antes de enviar um PDF.
+
+### 4.2 Do PDF enviado até o prazo
 
 ```mermaid
 sequenceDiagram
@@ -249,6 +393,7 @@ sequenceDiagram
     participant Verificador
     participant Calculadora
 
+    Note over Contador,Recepcao: Com a sessão aberta. A empresa escolhida tem que ser do escritório de quem entrou
     Contador->>Recepcao: envia o PDF e escolhe a empresa
     alt não é PDF, é grande demais ou não abre
         Recepcao-->>Contador: recusa com a mensagem
@@ -299,9 +444,58 @@ stateDiagram-v2
     Resolvida --> [*]
 ```
 
-Hoje o código chega até **Lida** ou **Precisa de gente** (pelo aviso `precisaDeRevisao`). Os outros estados são o plano dos Marcos 3 e 4.
+Hoje o código chega a **Conferida** ou **Precisa de gente** (pelo aviso `precisaDeRevisao`) e, das duas, a **Resolvida**. **Com prazo** e **Avisada ao cliente** são o plano do Marco 3.
+
+O estado não é uma coluna do banco: sai dos campos da notificação (`precisaDeRevisao`, `dataLimite`, `resolvidaEm`).
 
 ## 6. O banco
+
+```mermaid
+erDiagram
+    escritorio ||--o{ usuario : "tem"
+    escritorio ||--o{ empresa : "atende"
+    empresa ||--o{ notificacao : "recebe"
+    notificacao ||--o{ dado_extraido : "tem"
+
+    escritorio {
+        bigint id PK
+        varchar nome
+    }
+    usuario {
+        bigint id PK
+        bigint escritorio_id FK
+        varchar email UK
+        varchar senha "só o embaralhado (bcrypt)"
+        timestamptz criado_em
+    }
+    empresa {
+        bigint id PK
+        bigint escritorio_id FK
+        varchar cnpj "único dentro do escritório"
+        varchar nome
+    }
+    notificacao {
+        bigint id PK
+        bigint empresa_id FK
+        bytea arquivo
+        text texto
+        varchar tipo
+        date data_limite
+        boolean precisa_de_revisao
+        text motivo_da_revisao
+        timestamptz recebida_em
+        timestamptz resolvida_em
+        varchar desfecho
+        varchar observacao
+    }
+    dado_extraido {
+        bigint notificacao_id FK
+        int ordem
+        text campo
+        text valor
+        text trecho
+    }
+```
 
 | Arquivo | O que faz |
 |---|---|
@@ -309,7 +503,9 @@ Hoje o código chega até **Lida** ou **Precisa de gente** (pelo aviso `precisaD
 | `V2__notificacao_guarda_o_pdf.sql` | A notificação passa a guardar o PDF original |
 | `V3__notificacao_guarda_a_analise.sql` | A notificação passa a guardar o tipo e os motivos da revisão; cria `dado_extraido` (campo, valor, trecho e a ordem de cada dado) |
 | `V4__notificacao_resolvida.sql` | A notificação pode ser resolvida: quando, o desfecho e a observação (os três vazios ou os três preenchidos) |
-| `db/exemplo/R__empresas_de_exemplo.sql` | Empresas inventadas para a prévia |
+| `V5__desfecho_so_aceita_os_quatro.sql` | O banco só aceita os quatro desfechos que existem no Java |
+| `V6__escritorio_e_usuario.sql` | Cria `escritorio` e `usuario` (e-mail único, senha embaralhada); cada empresa passa a ser de um escritório, e o CNPJ deixa de ser único no sistema inteiro para ser único dentro do escritório |
+| `db/exemplo/R__empresas_de_exemplo.sql` | Ficou vazio: com o login, cada escritório cadastra as próprias empresas. O arquivo continua porque o Flyway já registrou o nome dele |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
 
@@ -318,4 +514,6 @@ Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
 - Cada peça tem os próprios testes JUnit; o `./mvnw verify` roda todos antes de qualquer PR.
 - Toda mudança entra por PR com `Resolve #N`, e passa por uma revisão antes do merge.
 - Os testes usam o H2 em memória com as mesmas migrações do Flyway.
+- O isolamento entre escritórios tem teste próprio: dois escritórios, e um tenta ver, resolver, listar e enviar no lugar do outro.
+- O login passou por teste de invasão antes de entrar na `main`, sem achado crítico ou alto. O que ficou para antes de ir ao ar está na issue #144.
 - Só dado inventado: regra de prazo de exemplo, empresas de exemplo, PDFs de exemplo.
