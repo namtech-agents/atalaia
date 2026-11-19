@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -99,20 +100,22 @@ class HistoricoDoCasoTest {
         //Agir: o caminho inteiro. Envia o PDF...
         escritorioNavegando.perform(multipart("/enviar")
                 .file(new MockMultipartFile("arquivo", "intimacao.pdf", MediaType.APPLICATION_PDF_VALUE, bytes))
-                .param("empresaId", empresa.getId().toString()));
+                .param("empresaId", empresa.getId().toString())).andExpect(status().is3xxRedirection());
         Notificacao caso = notificacoes.findAll().getLast();
         String endereco = "/notificacoes/" + caso.getId();
         //...calcula o prazo com a ciência de hoje...
         escritorioNavegando.perform(post(endereco + "/prazo").param("regraId", regra.getId().toString())
-                .param("ciencia", LocalDate.now(Notificacao.TERESINA).toString()));
+                .param("ciencia", LocalDate.now(Notificacao.TERESINA).toString())).andExpect(status().is3xxRedirection());
         //...gera o link para o cliente...
-        escritorioNavegando.perform(post(endereco + "/aviso").param("resumo", "A Receita pediu os livros."));
+        escritorioNavegando.perform(post(endereco + "/aviso").param("resumo", "A Receita pediu os livros."))
+                .andExpect(status().is3xxRedirection());
         AvisoAoCliente aviso = avisos.doCaso(caso.getId(), escritorio.getId()).getFirst();
         //...o cliente confirma marcando a data certa...
-        cliente.perform(post("/c/" + aviso.getToken()).with(csrf()).param("resposta", aviso.getPrazo().toString()));
+        cliente.perform(post("/c/" + aviso.getToken()).with(csrf()).param("resposta", aviso.getPrazo().toString()))
+                .andExpect(status().is3xxRedirection());
         //...e o escritorio fecha o caso
         escritorioNavegando.perform(post(endereco + "/resolver").param("desfecho", "ARQUIVADO")
-                .param("observacao", "Livros entregues."));
+                .param("observacao", "Livros entregues.")).andExpect(status().is3xxRedirection());
 
         //Conferir: cinco eventos, na ordem, cada um com quem fez ("quem | o que")
         List<String> linhas = historico.doCaso(caso.getId(), escritorio.getId()).stream()
@@ -128,6 +131,59 @@ class HistoricoDoCasoTest {
         String pagina = escritorioNavegando.perform(get(endereco)).andReturn().getResponse().getContentAsString();
         assertThat(pagina).contains("Histórico", "Enviou o PDF", "Resolveu o caso. Desfecho: Arquivado");
         assertThat(pagina.indexOf("Enviou o PDF")).isLessThan(pagina.indexOf("Resolveu o caso"));
+    }
+
+    //Um caso aberto, com data limite daqui a 20 dias e um aviso aguardando o cliente, gravado direto no banco
+    private AvisoAoCliente casoComAviso() {
+        Notificacao caso = notificacoes.save(new Notificacao(empresa, new byte[0], "Texto.", null, List.of(), List.of()));
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        caso.registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
+        return avisos.save(new AvisoAoCliente(caso, "token-de-teste-historico", "Resumo.", null,
+                "pessoa@escritorio.test", java.time.Instant.now()));
+    }
+
+    @Test
+    void pedidoRecusadoNaoGravaEvento() throws Exception {
+        //Arrumar: um caso com aviso, sem nenhum evento ainda
+        AvisoAoCliente aviso = casoComAviso();
+        Notificacao caso = aviso.getNotificacao();
+        String endereco = "/notificacoes/" + caso.getId();
+
+        //Agir: cada pedido valido em tudo, menos num ponto. Prazo sem regra escolhida...
+        escritorioNavegando.perform(post(endereco + "/prazo")
+                .param("ciencia", LocalDate.now(Notificacao.TERESINA).toString()));
+        //...aviso sem resumo...
+        escritorioNavegando.perform(post(endereco + "/aviso").param("resumo", "   "));
+        //...resolver sem desfecho...
+        escritorioNavegando.perform(post(endereco + "/resolver").param("observacao", "Livros entregues."))
+                .andExpect(status().isBadRequest());
+        //...e o cliente marcando uma data que nao estava nas opções
+        cliente.perform(post("/c/" + aviso.getToken()).with(csrf())
+                .param("resposta", aviso.getPrazo().plusDays(1).toString()));
+
+        //Conferir: nada entrou no historico
+        assertThat(historico.doCaso(caso.getId(), escritorio.getId())).isEmpty();
+    }
+
+    @Test
+    void clienteQueMarcaOutraDataFicaNoHistoricoComOAviso() throws Exception {
+        //Arrumar: um caso com aviso; a opção errada é uma das outras duas datas da pergunta
+        AvisoAoCliente aviso = casoComAviso();
+        LocalDate errada = aviso.opcoesDePrazo().stream().filter(data -> !data.equals(aviso.getPrazo()))
+                .findFirst().orElseThrow();
+
+        //Agir
+        cliente.perform(post("/c/" + aviso.getToken()).with(csrf()).param("resposta", errada.toString()))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o evento diz a data marcada e que ela nao é a data limite
+        assertThat(historico.doCaso(aviso.getNotificacao().getId(), escritorio.getId()))
+                .singleElement()
+                .satisfies(evento -> {
+                    assertThat(evento.getQuem()).isEqualTo(Historico.CLIENTE);
+                    assertThat(evento.getAcao()).isEqualTo("Confirmou a ciência marcando " + Datas.DIA.format(errada)
+                            + ", que não é a data limite");
+                });
     }
 
     @Test

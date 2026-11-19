@@ -19,12 +19,14 @@ public class Historico {
     private final EventoDoCasoRepository eventos;
     private final Clock relogio;
 
-    public Historico(EventoDoCasoRepository eventos, Clock relogio) {
+    //Sem public: o repositorio é do pacote; o Spring cria o servico pelo construtor mesmo assim
+    Historico(EventoDoCasoRepository eventos, Clock relogio) {
         this.eventos = eventos;
         this.relogio = relogio;
     }
 
-    //Num metodo Transactional (prazo, aviso, confirmação, resolver), grava junto com a mudança do caso:
+    //Num metodo Transactional (prazo, aviso, confirmação, resolver) ou dentro da transação do envio,
+    //grava junto com a mudança do caso:
     //se o pedido falhar, o evento tambem nao fica
     public void registrar(Notificacao caso, String quem, String acao) {
         eventos.save(new EventoDoCaso(caso, quem, acao, Instant.now(relogio)));

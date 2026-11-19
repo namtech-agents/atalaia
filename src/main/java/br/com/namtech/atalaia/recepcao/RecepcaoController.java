@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,10 +73,12 @@ public class RecepcaoController {
     private final Analista analista;
     private final Verificador verificador = new Verificador();
     private final Historico historico;
+    private final TransactionTemplate transacao;
 
     //O Spring entrega os repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
     public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes,
-            RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia, Historico historico,
+            RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia,
+            Historico historico, TransactionTemplate transacao,
             @Value("${atalaia.endereco-publico:}") String enderecoPublico) {
         //Sem a barra do fim, para montar o link sempre do mesmo jeito
         this.enderecoPublico = enderecoPublico.strip().replaceAll("/+$", "");
@@ -86,6 +89,7 @@ public class RecepcaoController {
         this.relogio = relogio;
         this.analista = new Analista(ia);
         this.historico = historico;
+        this.transacao = transacao;
     }
 
     //AuthenticationPrincipal: o Spring Security entrega quem esta com a sessão aberta.
@@ -125,8 +129,15 @@ public class RecepcaoController {
                     usuario, empresaId, model, resposta);
         }
 
-        Notificacao notificacao = notificacoes.save(analisar(empresa, pdf, leitura));
-        historico.registrar(notificacao, usuario.email(), "Enviou o PDF");
+        //A IA responde fora da transação: segurar a conexão com o banco enquanto ela pensa travaria os outros pedidos
+        Notificacao analisada = analisar(empresa, pdf, leitura);
+        //A notificação e o evento "Enviou o PDF" sao gravados juntos (o metodo nao é Transactional por causa da IA):
+        //se o evento falhar, a notificação tambem nao fica, e a pessoa pode enviar de novo sem duplicar o caso
+        Notificacao notificacao = transacao.execute(conversa -> {
+            Notificacao gravada = notificacoes.save(analisada);
+            historico.registrar(gravada, usuario.email(), "Enviou o PDF");
+            return gravada;
+        });
         //Redireciona para a pagina da notificação: recarregar a tela nao envia o arquivo de novo
         return "redirect:/notificacoes/" + notificacao.getId();
     }

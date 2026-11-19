@@ -13,20 +13,29 @@ create table evento_do_caso (
 );
 create index evento_do_caso_notificacao_idx on evento_do_caso (notificacao_id);
 
--- Os casos que já existiam ganham o histórico que dá para tirar das colunas: só o último cálculo do prazo
+-- Os casos que já existiam ganham o histórico que dá para tirar das colunas, nas mesmas frases do Java:
+-- só o último cálculo do prazo
 -- (os anteriores não foram guardados) e sem quem enviou nem quem resolveu (também não eram guardados)
 insert into evento_do_caso (notificacao_id, quando, quem, acao)
 select id, recebida_em, null, 'Enviou o PDF' from notificacao;
 
 insert into evento_do_caso (notificacao_id, quando, quem, acao)
-select id, prazo_calculado_em, prazo_calculado_por, 'Calculou o prazo'
+select id, prazo_calculado_em, prazo_calculado_por,
+    case when data_limite is null
+        then 'Pediu a conta do prazo (ciência ' || to_char(ciencia, 'DD/MM/YYYY') || '), que foi para revisão'
+        else 'Calculou o prazo: data limite ' || to_char(data_limite, 'DD/MM/YYYY')
+            || ' (ciência ' || to_char(ciencia, 'DD/MM/YYYY') || ')' end
 from notificacao where prazo_calculado_em is not null;
 
 insert into evento_do_caso (notificacao_id, quando, quem, acao)
-select notificacao_id, criado_em, criado_por, 'Gerou o link para o cliente' from aviso_ao_cliente;
+select notificacao_id, criado_em, criado_por,
+    'Gerou o link para o cliente (data limite ' || to_char(prazo, 'DD/MM/YYYY') || ')'
+from aviso_ao_cliente;
 
 insert into evento_do_caso (notificacao_id, quando, quem, acao)
-select notificacao_id, confirmado_em, 'Cliente, pelo link', 'Confirmou a ciência'
+select notificacao_id, confirmado_em, 'Cliente, pelo link',
+    'Confirmou a ciência marcando ' || to_char(resposta, 'DD/MM/YYYY')
+        || case when resposta <> prazo then ', que não é a data limite' else '' end
 from aviso_ao_cliente where confirmado_em is not null;
 
 insert into evento_do_caso (notificacao_id, quando, quem, acao)
