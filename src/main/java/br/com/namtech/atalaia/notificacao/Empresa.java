@@ -66,6 +66,12 @@ public class Empresa {
         this.nome = nome;
     }
 
+    //Nome ou CNPJ digitado errado no cadastro. Quem confere os dois antes é o EmpresaController
+    public void corrigir(String cnpj, String nome) {
+        this.cnpj = cnpj;
+        this.nome = nome;
+    }
+
     public Long getId() {
         return id;
     }

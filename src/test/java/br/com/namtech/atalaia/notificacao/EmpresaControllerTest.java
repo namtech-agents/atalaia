@@ -2,11 +2,14 @@ package br.com.namtech.atalaia.notificacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
 
@@ -32,6 +36,9 @@ class EmpresaControllerTest {
 
     @Autowired
     private EmpresaRepository empresas;
+
+    @Autowired
+    private NotificacaoRepository notificacoes;
 
     private MockMvc navegador;
     private Escritorio escritorio;
@@ -114,5 +121,92 @@ class EmpresaControllerTest {
         navegador.perform(post("/empresas").param("nome", "Padaria de Teste").param("cnpj", "99999009000115"))
                 .andExpect(redirectedUrl("/empresas?cadastrada"));
         assertThat(empresas.findAllByEscritorioIdOrderByNome(escritorio.getId())).hasSize(1);
+    }
+
+    @Test
+    void corrigeONomeEOCnpjDaEmpresa() throws Exception {
+        //Arrumar: uma empresa cadastrada com o nome errado
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000115", "Padaria de Tetse"));
+
+        //Agir e conferir: a tela de editar abre com os dados atuais
+        navegador.perform(get("/empresas/" + empresa.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Padaria de Tetse")));
+
+        //Agir: corrige só o nome (o mesmo CNPJ não conta como repetido) e depois o CNPJ
+        navegador.perform(post("/empresas/" + empresa.getId()).param("nome", "Padaria de Teste").param("cnpj", "99999009000115"))
+                .andExpect(redirectedUrl("/empresas?alterada"));
+        navegador.perform(post("/empresas/" + empresa.getId()).param("nome", "Padaria de Teste").param("cnpj", "11.222.333/0001-81"))
+                .andExpect(redirectedUrl("/empresas?alterada"));
+
+        //Conferir: ficou guardado
+        assertThat(empresas.findByIdAndEscritorioId(empresa.getId(), escritorio.getId())).hasValueSatisfying(salva -> {
+            assertThat(salva.getNome()).isEqualTo("Padaria de Teste");
+            assertThat(salva.getCnpj()).isEqualTo("11222333000181");
+        });
+        navegador.perform(get("/empresas").param("alterada", ""))
+                .andExpect(content().string(containsString("Empresa alterada.")));
+    }
+
+    @Test
+    void correcaoComCnpjDeOutraEmpresaDoEscritorioERecusada() throws Exception {
+        //Arrumar: duas empresas do escritório
+        empresas.save(new Empresa(escritorio, "99999009000115", "Padaria de Teste"));
+        Empresa oficina = empresas.save(new Empresa(escritorio, "11222333000181", "Oficina de Teste"));
+
+        //Agir e conferir: a oficina não pode ficar com o CNPJ da padaria
+        navegador.perform(post("/empresas/" + oficina.getId()).param("nome", "Oficina de Teste").param("cnpj", "99999009000115"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("já está cadastrado")));
+        assertThat(empresas.findByIdAndEscritorioId(oficina.getId(), escritorio.getId()))
+                .hasValueSatisfying(salva -> assertThat(salva.getCnpj()).isEqualTo("11222333000181"));
+    }
+
+    @Test
+    void empresaSemCasosPodeSerExcluida() throws Exception {
+        //Arrumar: uma empresa cadastrada por engano, sem nenhum caso
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000115", "Padaria de Teste"));
+
+        //Agir e conferir: some da lista
+        navegador.perform(post("/empresas/" + empresa.getId() + "/excluir"))
+                .andExpect(redirectedUrl("/empresas?excluida"));
+        assertThat(empresas.findByIdAndEscritorioId(empresa.getId(), escritorio.getId())).isEmpty();
+
+        //Conferir: clique duplo (o segundo pedido já não acha a empresa) responde 404, sem página de erro do banco
+        navegador.perform(post("/empresas/" + empresa.getId() + "/excluir")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void empresaComCasosNaoPodeSerExcluida() throws Exception {
+        //Arrumar: uma empresa com um caso registrado
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000115", "Padaria de Teste"));
+        notificacoes.save(new Notificacao(empresa, "%PDF-teste".getBytes(), "texto", TipoDeDocumento.COBRANCA,
+                List.of(), List.of()));
+
+        //Conferir: a tela de editar não oferece excluir e explica o porquê
+        navegador.perform(get("/empresas/" + empresa.getId()))
+                .andExpect(content().string(containsString("tem 1 caso")))
+                .andExpect(content().string(not(containsString("Excluir empresa"))));
+
+        //Agir e conferir: mesmo forçando o pedido, a empresa fica (409: conflita com os casos dela)
+        navegador.perform(post("/empresas/" + empresa.getId() + "/excluir")).andExpect(status().isConflict());
+        assertThat(empresas.findByIdAndEscritorioId(empresa.getId(), escritorio.getId())).isPresent();
+    }
+
+    @Test
+    void empresaDeOutroEscritorioNaoAbreNaoMudaENaoSai() throws Exception {
+        //Arrumar: uma empresa de outro escritório
+        Escritorio outro = escritorios.save(new Escritorio("Outro Escritório"));
+        Empresa alheia = empresas.save(new Empresa(outro, "99999009000115", "Empresa Secreta"));
+
+        //Agir e conferir: abrir, corrigir e excluir respondem como se ela não existisse
+        navegador.perform(get("/empresas/" + alheia.getId())).andExpect(status().isNotFound());
+        navegador.perform(post("/empresas/" + alheia.getId()).param("nome", "Trocada").param("cnpj", "11222333000181"))
+                .andExpect(status().isNotFound());
+        navegador.perform(post("/empresas/" + alheia.getId() + "/excluir")).andExpect(status().isNotFound());
+
+        //Conferir: continua igual
+        assertThat(empresas.findByIdAndEscritorioId(alheia.getId(), outro.getId()))
+                .hasValueSatisfying(salva -> assertThat(salva.getNome()).isEqualTo("Empresa Secreta"));
     }
 }

@@ -8,14 +8,16 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
 import jakarta.servlet.http.HttpServletResponse;
 
-//Empresas: os clientes do escritório. Cada escritório cadastra as suas, e só ve as suas
+//Empresas: os clientes do escritório. Cada escritório cadastra, corrige e exclui as suas, e só ve as suas
 @Controller
 public class EmpresaController {
 
@@ -23,17 +25,34 @@ public class EmpresaController {
 
     private final EmpresaRepository empresas;
     private final EscritorioRepository escritorios;
+    private final NotificacaoRepository notificacoes;
 
-    public EmpresaController(EmpresaRepository empresas, EscritorioRepository escritorios) {
+    public EmpresaController(EmpresaRepository empresas, EscritorioRepository escritorios,
+            NotificacaoRepository notificacoes) {
         this.empresas = empresas;
         this.escritorios = escritorios;
+        this.notificacoes = notificacoes;
+    }
+
+    //O que a pessoa digitou, ja limpo: nome sem espaço nas pontas, CNPJ só com as 14 letras e numeros, em maiusculas
+    private record Digitado(String nome, String cnpj) {
+        static Digitado arrumar(String nome, String cnpj) {
+            return new Digitado(nome.strip(), cnpj.replaceAll("[.\\-/\\s]", "").toUpperCase(Locale.ROOT));
+        }
+    }
+
+    //Por que o formulario foi recusado: a mensagem e o campo que a tela marca e onde poe o foco
+    private record Recusa(String campo, String mensagem) {
     }
 
     @GetMapping("/empresas")
     public String lista(@AuthenticationPrincipal UsuarioLogado usuario,
-            @RequestParam(required = false) String cadastrada, Model model) {
-        //?cadastrada no endereço: acabou de cadastrar uma empresa, a tela confirma e mostra o proximo passo
+            @RequestParam(required = false) String cadastrada, @RequestParam(required = false) String alterada,
+            @RequestParam(required = false) String excluida, Model model) {
+        //?cadastrada, ?alterada ou ?excluida no endereço: a tela confirma o que acabou de acontecer
         model.addAttribute("cadastrada", cadastrada != null);
+        model.addAttribute("alterada", alterada != null);
+        model.addAttribute("excluida", excluida != null);
         model.addAttribute("empresas", empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
         return "empresas";
     }
@@ -41,43 +60,115 @@ public class EmpresaController {
     @PostMapping("/empresas")
     public String cadastrar(@AuthenticationPrincipal UsuarioLogado usuario, @RequestParam(defaultValue = "") String nome,
             @RequestParam(defaultValue = "") String cnpj, Model model, HttpServletResponse resposta) {
-        String nomeArrumado = nome.strip();
-        //A pessoa pode digitar com ou sem pontuação: guarda só as 14 letras e numeros, em maiusculas
-        String cnpjArrumado = cnpj.replaceAll("[.\\-/\\s]", "").toUpperCase(Locale.ROOT);
-
-        String erro = null;
-        //O campo que falhou: a tela marca ele e poe o foco nele
-        String campoComErro = "cnpj";
-        if (nomeArrumado.isEmpty() || nomeArrumado.length() > 200) {
-            campoComErro = "nome";
-            erro = "Escreva o nome da empresa, em até 200 letras.";
-        //12 letras ou numeros e 2 numeros no fim (os digitos de conferencia): o formato do CNPJ, inclusive o novo, com letras
-        } else if (!cnpjArrumado.matches("[A-Z0-9]{12}[0-9]{2}")) {
-            erro = "Escreva o CNPJ completo, com os 14 dígitos.";
-        } else if (!Empresa.cnpjValido(cnpjArrumado)) {
-            erro = "Este CNPJ não existe: confira os números digitados.";
-        } else if (empresas.existsByEscritorioIdAndCnpj(usuario.escritorioId(), cnpjArrumado)) {
-            erro = CNPJ_REPETIDO;
-        } else {
-            try {
-                //getReferenceById: só aponta para o escritório pelo numero, sem ir busca-lo no banco
-                empresas.save(new Empresa(escritorios.getReferenceById(usuario.escritorioId()), cnpjArrumado, nomeArrumado));
-            } catch (DataIntegrityViolationException repetida) {
-                //Clique duplo: os dois pedidos passaram pela conferencia de cima e o banco recusou o segundo
-                //(empresa_cnpj_unico_no_escritorio). A pessoa ve a mensagem, nao uma pagina de erro
-                erro = CNPJ_REPETIDO;
-            }
+        Digitado digitado = Digitado.arrumar(nome, cnpj);
+        Recusa recusa = conferir(digitado, usuario, null);
+        if (recusa == null) {
+            //getReferenceById: só aponta para o escritório pelo numero, sem ir busca-lo no banco
+            recusa = gravar(new Empresa(escritorios.getReferenceById(usuario.escritorioId()), digitado.cnpj(),
+                    digitado.nome()));
         }
-        if (erro != null) {
-            resposta.setStatus(HttpStatus.BAD_REQUEST.value());
-            model.addAttribute("erro", erro);
-            model.addAttribute("campoComErro", campoComErro);
-            model.addAttribute("nome", nome);
-            model.addAttribute("cnpj", cnpj);
-            return lista(usuario, null, model);
+        if (recusa != null) {
+            mostrarRecusa(recusa, nome, cnpj, model, resposta);
+            return lista(usuario, null, null, null, model);
         }
-
         //Redireciona: recarregar a tela nao cadastra de novo
         return "redirect:/empresas?cadastrada";
+    }
+
+    //A tela de uma empresa: corrigir o nome e o CNPJ e, se ela nao tiver casos, excluir
+    @GetMapping("/empresas/{id}")
+    public String empresa(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id, Model model) {
+        Empresa empresa = buscar(id, usuario);
+        model.addAttribute("empresa", empresa);
+        model.addAttribute("casos", notificacoes.casosDaEmpresa(id, usuario.escritorioId()));
+        //Na primeira vez os campos vem com o que esta guardado; numa recusa, com o que a pessoa digitou
+        if (!model.containsAttribute("nome")) {
+            model.addAttribute("nome", empresa.getNome());
+            model.addAttribute("cnpj", empresa.getCnpjFormatado());
+        }
+        return "empresa";
+    }
+
+    @PostMapping("/empresas/{id}")
+    public String corrigir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id,
+            @RequestParam(defaultValue = "") String nome, @RequestParam(defaultValue = "") String cnpj, Model model,
+            HttpServletResponse resposta) {
+        Empresa empresa = buscar(id, usuario);
+        Digitado digitado = Digitado.arrumar(nome, cnpj);
+        Recusa recusa = conferir(digitado, usuario, empresa.getCnpj());
+        if (recusa == null) {
+            //A empresa veio de uma busca com o escritório de quem entrou: o save só grava por cima dela
+            empresa.corrigir(digitado.cnpj(), digitado.nome());
+            recusa = gravar(empresa);
+        }
+        if (recusa != null) {
+            mostrarRecusa(recusa, nome, cnpj, model, resposta);
+            return empresa(usuario, id, model);
+        }
+        return "redirect:/empresas?alterada";
+    }
+
+    @PostMapping("/empresas/{id}/excluir")
+    public String excluir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
+        int apagadas;
+        try {
+            apagadas = empresas.excluirSemCasos(id, usuario.escritorioId());
+        } catch (DataIntegrityViolationException casoChegouJunto) {
+            //Um envio para esta empresa foi gravado no mesmo instante: o banco recusou apagar
+            apagadas = 0;
+        }
+        if (apagadas == 0) {
+            //Nao apagou: ou a empresa nao é deste escritório (ou ja saiu, clique duplo), 404; ou tem casos, 409.
+            //A tela nem mostra o botão para empresa com casos: o 409 só aparece para quem forçou o pedido
+            buscar(id, usuario);
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
+        return "redirect:/empresas?excluida";
+    }
+
+    //Empresa de outro escritório responde igual a uma que nao existe (404): nem a existencia dela vaza
+    private Empresa buscar(Long id, UsuarioLogado usuario) {
+        return empresas.findByIdAndEscritorioId(id, usuario.escritorioId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    //As regras do cadastro e da correção. cnpjAtual: o CNPJ que a empresa ja tem (null no cadastro), que nao
+    //conta como repetido. Devolve null se esta tudo certo
+    private Recusa conferir(Digitado digitado, UsuarioLogado usuario, String cnpjAtual) {
+        if (digitado.nome().isEmpty() || digitado.nome().length() > 200) {
+            return new Recusa("nome", "Escreva o nome da empresa, em até 200 letras.");
+        }
+        //12 letras ou numeros e 2 numeros no fim (os digitos de conferencia): o formato do CNPJ, inclusive o novo, com letras
+        if (!digitado.cnpj().matches("[A-Z0-9]{12}[0-9]{2}")) {
+            return new Recusa("cnpj", "Escreva o CNPJ completo, com os 14 dígitos.");
+        }
+        if (!Empresa.cnpjValido(digitado.cnpj())) {
+            return new Recusa("cnpj", "Este CNPJ não existe: confira os números digitados.");
+        }
+        if (!digitado.cnpj().equals(cnpjAtual) && empresas.existsByEscritorioIdAndCnpj(usuario.escritorioId(), digitado.cnpj())) {
+            return new Recusa("cnpj", CNPJ_REPETIDO);
+        }
+        return null;
+    }
+
+    //Grava, e devolve a recusa se o banco barrar o CNPJ repetido (empresa_cnpj_unico_no_escritorio).
+    //Acontece no clique duplo, ou com duas pessoas usando o mesmo CNPJ ao mesmo tempo: os dois pedidos passaram
+    //pela conferencia e o banco recusou o segundo. A pessoa ve a mensagem, nao uma pagina de erro
+    private Recusa gravar(Empresa empresa) {
+        try {
+            empresas.save(empresa);
+            return null;
+        } catch (DataIntegrityViolationException repetida) {
+            return new Recusa("cnpj", CNPJ_REPETIDO);
+        }
+    }
+
+    //Volta o formulario com a mensagem e com o que a pessoa digitou, e responde 400 (pedido recusado)
+    private void mostrarRecusa(Recusa recusa, String nome, String cnpj, Model model, HttpServletResponse resposta) {
+        resposta.setStatus(HttpStatus.BAD_REQUEST.value());
+        model.addAttribute("erro", recusa.mensagem());
+        model.addAttribute("campoComErro", recusa.campo());
+        model.addAttribute("nome", nome);
+        model.addAttribute("cnpj", cnpj);
     }
 }

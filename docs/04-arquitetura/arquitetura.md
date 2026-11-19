@@ -138,7 +138,8 @@ Decisões:
 - **O resumo da IA é rascunho.** Ele vem no mesmo pedido em que o Analista classifica o documento e abre o campo do aviso. O código joga fora o rascunho que cite data, dias, mês ou link, ou que traga um número que não esteja escrito igual no documento. Quem aprova e envia é o escritório.
 - **Um relógio só.** Todo controller pede ao Spring o mesmo relógio, no fuso de Teresina, em vez de olhar a hora do servidor.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
-- **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos.
+- **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos. Os repositórios estendem `Repository` (e não `JpaRepository`): não existe `findAll` nem `findById` sem o escritório, e um teste confere que todo método de repositório recebe o `escritorioId` ou está numa lista curta de exceções com motivo (gravar, entrar pelo e-mail, a página do cliente pelo token).
+- **Empresa com caso não é excluída.** Nome e CNPJ podem ser corrigidos a qualquer momento; excluir só vale para empresa sem nenhum caso, numa operação só no banco (`excluirSemCasos`). Os casos são o histórico do escritório e a prova do que o cliente confirmou.
 - **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
 - **A senha nunca é guardada.** Só o embaralhado dela (bcrypt). Quem confere e-mail e senha é o Spring Security; a sessão anda só pelo cookie, todo formulário leva o código contra pedido forjado (CSRF) e sair é por POST.
 - **Toda resposta sai com cabeçalhos de segurança** (filtro `CabecalhosDeSeguranca`): a página só carrega o que é do próprio Atalaia e não pode ser mostrada dentro de outro site.
@@ -414,6 +415,8 @@ classDiagram
     class EmpresaController {
         +lista()
         +cadastrar(String nome, String cnpj)
+        +corrigir(Long id, String nome, String cnpj)
+        +excluir(Long id)
     }
     class PainelController {
         +painel()
