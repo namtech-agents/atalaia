@@ -77,6 +77,9 @@ public class Notificacao {
 
     private String observacao;
 
+    //O rascunho do aviso ao cliente escrito pela IA. Vazio se ela nao sugeriu ou se o documento foi para revisao
+    private String resumoSugerido;
+
     //A conta do prazo: os quatro ficam vazios ate alguem calcular, e sao preenchidos juntos em registrarPrazo()
     private LocalDate ciencia;
 
@@ -105,6 +108,16 @@ public class Notificacao {
                 ? motivosDaRevisao.stream().map(motivo -> motivo.replaceAll("\\R", " ")).collect(Collectors.joining("\n"))
                 : null;
         this.recebidaEm = Instant.now();
+    }
+
+    //Guarda o rascunho da IA para o aviso ao cliente. Documento que foi para revisao nao guarda:
+    //se nem os dados dele sao mostrados, um resumo feito em cima deles tambem nao é
+    public void sugerirResumo(String resumo) {
+        this.resumoSugerido = precisaDeRevisao ? null : resumo;
+    }
+
+    public String getResumoSugerido() {
+        return resumoSugerido;
     }
 
     //Fecha o caso. Uma notificação só se resolve uma vez: o que foi registrado nao é trocado depois
