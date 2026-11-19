@@ -77,11 +77,26 @@ public class FaxinaController {
         //Tranca a linha: dois cliques (ou duas pessoas) gravam em fila, e o caso fechado no meio tempo não ganha anotação
         Notificacao caso = notificacoes.buscarParaAlterar(id, usuario.escritorioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!caso.isResolvida()) {
+        String empresa = caso.getEmpresa().getNome();
+        if (caso.isResolvida()) {
+            //Fechado no meio tempo (outra aba, outra pessoa): diz por que o caso sumiu da lista
+            recado.addFlashAttribute("anotado", "O caso de " + empresa + " já foi fechado. Nada foi anotado.");
+        } else if (teveMovimentoNaSemana(caso, usuario)) {
+            //Clique repetido, ou outra pessoa anotou primeiro: o caso já saiu da faxina, e um segundo evento igual
+            //só sujaria o histórico
+            recado.addFlashAttribute("anotado", "O caso de " + empresa + " já teve movimento nesta semana.");
+        } else {
             historico.registrar(caso, usuario.email(), texto);
-            recado.addFlashAttribute("anotado", "Anotado no histórico do caso de " + caso.getEmpresa().getNome() + ".");
+            recado.addFlashAttribute("anotado", "Anotado no histórico do caso de " + empresa + ".");
         }
         //Redireciona: recarregar a tela não grava de novo
         return "redirect:/faxina";
+    }
+
+    //Lido com a linha do caso já trancada: quem chega depois do primeiro clique vê o evento que ele gravou
+    private boolean teveMovimentoNaSemana(Notificacao caso, UsuarioLogado usuario) {
+        Instant limite = Instant.now(relogio).minus(PARADO_HA);
+        return historico.ultimoMovimento(caso.getId(), usuario.escritorioId())
+                .map(quando -> !quando.isBefore(limite)).orElse(false);
     }
 }

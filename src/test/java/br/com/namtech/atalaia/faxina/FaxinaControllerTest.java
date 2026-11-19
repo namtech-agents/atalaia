@@ -89,11 +89,17 @@ class FaxinaControllerTest {
         voltaNoTempo(vencido, 20);
         voltaNoTempo(mexidoOntem, 20);
         voltaNoTempo(resolvido, 20);
-        //Alguém mexeu ontem no Mercado: o evento mais novo é o que conta como movimento
+        //Alguém mexeu ontem no Mercado: ele tem o envio de 20 dias atrás e um evento de ontem. O mais novo conta
         historico.registrar(mexidoOntem, "pessoa@escritorio.test", "Calculou o prazo");
         banco.gravar();
-        sql.update("update evento_do_caso set quando = ? where notificacao_id = ?",
+        sql.update("update evento_do_caso set quando = ? where notificacao_id = ? and acao = 'Calculou o prazo'",
                 Timestamp.from(Instant.now().minus(1, ChronoUnit.DAYS)), mexidoOntem.getId());
+        //Um caso de outro escritório, também parado há 20 dias, não pode aparecer
+        Escritorio outro = escritorios.save(new Escritorio("Outro Escritório"));
+        Notificacao alheio = notificacoes.save(new Notificacao(empresas.save(new Empresa(outro, "99999009004999",
+                "Empresa Alheia Parada")), "%PDF-teste".getBytes(), "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        historico.registrar(alheio, null, "Enviou o PDF");
+        voltaNoTempo(alheio, 20);
 
         //Agir
         String pagina = navegador.perform(get("/faxina")).andExpect(status().isOk()).andReturn().getResponse()
@@ -102,13 +108,13 @@ class FaxinaControllerTest {
         //Conferir: os três parados, nesta ordem (vencido, com prazo, sem prazo), com os dias parados.
         //O mexido ontem e o resolvido não aparecem
         assertThat(pagina).contains("3 casos parados", "Parado há <span class=\"num\">20</span> dias")
-                .doesNotContain("Mercado Mexido", "Farmácia Resolvida");
+                .doesNotContain("Mercado Mexido", "Farmácia Resolvida", "Empresa Alheia Parada");
         int loja = pagina.indexOf("<strong>Loja Vencida");
         int oficina = pagina.indexOf("<strong>Oficina Correndo");
         int padaria = pagina.indexOf("<strong>Padaria Sem Prazo");
         assertThat(loja).isPositive().isLessThan(oficina);
         assertThat(oficina).isLessThan(padaria);
-        assertThat(pagina).contains("etq num atencao\">Venceu em ");
+        assertThat(pagina).contains("etq num atencao\">Venceu em ", "etq falta\">Sem prazo calculado<");
         //"Resolvido" leva ao cartão de fechar o caso, que pede desfecho e observação
         assertThat(pagina).contains("href=\"/notificacoes/" + vencido.getId() + "#titulo-resolver\"");
     }
@@ -139,12 +145,13 @@ class FaxinaControllerTest {
         navegador.perform(post("/faxina/" + adia.getId()).param("acao", "adiar"))
                 .andExpect(redirectedUrl("/faxina"));
 
-        //Conferir: cada caso ganhou a sua anotação, com quem fez, e a faxina ficou vazia
+        //Conferir: cada caso ganhou a sua anotação depois do envio, com quem fez, e a faxina ficou vazia
         assertThat(historico.doCaso(segue.getId(), escritorio.getId()))
                 .extracting(evento -> evento.getAcao() + " / " + evento.getQuem())
-                .containsExactly(FaxinaController.SEGUE_ABERTO + " / pessoa@escritorio.test");
+                .containsExactly("Enviou o PDF / pessoa@escritorio.test",
+                        FaxinaController.SEGUE_ABERTO + " / pessoa@escritorio.test");
         assertThat(historico.doCaso(adia.getId(), escritorio.getId()))
-                .extracting(evento -> evento.getAcao()).containsExactly(FaxinaController.ADIOU);
+                .extracting(evento -> evento.getAcao()).containsExactly("Enviou o PDF", FaxinaController.ADIOU);
         navegador.perform(get("/faxina")).andExpect(content().string(containsString("Nenhum caso parado.")));
     }
 
@@ -157,10 +164,39 @@ class FaxinaControllerTest {
         //Agir: o clique da aba velha chega
         navegador.perform(post("/faxina/" + caso.getId()).param("acao", "segue"))
                 .andExpect(redirectedUrl("/faxina"))
-                .andExpect(flash().attributeCount(0));
+                .andExpect(flash().attribute("anotado", "O caso de Padaria Fechada já foi fechado. Nada foi anotado."));
 
-        //Conferir: nada foi anotado
-        assertThat(banco.contarEventosDo(caso.getId())).isZero();
+        //Conferir: só o envio está no histórico
+        assertThat(banco.contarEventosDo(caso.getId())).isEqualTo(1);
+    }
+
+    @Test
+    void cliqueRepetidoNaoGravaDuasVezes() throws Exception {
+        //Arrumar: um caso parado há 10 dias
+        Notificacao caso = casoDe("Padaria Do Clique Duplo", null);
+        voltaNoTempo(caso, 10);
+
+        //Agir: o mesmo botão duas vezes
+        navegador.perform(post("/faxina/" + caso.getId()).param("acao", "segue"));
+        navegador.perform(post("/faxina/" + caso.getId()).param("acao", "segue"))
+                .andExpect(flash().attribute("anotado", "O caso de Padaria Do Clique Duplo já teve movimento nesta semana."));
+
+        //Conferir: o envio e uma anotação só
+        assertThat(banco.contarEventosDo(caso.getId())).isEqualTo(2);
+    }
+
+    @Test
+    void semPrazoOParadoHaMaisTempoVemPrimeiro() throws Exception {
+        //Arrumar: dois casos sem prazo, um parado há 10 dias e outro há 20
+        voltaNoTempo(casoDe("Padaria Dez Dias", null), 10);
+        voltaNoTempo(casoDe("Oficina Vinte Dias", null), 20);
+
+        //Agir
+        String pagina = navegador.perform(get("/faxina")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: o de 20 dias em cima
+        assertThat(pagina.indexOf("<strong>Oficina Vinte Dias")).isPositive()
+                .isLessThan(pagina.indexOf("<strong>Padaria Dez Dias"));
     }
 
     @Test
@@ -174,7 +210,7 @@ class FaxinaControllerTest {
         //Agir e conferir: ação que não existe (formulário mexido) é 400; caso de outro escritório é 404, como se não existisse
         navegador.perform(post("/faxina/" + meu.getId()).param("acao", "apagar")).andExpect(status().isBadRequest());
         navegador.perform(post("/faxina/" + alheio.getId()).param("acao", "segue")).andExpect(status().isNotFound());
-        assertThat(banco.contarEventosDo(meu.getId())).isZero();
+        assertThat(banco.contarEventosDo(meu.getId())).isEqualTo(1);
         assertThat(banco.contarEventosDo(alheio.getId())).isZero();
     }
 
@@ -185,16 +221,19 @@ class FaxinaControllerTest {
         String cnpj = "9999900900" + String.format("%04d", 4000 + cnpjs++);
         Notificacao caso = notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, cnpj, nomeDaEmpresa)),
                 "%PDF-teste".getBytes(), "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        //Como no envio de verdade, todo caso nasce com o evento "Enviou o PDF"
+        historico.registrar(caso, "pessoa@escritorio.test", "Enviou o PDF");
         if (dataLimite != null) {
             caso.registrarPrazo(dataLimite.minusDays(15), dataLimite, List.of("Conta de teste."), "pessoa@escritorio.test");
         }
         return caso;
     }
 
-    //Faz o caso parecer chegado há tantos dias (ele não tem eventos, então a chegada é o último movimento)
+    //Faz o caso parecer chegado há tantos dias: a chegada e todos os eventos dele voltam no tempo
     private void voltaNoTempo(Notificacao caso, int dias) {
         banco.gravar();
-        sql.update("update notificacao set recebida_em = ? where id = ?",
-                Timestamp.from(Instant.now().minus(dias, ChronoUnit.DAYS)), caso.getId());
+        Timestamp antes = Timestamp.from(Instant.now().minus(dias, ChronoUnit.DAYS));
+        sql.update("update notificacao set recebida_em = ? where id = ?", antes, caso.getId());
+        sql.update("update evento_do_caso set quando = ? where notificacao_id = ?", antes, caso.getId());
     }
 }

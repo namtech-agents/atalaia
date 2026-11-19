@@ -16,6 +16,11 @@ public record CasoParado(Long id, String empresa, TipoDeDocumento tipo, LocalDat
         return dataLimite != null && dataLimite.isBefore(hoje);
     }
 
+    //A mesma regra da lista da tela inicial: até 3 dias para vencer, o prazo aparece em vermelho
+    public boolean prazoApertado(LocalDate hoje) {
+        return dataLimite != null && ChronoUnit.DAYS.between(hoje, dataLimite) <= NotificacaoNaLista.DIAS_DE_ALERTA;
+    }
+
     //Ha quantos dias inteiros ninguem mexe no caso, para a linha dizer "parado há N dias"
     public long diasParado(Instant agora) {
         return ChronoUnit.DAYS.between(ultimoMovimento, agora);
