@@ -53,6 +53,7 @@ O que já está pronto:
 - Projeto Spring Boot criado, com banco PostgreSQL e as tabelas criadas pelo Flyway
 - Leitor de PDF, Analista, Verificador e Calculadora de prazo, cada um com os seus testes
 - Um teste do caminho inteiro (`CaminhoInteiroTest`): do PDF enviado ao caso resolvido, pela tela
+- Testes por variação: a mesma notificação inventada com outra data, outra ordem ou outro CNPJ dá o mesmo resultado
 - Login com cadastro do escritório, com teste de que um escritório não vê os dados de outro
 - Aviso ao cliente por link, com resumo rascunhado pela IA e aprovado pelo escritório, pergunta de conferência e registro de ciência; a lista inicial mostra quem ainda não confirmou
 - Arquitetura e diagramas UML ([docs/04-arquitetura](docs/04-arquitetura/arquitetura.md))
