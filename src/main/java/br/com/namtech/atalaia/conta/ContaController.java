@@ -37,17 +37,19 @@ public class ContaController {
     }
 
     //Os avisos da tela chegam pelo endereço: /entrar?erro (o Spring Security manda para ca quando a senha
-    //nao confere) e ?saiu. Aqui cada um vira um sim ou nao para a tela
+    //nao confere), ?saiu e ?travado (a TravaDeTentativas). Aqui cada um vira um sim ou nao para a tela
     @GetMapping("/entrar")
     public String entrar(@RequestParam(required = false) String erro, @RequestParam(required = false) String saiu,
-            Model model) {
+            @RequestParam(required = false) String travado, Model model) {
         model.addAttribute("erro", erro != null);
         model.addAttribute("saiu", saiu != null);
+        model.addAttribute("travado", travado != null);
         return "entrar";
     }
 
     @GetMapping("/cadastro")
-    public String formulario() {
+    public String formulario(@RequestParam(required = false) String travado, Model model) {
+        model.addAttribute("travado", travado != null);
         return "cadastro";
     }
 
