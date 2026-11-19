@@ -9,16 +9,13 @@
   <link rel="stylesheet" href="/css/atalaia.css">
 </head>
 <body>
-<!-- A tela que o app instalado mostra sem internet (o sw.js entrega esta página). É estática: não tem dado nenhum -->
-<div class="pagina">
-  <main id="conteudo">
-    <div class="titulo">
-      <img src="/logo/atalaia-simbolo.svg" alt="" width="48" height="48">
-      <h1>Sem conexão</h1>
-      <p>O Atalaia precisa de internet para mostrar os casos e os prazos. Nada do escritório fica guardado neste aparelho.</p>
-    </div>
-    <a class="botao cheio" href="/">Tentar de novo</a>
-  </main>
-</div>
+<!-- A tela que o app instalado mostra sem internet (o sw.js entrega esta página). É estática: não tem dado nenhum.
+     Layout próprio (sem a grade das telas com menu), centrado e dentro da área segura do iPhone -->
+<main class="sem-conexao">
+  <img src="/logo/atalaia-simbolo.svg" alt="" width="48" height="48">
+  <h1>Sem conexão</h1>
+  <p>O Atalaia precisa de internet para mostrar os casos e os prazos. Nada do escritório fica guardado neste aparelho.</p>
+  <a class="botao cheio" href="/">Tentar de novo</a>
+</main>
 </body>
 </html>

@@ -527,3 +527,8 @@ html { scroll-padding-top: 92px; }
 @media (max-width: 560px) {
   .formulario .botao, .resolver .botao, .confirmar .botao, .engano .botao { align-self: stretch; }
 }
+
+/* A tela "Sem conexão" do app instalado (offline.html): sem menu, centrada, dentro da área segura do iPhone */
+.sem-conexao { box-sizing: border-box; min-height: 100dvh; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 16px;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
+.sem-conexao h1, .sem-conexao p { margin: 0; }
