@@ -19,6 +19,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.interactive.action.PDActionJavaScript;
 import org.apache.pdfbox.pdmodel.interactive.action.PDActionLaunch;
+import org.apache.pdfbox.pdmodel.interactive.action.PDActionRemoteGoTo;
 import org.apache.pdfbox.pdmodel.interactive.action.PDActionURI;
 import org.apache.pdfbox.pdmodel.interactive.action.PDPageAdditionalActions;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink;
@@ -118,9 +119,15 @@ public class LeitorPdfTest {
         assertThatThrownBy(() -> leitor.ler(pdf)).isInstanceOf(PdfRecusado.class).hasMessageContaining("páginas demais");
     }
 
-    //Monta na hora uma "bomba": um arquivo pequeno (algumas centenas de KB) cujo conteudo, descomprimido,
-    //é um unico texto de 60 MB. Foi assim que um PDF de 949 KB estourou a memoria no teste de 19/11
-    public static byte[] pdfBomba() throws IOException {
+    //A "bomba" de 19/11: um arquivo de cerca de 1 MB cujo conteudo, descomprimido, é um unico texto de 1 GB.
+    //O PDFBox descomprime a parte inteira antes de ler, entao ela estoura qualquer memoria pequena.
+    //Montar leva uns segundos: fica guardada para os testes que a usam
+    private static byte[] bomba;
+
+    public static synchronized byte[] pdfBomba() throws IOException {
+        if (bomba != null) {
+            return bomba;
+        }
         ByteArrayOutputStream saida = new ByteArrayOutputStream();
         try (PDDocument documento = new PDDocument()) {
             PDPage pagina = new PDPage();
@@ -131,7 +138,7 @@ public class LeitorPdfTest {
                     DeflaterOutputStream comprimido = new DeflaterOutputStream(bruto)) {
                 comprimido.write("BT (".getBytes());
                 byte[] bloco = "a".repeat(1024 * 1024).getBytes();
-                for (int mega = 0; mega < 60; mega++) {
+                for (int mega = 0; mega < 1024; mega++) {
                     comprimido.write(bloco);
                 }
                 comprimido.write(") Tj ET".getBytes());
@@ -140,18 +147,41 @@ public class LeitorPdfTest {
             pagina.getCOSObject().setItem(COSName.CONTENTS, conteudo);
             documento.save(saida);
         }
-        return saida.toByteArray();
+        bomba = saida.toByteArray();
+        return bomba;
     }
 
     @Test
     void recusaPdfQueIncha() throws IOException {
-        //Arrumar: o arquivo pequeno que vira 60 MB quando aberto
+        //Arrumar: o arquivo pequeno que vira 1 GB quando aberto
         byte[] pdf = pdfBomba();
-        assertThat(pdf.length).isLessThan(1024 * 1024);
+        assertThat(pdf.length).isLessThan(2 * 1024 * 1024);
 
-        //Agir e conferir: o leitor para de descomprimir no teto e recusa, sem montar o texto gigante na memoria
+        //Agir e conferir: o processo que le estoura a memoria dele (256 MB) e morre; o Atalaia so recusa
         LeitorPdf leitor = new LeitorPdf();
         assertThatThrownBy(() -> leitor.ler(pdf)).isInstanceOf(PdfRecusado.class).hasMessageContaining("pesado demais");
+    }
+
+    @Test
+    void recusaPdfComLetrasDemais() throws IOException {
+        //Arrumar: uma pagina com uma letra a mais que o teto, num arquivo de poucos KB
+        ByteArrayOutputStream saida = new ByteArrayOutputStream();
+        try (PDDocument documento = new PDDocument()) {
+            PDPage pagina = new PDPage();
+            documento.addPage(pagina);
+            try (PDPageContentStream escrita = new PDPageContentStream(documento, pagina)) {
+                escrita.beginText();
+                escrita.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 1);
+                escrita.showText("a".repeat(LeitorIsolado.MAXIMO_DE_LETRAS + 1));
+                escrita.endText();
+            }
+            documento.save(saida);
+        }
+
+        //Agir e conferir: o leitor para de contar no teto e recusa
+        LeitorPdf leitor = new LeitorPdf();
+        assertThatThrownBy(() -> leitor.ler(saida.toByteArray()))
+                .isInstanceOf(PdfRecusado.class).hasMessageContaining("pesado demais");
     }
 
     @Test
@@ -160,12 +190,12 @@ public class LeitorPdfTest {
         byte[] pdf = getClass().getResourceAsStream("/pdfs/notificacao-simples.pdf").readAllBytes();
         LeitorPdf semTempo = new LeitorPdf(Duration.ZERO);
 
-        //Agir e conferir: no primeiro comando da pagina o leitor ve que o tempo passou e desiste
+        //Agir e conferir: o leitor nao espera nada pelo processo que le, encerra o processo e desiste
         assertThatThrownBy(() -> semTempo.ler(pdf)).isInstanceOf(PdfRecusado.class).hasMessageContaining("demorou demais");
     }
 
-    //Monta na hora um PDF com texto e com os quatro jeitos mais comuns de esconder um script:
-    //ao abrir o arquivo, no indice de scripts do documento, ao abrir a pagina e num link que abre um programa.
+    //Monta na hora um PDF com texto e com seis jeitos de o arquivo agir sozinho: script ao abrir o arquivo, no indice
+    //de scripts do documento e ao abrir a pagina; links que abrem um programa, rodam script ou abrem arquivo da rede.
     //Tem tambem um link comum (endereço de site), que precisa continuar
     public static byte[] pdfComScripts() throws IOException {
         ByteArrayOutputStream saida = new ByteArrayOutputStream();
@@ -201,8 +231,21 @@ public class LeitorPdfTest {
             PDActionURI endereco = new PDActionURI();
             endereco.setURI("https://www.gov.br");
             site.setAction(endereco);
+            PDAnnotationLink scriptNoEndereco = new PDAnnotationLink();
+            scriptNoEndereco.setRectangle(new PDRectangle(72, 520, 100, 20));
+            PDActionURI javascript = new PDActionURI();
+            javascript.setURI("  JavaScript:alert(document.domain)");
+            scriptNoEndereco.setAction(javascript);
+            //GoToR para um caminho de rede: no Windows, abrir faz o computador mandar a senha embaralhada para o servidor
+            PDAnnotationLink arquivoDaRede = new PDAnnotationLink();
+            arquivoDaRede.setRectangle(new PDRectangle(72, 480, 100, 20));
+            PDActionRemoteGoTo outroArquivo = new PDActionRemoteGoTo();
+            outroArquivo.setFile(new PDSimpleFileSpecification(new COSString("\\\\servidor\\x.pdf")));
+            arquivoDaRede.setAction(outroArquivo);
             pagina.getAnnotations().add(abrePrograma);
             pagina.getAnnotations().add(site);
+            pagina.getAnnotations().add(scriptNoEndereco);
+            pagina.getAnnotations().add(arquivoDaRede);
             documento.save(saida);
         }
         return saida.toByteArray();
@@ -210,7 +253,7 @@ public class LeitorPdfTest {
 
     @Test
     void pdfComScriptsGanhaUmaCopiaSemEles() throws IOException {
-        //Arrumar: o PDF com os quatro scripts
+        //Arrumar: o PDF com os seis jeitos de agir sozinho
         byte[] pdf = pdfComScripts();
 
         //Agir
@@ -220,7 +263,7 @@ public class LeitorPdfTest {
         assertThat(resultado.texto()).contains("Prazo: 30 dias a contar da ciencia.");
         assertThat(resultado.semScripts()).isNotNull();
 
-        //Conferir: na copia nao sobra nenhum dos quatro, o link do site continua e o texto é o mesmo
+        //Conferir: na copia nao sobra nenhum dos seis, o link do site continua e o texto é o mesmo
         try (PDDocument copia = Loader.loadPDF(resultado.semScripts())) {
             COSDictionary catalogo = copia.getDocumentCatalog().getCOSObject();
             assertThat(catalogo.containsKey(COSName.OPEN_ACTION)).isFalse();
@@ -229,6 +272,8 @@ public class LeitorPdfTest {
             assertThat(pagina.getCOSObject().containsKey(COSName.AA)).isFalse();
             assertThat(((PDAnnotationLink) pagina.getAnnotations().get(0)).getAction()).isNull();
             assertThat(((PDAnnotationLink) pagina.getAnnotations().get(1)).getAction()).isInstanceOf(PDActionURI.class);
+            assertThat(((PDAnnotationLink) pagina.getAnnotations().get(2)).getAction()).isNull();
+            assertThat(((PDAnnotationLink) pagina.getAnnotations().get(3)).getAction()).isNull();
             assertThat(new PDFTextStripper().getText(copia))
                     .contains("Prazo: 30 dias a contar da ciencia.");
         }

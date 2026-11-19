@@ -1,36 +1,36 @@
 package br.com.namtech.atalaia.leitor;
 
-import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.contentstream.operator.Operator;
-import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSDocument;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSObjectKey;
-import org.apache.pdfbox.cos.COSStream;
-import org.apache.pdfbox.io.IOUtils;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.text.PDFTextStripper;
-
+//Lê o PDF enviado num processo Java à parte (o LeitorIsolado), com pouca memória e hora para acabar.
+//Daqui de fora o Atalaia só manda o PDF, espera e traduz o que voltou. Qualquer jeito de o processo morrer
+//(memória estourada, tempo esgotado, defeito do PDFBox) vira "PDF recusado", nunca o servidor caído
 public class LeitorPdf {
 
-    //Notificação é um documento de poucas paginas. Acima disso é engano ou abuso, e ler tudo custaria memoria e tempo
-    public static final int MAXIMO_DE_PAGINAS = 100;
+    public static final int MAXIMO_DE_PAGINAS = LeitorIsolado.MAXIMO_DE_PAGINAS;
 
-    //O PDF guarda o conteudo comprimido: um arquivo de 1 MB pode virar 1 GB ao abrir (a "bomba de descompressão").
-    //Em 19/11, um PDF de 949 KB estourou a memoria e um de 1,4 MB prendeu a leitura por 20 s.
-    //Uma notificação de 100 paginas com fontes embutidas fica bem abaixo de 50 MB (as imagens nao entram na conta)
-    static final long CONTEUDO_MAXIMO = 50L * 1024 * 1024;
+    //Uma notificação normal é lida em 1 a 2 s, já contando o processo nascer
+    static final Duration TEMPO_MAXIMO = Duration.ofSeconds(20);
 
-    //Uma notificação normal é lida em menos de 1 s. O teto pega o que é pequeno mas lento de propósito
-    //(um desenho que se repete dentro dele mesmo milhares de vezes), que o teto de tamanho nao ve
-    static final Duration TEMPO_MAXIMO = Duration.ofSeconds(15);
+    //Cada leitura usa até 256 MB fora do Atalaia. Duas ao mesmo tempo cabem num servidor pequeno;
+    //a terceira espera a vez (static: vale para todo o Atalaia, não para cada LeitorPdf criado)
+    private static final Semaphore VAGAS = new Semaphore(2, true);
+
+    static final String PESADO_DEMAIS = "Este PDF é pesado demais para ser lido.";
 
     private final Duration tempoMaximo;
 
@@ -44,85 +44,92 @@ public class LeitorPdf {
     }
 
     public ResultadoLeitura ler(byte[] pdf) throws IOException {
-        // Abre o PDF; o try fecha o documento sozinho no fim
-        //createTempFileOnlyStreamCache: o que o PDFBox precisar guardar enquanto le vai para um arquivo temporario
-        //(apagado no fim), em vez de ocupar a memoria do servidor
-        try (PDDocument documento = Loader.loadPDF(pdf, "", null, null, IOUtils.createTempFileOnlyStreamCache())) {
-            conferirPaginas(documento);
-            conferirTamanho(documento.getDocument());
-            String texto = new ExtratorComPrazo(tempoMaximo).getText(documento);
-            //Pdf so de imagem volta em branco (so espaços e quebras de linhas)
-            boolean precisaDeRevisao = texto.isBlank();
-            return new ResultadoLeitura(texto, precisaDeRevisao, copiaSemScripts(documento));
-        }
-    }
-
-    //Conta as paginas uma a uma. O numero que o PDF declara (getNumberOfPages) nao serve:
-    //quem monta o arquivo escreve ali o que quiser
-    private void conferirPaginas(PDDocument documento) throws PdfRecusado {
-        int paginas = 0;
-        for (PDPage pagina : documento.getPages()) {
-            paginas++;
-            if (paginas > MAXIMO_DE_PAGINAS) {
-                throw new PdfRecusado("Este PDF tem páginas demais. O limite é " + MAXIMO_DE_PAGINAS + " páginas.");
+        try {
+            if (!VAGAS.tryAcquire(tempoMaximo.toMillis(), TimeUnit.MILLISECONDS)) {
+                throw new PdfRecusado("O Atalaia está lendo outros PDFs agora. Espere um instante e envie de novo.");
             }
+        } catch (InterruptedException interrompido) {
+            Thread.currentThread().interrupt();
+            throw new IOException(interrompido);
+        }
+        try {
+            return lerNoProcesso(pdf);
+        } finally {
+            VAGAS.release();
         }
     }
 
-    //Descomprime cada parte do arquivo só para contar o tamanho, jogando fora o que leu, e para no teto.
-    //Assim o texto gigante nunca chega a ser montado na memoria. As imagens ficam de fora: elas nao viram texto
-    //e algumas (JPEG 2000) custariam caro só para contar
-    private void conferirTamanho(COSDocument documento) throws IOException {
-        long total = 0;
-        byte[] descarte = new byte[64 * 1024];
-        for (COSObjectKey chave : List.copyOf(documento.getXrefTable().keySet())) {
-            COSBase objeto = documento.getObjectFromPool(chave).getObject();
-            if (!(objeto instanceof COSStream parte) || COSName.IMAGE.equals(parte.getCOSName(COSName.SUBTYPE))) {
-                continue;
+    private ResultadoLeitura lerNoProcesso(byte[] pdf) throws IOException {
+        //A saída de erros do filho (avisos do PDFBox) vai para o registro do próprio Atalaia
+        Process filho = new ProcessBuilder(comando()).redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        try {
+            //A resposta é lida ao mesmo tempo, noutra linha de execução: se ninguém lesse, o filho travaria
+            //com a saída cheia, e esta aqui travaria esperando ele terminar
+            CompletableFuture<byte[]> resposta = CompletableFuture.supplyAsync(() -> lerTudo(filho.getInputStream()));
+            try (OutputStream entrada = filho.getOutputStream()) {
+                entrada.write(pdf);
+            } catch (IOException filhoJaMorreu) {
+                //O filho morreu antes de ler tudo (estourou a memória ao nascer?): o código de saída diz o resto
             }
-            try (InputStream conteudo = parte.createInputStream()) {
-                int lidos;
-                while ((lidos = conteudo.read(descarte)) != -1) {
-                    total += lidos;
-                    if (total > CONTEUDO_MAXIMO) {
-                        throw new PdfRecusado("Este PDF é pesado demais para ser lido.");
-                    }
-                }
-            }
-        }
-    }
-
-    //Só grava uma copia se havia script para tirar: no caso comum a tela mostra o original, sem custo nenhum.
-    //O original continua guardado do jeito que chegou (a notificação pode vir assinada, e regravar quebraria a assinatura)
-    private byte[] copiaSemScripts(PDDocument documento) throws IOException {
-        if (!TiraScripts.tirar(documento.getDocument())) {
-            return null;
-        }
-        //PDF aberto sem senha, mas com restrições (de impressão, por exemplo): a copia sai sem elas,
-        //senao o PDFBox nao consegue gravar
-        documento.setAllSecurityToBeRemoved(true);
-        ByteArrayOutputStream copia = new ByteArrayOutputStream();
-        documento.save(copia);
-        return copia.toByteArray();
-    }
-
-    //O extrator de texto do PDFBox, com um relogio: antes de cada comando da pagina (escrever, desenhar,
-    //trocar a fonte...) confere se o tempo acabou. Assim nenhum PDF segura o servidor por mais que o teto
-    private static final class ExtratorComPrazo extends PDFTextStripper {
-
-        //nanoTime: um relogio que só anda para frente, bom para medir intervalos (a hora do sistema pode ser acertada)
-        private final long limite;
-
-        ExtratorComPrazo(Duration tempoMaximo) {
-            this.limite = System.nanoTime() + tempoMaximo.toNanos();
-        }
-
-        @Override
-        protected void processOperator(Operator comando, List<COSBase> argumentos) throws IOException {
-            if (System.nanoTime() - limite >= 0) {
+            if (!filho.waitFor(tempoMaximo.toMillis(), TimeUnit.MILLISECONDS)) {
                 throw new PdfRecusado("Este PDF demorou demais para ser lido.");
             }
-            super.processOperator(comando, argumentos);
+            return traduzir(filho.exitValue(), resposta.get());
+        } catch (InterruptedException interrompido) {
+            Thread.currentThread().interrupt();
+            throw new IOException(interrompido);
+        } catch (ExecutionException falhaAoLer) {
+            throw new IOException(falhaAoLer.getCause());
+        } finally {
+            //Em qualquer saída daqui (tempo esgotado, erro) o filho não fica vivo gastando memória
+            filho.destroyForcibly();
         }
+    }
+
+    private static ResultadoLeitura traduzir(int codigo, byte[] resposta) throws IOException {
+        if (codigo == LeitorIsolado.SAIDA_RECUSADO) {
+            throw new PdfRecusado(new String(resposta, StandardCharsets.UTF_8));
+        }
+        if (codigo == LeitorIsolado.SAIDA_NAO_ABRIU) {
+            throw new IOException("O PDF não abriu");
+        }
+        if (codigo != 0) {
+            //Memória estourada (ExitOnOutOfMemoryError) ou outra queda do filho
+            throw new PdfRecusado(PESADO_DEMAIS);
+        }
+        DataInputStream entrada = new DataInputStream(new ByteArrayInputStream(resposta));
+        String texto = new String(entrada.readNBytes(entrada.readInt()), StandardCharsets.UTF_8);
+        boolean precisaDeRevisao = entrada.readBoolean();
+        int tamanhoDaCopia = entrada.readInt();
+        byte[] copia = tamanhoDaCopia < 0 ? null : entrada.readNBytes(tamanhoDaCopia);
+        return new ResultadoLeitura(texto, precisaDeRevisao, copia);
+    }
+
+    private static byte[] lerTudo(InputStream saidaDoFilho) {
+        try {
+            return saidaDoFilho.readAllBytes();
+        } catch (IOException erro) {
+            throw new UncheckedIOException(erro);
+        }
+    }
+
+    //A linha de comando do filho: o mesmo Java e as mesmas classes do Atalaia, com outra porta de entrada
+    static List<String> comando() {
+        List<String> comando = new ArrayList<>(List.of(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                //Memória curta, e morrer de vez quando ela acabar (sem isso o processo pode ficar agonizando)
+                "-Xmx256m", "-XX:+ExitOnOutOfMemoryError", "-XX:+UseSerialGC",
+                //Nasce mais rápido: o filho vive poucos segundos e não compensa otimizar o código a fundo
+                "-XX:TieredStopAtLevel=1", "-Djava.awt.headless=true",
+                "-cp", System.getProperty("java.class.path")));
+        //No ar o Atalaia roda de dentro de um único .jar do Spring Boot, que guarda as bibliotecas em BOOT-INF.
+        //Nesse caso quem abre o jar é o lançador do Spring Boot, avisado de qual classe chamar
+        if (LeitorPdf.class.getClassLoader().getClass().getName().startsWith("org.springframework.boot.loader")) {
+            comando.add("-Dloader.main=" + LeitorIsolado.class.getName());
+            comando.add("org.springframework.boot.loader.launch.PropertiesLauncher");
+        } else {
+            comando.add(LeitorIsolado.class.getName());
+        }
+        return comando;
     }
 }

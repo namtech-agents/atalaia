@@ -2,6 +2,7 @@ package br.com.namtech.atalaia.leitor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,22 +14,31 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSObjectKey;
 
-//Tira de um PDF o que roda sozinho no leitor de quem abre: scripts (JavaScript), abrir programa (Launch),
-//mandar dados para fora (SubmitForm) e parecidos. O texto, as imagens e os links de site ficam.
-//Em vez de procurar em cada lugar conhecido (ao abrir, na página, no link, no formulário...), percorre
-//TODOS os objetos do arquivo: o lugar que esquecermos é justamente o que quem ataca vai usar
+//Tira de um PDF o que age sozinho no leitor de quem abre: scripts (JavaScript), abrir programa (Launch),
+//mandar dados para fora (SubmitForm), abrir arquivo da rede (GoToR para \\servidor\...) e o que mais existir.
+//Lista do PERMITIDO, não do proibido: fica só "ir para uma página" e link de site (http, https) ou de e-mail.
+//Qualquer outra ação sai, inclusive as que ainda não conhecemos (revisão do Hefesto, PR #184).
+//Em vez de procurar em cada lugar conhecido, percorre TODOS os objetos do arquivo: o lugar que esquecermos
+//é justamente o que quem ataca vai usar.
+//O que se perde num PDF legítimo: formulário só em XFA vira página vazia e campo calculado por script deixa de
+//calcular. Só na cópia que a tela mostra; o original fica guardado
 final class TiraScripts {
 
-    //Ações que fazem algo sozinhas ou falam com o mundo de fora. Ir para uma página, ou abrir um site
-    //(o navegador pergunta e abre em outra aba), continuam
-    private static final Set<COSName> ACOES_PERIGOSAS = Set.of(COSName.JAVA_SCRIPT, COSName.getPDFName("Launch"),
-            COSName.getPDFName("SubmitForm"), COSName.getPDFName("ImportData"), COSName.getPDFName("Rendition"),
-            COSName.getPDFName("RichMediaExecute"), COSName.getPDFName("GoToE"));
+    //Chaves que só existem para guardar scripts: AA = ações ao abrir/fechar a página, ao passar o mouse,
+    //ao digitar num campo...; JavaScript = o índice de scripts do documento; XFA = formulário com scripts dentro;
+    //OnInstantiate e Scripts = scripts de anotação 3D e de mídia
+    private static final Set<COSName> CHAVES_DE_SCRIPT = Set.of(COSName.AA, COSName.JAVA_SCRIPT, COSName.XFA,
+            COSName.getPDFName("OnInstantiate"), COSName.getPDFName("Scripts"));
 
-    //Chaves que só existem para guardar scripts:
-    //AA = ações ao abrir/fechar a página, ao passar o mouse, ao digitar num campo...;
-    //JavaScript = o índice de scripts do documento; XFA = formulário que traz scripts dentro
-    private static final Set<COSName> CHAVES_DE_SCRIPT = Set.of(COSName.AA, COSName.JAVA_SCRIPT, COSName.XFA);
+    //Onde uma ação mora: A (no link, no marcador, no campo), OpenAction (ao abrir o arquivo) e Next (a ação
+    //seguinte, sozinha ou numa lista). /S também aparece fora de ação (transparência, borda): por isso a regra
+    //das ações vale só nestas chaves
+    private static final Set<COSName> CHAVES_DE_ACAO = Set.of(COSName.A, COSName.OPEN_ACTION, COSName.NEXT);
+
+    //GoTo: ir para uma página do próprio PDF (o PDFBox não tem a constante pronta)
+    private static final COSName IR_PARA_PAGINA = COSName.getPDFName("GoTo");
+
+    private static final Set<String> ENDERECOS_PERMITIDOS = Set.of("http:", "https:", "mailto:");
 
     private TiraScripts() {
     }
@@ -52,23 +62,23 @@ final class TiraScripts {
             for (Map.Entry<COSName, COSBase> item : new ArrayList<>(dicionario.entrySet())) {
                 COSName chave = item.getKey();
                 COSBase valor = item.getValue();
-                //OpenAction com uma lista é só "abrir nesta página"; com um dicionário é uma ação, e sai
-                boolean acaoAoAbrir = chave.equals(COSName.OPEN_ACTION) && abrir(valor) instanceof COSDictionary;
-                if (CHAVES_DE_SCRIPT.contains(chave) || acaoAoAbrir || perigosa(valor)) {
+                if (CHAVES_DE_SCRIPT.contains(chave)) {
                     dicionario.removeItem(chave);
                     tirou = true;
+                } else if (CHAVES_DE_ACAO.contains(chave) && abrir(valor) instanceof COSDictionary acao) {
+                    if (!permitida(acao)) {
+                        dicionario.removeItem(chave);
+                        tirou = true;
+                    }
+                } else if (chave.equals(COSName.NEXT) && abrir(valor) instanceof COSArray seguintes) {
+                    tirou |= tirarDaLista(seguintes);
                 } else if (!(valor instanceof COSObject)) {
                     tirou |= limpar(valor);
                 }
             }
         } else if (objeto instanceof COSArray lista) {
-            //De trás para frente: tirar um item não muda a posição dos que ainda faltam
-            for (int posicao = lista.size() - 1; posicao >= 0; posicao--) {
-                COSBase valor = lista.get(posicao);
-                if (perigosa(valor)) {
-                    lista.remove(posicao);
-                    tirou = true;
-                } else if (!(valor instanceof COSObject)) {
+            for (COSBase valor : lista) {
+                if (!(valor instanceof COSObject)) {
                     tirou |= limpar(valor);
                 }
             }
@@ -76,14 +86,31 @@ final class TiraScripts {
         return tirou;
     }
 
-    //Uma ação é um dicionário com /S dizendo o tipo. Dicionário sem /S nao é ação (e o Set.of nao aceita
-    //perguntar por null: daria NullPointerException)
-    private static boolean perigosa(COSBase valor) {
-        if (!(abrir(valor) instanceof COSDictionary acao)) {
-            return false;
+    //Next com uma lista de ações: sai cada uma que não é permitida.
+    //De trás para frente: tirar um item não muda a posição dos que ainda faltam
+    private static boolean tirarDaLista(COSArray acoes) {
+        boolean tirou = false;
+        for (int posicao = acoes.size() - 1; posicao >= 0; posicao--) {
+            if (abrir(acoes.get(posicao)) instanceof COSDictionary acao && !permitida(acao)) {
+                acoes.remove(posicao);
+                tirou = true;
+            }
         }
+        return tirou;
+    }
+
+    //Uma ação é um dicionário com /S dizendo o tipo. Sem /S nenhum leitor de PDF executa nada: fica
+    private static boolean permitida(COSDictionary acao) {
         COSName tipo = acao.getCOSName(COSName.S);
-        return tipo != null && ACOES_PERIGOSAS.contains(tipo);
+        if (tipo == null || tipo.equals(IR_PARA_PAGINA)) {
+            return true;
+        }
+        if (tipo.equals(COSName.URI)) {
+            //Sem diferenciar maiúscula e sem espaço na frente: "  JavaScript:..." também é javascript:
+            String endereco = acao.getString(COSName.URI, "").strip().toLowerCase(Locale.ROOT);
+            return ENDERECOS_PERMITIDOS.stream().anyMatch(endereco::startsWith);
+        }
+        return false;
     }
 
     //Se o valor é uma referência ("veja o objeto 12"), devolve o objeto 12; senão, o próprio valor

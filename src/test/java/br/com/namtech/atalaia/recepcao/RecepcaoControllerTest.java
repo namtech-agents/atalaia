@@ -377,7 +377,7 @@ class RecepcaoControllerTest {
 
     @Test
     void pdfQueInchaERecusadoComMensagem() throws Exception {
-        //Arrumar: o arquivo pequeno que vira 60 MB quando aberto
+        //Arrumar: o arquivo pequeno que vira 1 GB quando aberto
         MockMultipartFile pdf = new MockMultipartFile("arquivo", "bomba.pdf", MediaType.APPLICATION_PDF_VALUE,
                 LeitorPdfTest.pdfBomba());
 
