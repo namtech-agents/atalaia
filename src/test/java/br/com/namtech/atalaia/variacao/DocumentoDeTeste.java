@@ -3,6 +3,7 @@ package br.com.namtech.atalaia.variacao;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -46,7 +47,7 @@ record DocumentoDeTeste(String data, String cnpj, boolean ordemTrocada) {
                 "Valor da multa em caso de descumprimento: R$ 1.250,00."));
         if (ordemTrocada) {
             //O contrário da base: o último vem primeiro
-            java.util.Collections.reverse(corpo);
+            Collections.reverse(corpo);
         }
         return corpo;
     }

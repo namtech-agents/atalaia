@@ -48,6 +48,8 @@ class VariacaoDoLeitorTest {
         }
     }
 
+    //Este e o do CNPJ provam sobretudo o Leitor: ele preserva o texto inteiro, em qualquer ordem, e o que o
+    //Verificador confere continua lá. Cada trecho é uma linha inteira, então a troca de ordem não corta trecho
     @Test
     void trocarAOrdemDosParagrafosNaoMudaNenhumDadoConferido() throws IOException {
         //Arrumar: a base e a mesma com os parágrafos na ordem contrária
@@ -83,9 +85,9 @@ class VariacaoDoLeitorTest {
 
     @Test
     void mudarSoADataDoDocumentoAndaOPrazoAMesmaQuantidadeDeDias() throws IOException {
-        //Arrumar: a base de 03/11 e a mesma uma semana depois, 10/11. A data do documento é o que vira a ciência
-        //na tela (quem envia confere e informa); uma semana inteira mantém o dia da semana, então fim de semana
-        //e feriado caem igual e a conta tem que andar exatamente 7 dias
+        //Arrumar: a base de 03/11 e a mesma uma semana depois, 10/11. A data do documento não entra na conta
+        //sozinha: a ciência é informada na tela por quem abriu a caixa postal. O que este teste prova é que,
+        //com o documento uma semana depois e a ciência também, a Calculadora anda junto
         DocumentoDeTeste base = DocumentoDeTeste.base();
         String textoDepois = textoDe(base.comData("10 de novembro de 2026"));
         assertThat(textoDepois).contains("Teresina, 10 de novembro de 2026");
@@ -95,7 +97,11 @@ class VariacaoDoLeitorTest {
         LocalDate antes = dataLimite(LocalDate.of(2026, 11, 3));
         LocalDate depois = dataLimite(LocalDate.of(2026, 11, 10));
 
-        //Conferir: a data limite andou os mesmos 7 dias que a ciência
+        //Conferir: as datas certas, contadas à mão (20 dias corridos começando no dia seguinte à ciência):
+        //03/11 dá 23/11 e 10/11 dá 30/11, as duas numa segunda. Só a diferença deixaria passar uma conta
+        //que errasse as duas do mesmo jeito (um dia a mais, o dia de início errado)
+        assertThat(antes).isEqualTo(LocalDate.of(2026, 11, 23));
+        assertThat(depois).isEqualTo(LocalDate.of(2026, 11, 30));
         assertThat(ChronoUnit.DAYS.between(antes, depois)).isEqualTo(7);
     }
 

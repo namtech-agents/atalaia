@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,11 +33,23 @@ class VariacaoComIATest {
 
     //O que a IA extraiu, como "campo -> valor". O trecho fica de fora: na ordem trocada ele pode vir recortado
     //diferente e continuar certo (quem confere o trecho é o Verificador, no outro teste)
+    private boolean primeira = true;
+
     private Map<String, String> extraido(DocumentoDeTeste documento) throws IOException, InterruptedException {
+        //Pausa antes de cada chamada, a partir da segunda (depois da última não precisa esperar)
+        if (!primeira) {
+            Thread.sleep(PAUSA_EM_MILISSEGUNDOS);
+        }
+        primeira = false;
         Analise analise = analista.analisar(leitor.ler(documento.pdf()).texto());
-        Thread.sleep(PAUSA_EM_MILISSEGUNDOS);
+        //Campo repetido (dois "prazo" diferentes) ou sem valor faz o teste falhar com a mensagem certa,
+        //em vez de um ficar escondido atrás do outro
         Map<String, String> campos = analise.dados().stream()
-                .collect(Collectors.toMap(dado -> dado.campo().strip(), DadoExtraido::valor, (um, outro) -> um));
+                .collect(Collectors.toMap(dado -> dado.campo().strip(),
+                        dado -> Objects.requireNonNull(dado.valor(), "campo sem valor: " + dado.campo()),
+                        (um, outro) -> {
+                            throw new AssertionError("A IA mandou o mesmo campo duas vezes: " + um + " / " + outro);
+                        }));
         //Uma linha por documento, para ler o resultado no terminal (os documentos são inventados)
         System.out.println(documento + " -> " + analise.tipo() + " " + campos);
         return campos;
@@ -51,14 +61,6 @@ class VariacaoComIATest {
         return numero.find() ? Integer.valueOf(numero.group()) : null;
     }
 
-    //Os campos que mudaram de uma resposta para a outra, com os dois valores
-    private static List<String> diferencas(Map<String, String> uma, Map<String, String> outra) {
-        Set<String> campos = new TreeSet<>(uma.keySet());
-        campos.addAll(outra.keySet());
-        return campos.stream().filter(campo -> !Objects.equals(uma.get(campo), outra.get(campo)))
-                .map(campo -> campo + ": " + uma.get(campo) + " / " + outra.get(campo)).toList();
-    }
-
     @Test
     void aIaExtraiOMesmoQuandoSoUmaCoisaMuda() throws IOException, InterruptedException {
         //Arrumar e agir: a base e as três variações
@@ -68,18 +70,20 @@ class VariacaoComIATest {
         Map<String, String> outroCnpj = extraido(base.comCnpj("99.999.002/0001-81"));
         Map<String, String> outraData = extraido(base.comData("10 de novembro de 2026"));
 
-        //Conferir: a base trouxe o prazo e o valor (senão as comparações abaixo não provariam nada)
-        assertThat(daBase).containsKeys("prazo", "valor");
+        //Conferir: a base trouxe o prazo de 20 dias e o valor certo (senão as comparações abaixo compararam
+        //vazio com vazio e não provariam nada)
+        assertThat(diasDoPrazo(daBase)).isEqualTo(20);
+        assertThat(daBase).containsEntry("valor", "R$ 1.250,00");
         //O que decide o caso fica igual nas três variações: o número de dias do prazo e o valor, letra por letra.
         //O prazo vai pelo número: na rodada de 19/11 a IA escreveu "20 dias a contar da ciência" na base e
-        //"20 dias" nas variações. O sentido é o mesmo, e esse texto não entra na conta (a data sai da regra da tela)
+        //"20 dias" na ordem trocada. O sentido é o mesmo, e esse texto não entra na conta (a data sai da regra da tela)
         for (Map<String, String> variacao : List.of(ordemTrocada, outroCnpj, outraData)) {
             assertThat(diasDoPrazo(variacao)).isEqualTo(diasDoPrazo(daBase));
             assertThat(variacao.get("valor")).isEqualTo(daBase.get("valor"));
         }
-        //Os outros campos só são medidos, não exigidos: na rodada de 19/11, mesmo com temperatura 0, a ordem trocada
-        //voltou com o remetente mais curto e, em outra rodada, com o número do termo a mais. Cada dado continua
-        //passando pelo Verificador (trecho e valor copiados do PDF), então a variação não vira dado inventado
-        System.out.println("Campos diferentes na ordem trocada: " + diferencas(daBase, ordemTrocada));
+        //Os outros campos não são exigidos: a IA varia de uma chamada para outra (em 19/11, na ordem trocada, veio
+        //o número do termo a mais numa rodada e o remetente mais curto em outra). Cada dado continua passando pelo
+        //Verificador (trecho e valor copiados do PDF), então a variação não vira dado inventado.
+        //A linha impressa de cada documento (acima) mostra tudo para quem quiser comparar
     }
 }
