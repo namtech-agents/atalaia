@@ -2,19 +2,24 @@ package br.com.namtech.atalaia.painel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.conta.Escritorio;
+import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
@@ -24,12 +29,25 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 
 //Transactional: cada teste desfaz o que gravou no fim, para um nao atrapalhar o outro
 @SpringBootTest
-@AutoConfigureMockMvc
 @Transactional
 class PainelControllerTest {
 
-    @Autowired
+    //O navegador de mentira é montado antes de cada teste, ja com a sessão de uma pessoa do escritório de teste
     private MockMvc navegador;
+
+    @Autowired
+    private WebApplicationContext aplicacao;
+
+    @Autowired
+    private EscritorioRepository escritorios;
+
+    private Escritorio escritorio;
+
+    @BeforeEach
+    void criaOEscritorioEEntra() {
+        escritorio = escritorios.save(new Escritorio("Escritório de Teste"));
+        navegador = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
+    }
 
     @Autowired
     private EmpresaRepository empresas;
@@ -40,17 +58,31 @@ class PainelControllerTest {
     private static final byte[] PDF = "%PDF-teste".getBytes();
 
     @Test
-    void painelVazioConvidaAEnviar() throws Exception {
-        //Agir e conferir: sem nenhuma notificação, a tela explica o que fazer
+    void escritorioSemEmpresaEConvidadoACadastrarAPrimeira() throws Exception {
+        //Agir e conferir: escritório novo ainda nao tem para quem enviar; a tela aponta para o cadastro de empresas
         navegador.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Nenhuma notificação recebida ainda")));
+                .andExpect(content().string(containsString("Comece cadastrando a primeira empresa")))
+                .andExpect(content().string(containsString("href=\"/empresas\"")))
+                .andExpect(content().string(not(containsString("Enviar notificação"))));
+    }
+
+    @Test
+    void painelVazioConvidaAEnviar() throws Exception {
+        //Arrumar: o escritório ja tem uma empresa, mas nenhuma notificação
+        empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
+
+        //Agir e conferir: a tela explica o que fazer
+        navegador.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Nenhuma notificação recebida ainda")))
+                .andExpect(content().string(containsString("Enviar notificação")));
     }
 
     @Test
     void painelSeparaOQuePrecisaDeGenteDoQueFoiConferido() throws Exception {
         //Arrumar: uma empresa inventada com uma notificação conferida e outra que foi para revisao
-        Empresa empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
         Notificacao conferida = notificacoes.save(
                 new Notificacao(empresa, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
         Notificacao paraRevisao = notificacoes.save(
@@ -73,7 +105,7 @@ class PainelControllerTest {
     @Test
     void notificacaoResolvidaSaiDosGruposAbertosEVaiParaOFim() throws Exception {
         //Arrumar: uma notificação que precisava de gente e ja foi resolvida
-        Empresa empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
         Notificacao resolvida = notificacoes.save(
                 new Notificacao(empresa, PDF, "", null, List.of(), List.of("Este PDF não tem texto.")));
         resolvida.resolver(Desfecho.ARQUIVADO, "Conferido com o cliente.");
@@ -91,7 +123,7 @@ class PainelControllerTest {
     @Test
     void resolvidasVemDaUltimaResolvidaParaAPrimeira() throws Exception {
         //Arrumar: duas notificações; a que chegou primeiro é resolvida por ultimo
-        Empresa empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
         Notificacao chegouPrimeiro = notificacoes.save(
                 new Notificacao(empresa, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
         Notificacao chegouDepois = notificacoes.save(
@@ -112,7 +144,7 @@ class PainelControllerTest {
     @Test
     void listaVemDaMaisNovaParaAMaisAntiga() throws Exception {
         //Arrumar: duas notificações conferidas da mesma empresa, uma depois da outra
-        Empresa empresa = empresas.save(new Empresa("99999009000100", "Empresa de Teste"));
+        Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
         Notificacao primeira = notificacoes.save(
                 new Notificacao(empresa, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
         Notificacao segunda = notificacoes.save(

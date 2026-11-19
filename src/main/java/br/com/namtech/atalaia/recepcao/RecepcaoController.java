@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -22,6 +23,7 @@ import br.com.namtech.atalaia.analista.Analise;
 import br.com.namtech.atalaia.analista.Analista;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
+import br.com.namtech.atalaia.conta.UsuarioLogado;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
 import br.com.namtech.atalaia.leitor.PaginasDemais;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
@@ -40,7 +42,7 @@ public class RecepcaoController {
     //10 MB. Notificação é um PDF de poucas paginas; acima disso é engano ou abuso
     static final long TAMANHO_MAXIMO = 10 * 1024 * 1024;
 
-    //A mesma mensagem serve para as duas travas de tamanho: a daqui e a do servidor (ArquivoGrandeDemais)
+    //Acima de 15 MB quem barra é o servidor, antes de chegar aqui: a pessoa ve a pagina de erro (error.html, caso 413)
     static final String GRANDE_DEMAIS = "Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.";
 
     //O tamanho da coluna observacao no banco (V4)
@@ -62,27 +64,29 @@ public class RecepcaoController {
         this.analista = new Analista(ia);
     }
 
+    //AuthenticationPrincipal: o Spring Security entrega quem esta com a sessão aberta.
+    //Todo metodo daqui usa o escritório dessa pessoa nas buscas: é o que separa um escritório do outro
     @GetMapping("/enviar")
-    public String formulario(Model model) {
-        model.addAttribute("empresas", empresas.findAllByOrderByNome());
+    public String formulario(@AuthenticationPrincipal UsuarioLogado usuario, Model model) {
+        model.addAttribute("empresas", empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
         return "enviar";
     }
 
     @PostMapping("/enviar")
-    public String enviar(@RequestParam Long empresaId, @RequestParam MultipartFile arquivo, Model model,
-            HttpServletResponse resposta) throws IOException {
-        //Empresa que nao existe so chega aqui se alguem mexeu no formulario
-        Empresa empresa = empresas.findById(empresaId)
+    public String enviar(@AuthenticationPrincipal UsuarioLogado usuario, @RequestParam Long empresaId,
+            @RequestParam MultipartFile arquivo, Model model, HttpServletResponse resposta) throws IOException {
+        //Empresa que nao existe, ou que é de outro escritório, so chega aqui se alguem mexeu no formulario
+        Empresa empresa = empresas.findByIdAndEscritorioId(empresaId, usuario.escritorioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         //Confere o tamanho antes de trazer o arquivo para a memoria
         if (arquivo.getSize() > TAMANHO_MAXIMO) {
-            return recusar(GRANDE_DEMAIS, empresaId, model, resposta);
+            return recusar(GRANDE_DEMAIS, usuario, empresaId, model, resposta);
         }
         byte[] pdf = arquivo.getBytes();
         String recusa = motivoDaRecusa(pdf);
         if (recusa != null) {
-            return recusar(recusa, empresaId, model, resposta);
+            return recusar(recusa, usuario, empresaId, model, resposta);
         }
 
         ResultadoLeitura leitura;
@@ -90,11 +94,11 @@ public class RecepcaoController {
             leitura = leitor.ler(pdf);
         } catch (PaginasDemais erro) {
             return recusar("Este PDF tem páginas demais. O limite é " + LeitorPdf.MAXIMO_DE_PAGINAS
-                    + " páginas. Escolha outro arquivo.", empresaId, model, resposta);
+                    + " páginas. Escolha outro arquivo.", usuario, empresaId, model, resposta);
         } catch (IOException erro) {
             //Tem a assinatura de PDF mas o PDFBox nao conseguiu abrir: quebrado ou com senha
             return recusar("Não foi possível abrir este PDF. Ele pode estar corrompido ou protegido por senha. Escolha outro arquivo.",
-                    empresaId, model, resposta);
+                    usuario, empresaId, model, resposta);
         }
 
         Notificacao notificacao = notificacoes.save(analisar(empresa, pdf, leitura));
@@ -106,8 +110,8 @@ public class RecepcaoController {
     //A tela recebe só o texto pronto; se ela mesma fosse buscar a empresa, a conversa ja estaria fechada
     @GetMapping("/notificacoes/{id}")
     @Transactional(readOnly = true)
-    public String notificacao(@PathVariable Long id, Model model) {
-        Notificacao notificacao = buscar(id);
+    public String notificacao(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id, Model model) {
+        Notificacao notificacao = buscar(id, usuario);
         model.addAttribute("notificacao", notificacao);
         model.addAttribute("empresa", notificacao.getEmpresa().getNome());
         model.addAttribute("recebidaEm", Notificacao.DIA_E_HORA.format(notificacao.getRecebidaEm()));
@@ -124,10 +128,11 @@ public class RecepcaoController {
     //Transactional (sem readOnly): a mudança feita no objeto é gravada no banco quando o metodo termina
     @PostMapping("/notificacoes/{id}/resolver")
     @Transactional
-    public String resolver(@PathVariable Long id, @RequestParam(required = false) Desfecho desfecho,
-            @RequestParam(defaultValue = "") String observacao, Model model, HttpServletResponse resposta) {
+    public String resolver(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id,
+            @RequestParam(required = false) Desfecho desfecho, @RequestParam(defaultValue = "") String observacao,
+            Model model, HttpServletResponse resposta) {
         //Busca trancando a linha: se dois pedidos chegarem juntos, o segundo espera aqui o primeiro gravar
-        Notificacao notificacao = notificacoes.buscarParaAlterar(id)
+        Notificacao notificacao = notificacoes.buscarParaAlterar(id, usuario.escritorioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         //Ja resolvida (clique duplo, ou a pagina ficou aberta em duas abas): nao troca o que foi registrado
         if (!notificacao.isResolvida()) {
@@ -144,7 +149,7 @@ public class RecepcaoController {
                         : "Escreva o que foi feito, em até " + OBSERVACAO_MAXIMA + " letras.");
                 model.addAttribute("observacao", observacao);
                 model.addAttribute("desfechoEscolhido", desfecho);
-                return notificacao(id, model);
+                return notificacao(usuario, id, model);
             }
             notificacao.resolver(desfecho, texto);
         }
@@ -154,15 +159,17 @@ public class RecepcaoController {
 
     //Entrega o PDF original para a tela mostrar ao lado do texto lido
     @GetMapping("/notificacoes/{id}/pdf")
-    public ResponseEntity<byte[]> pdf(@PathVariable Long id) {
+    public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", "inline; filename=\"notificacao-" + id + ".pdf\"")
-                .body(buscar(id).getArquivo());
+                .body(buscar(id, usuario).getArquivo());
     }
 
-    private Notificacao buscar(Long id) {
-        return notificacoes.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    //Notificação de outro escritório responde igual a uma que nao existe (404): nem a existencia dela vaza
+    private Notificacao buscar(Long id, UsuarioLogado usuario) {
+        return notificacoes.buscar(id, usuario.escritorioId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 
     //O caminho do documento depois de lido: Analista (IA) e Verificador (codigo). Cada peça que desconfia
@@ -204,10 +211,11 @@ public class RecepcaoController {
     }
 
     //Volta para o formulario com a mensagem, mantendo a empresa escolhida, e responde 400 (pedido recusado)
-    private String recusar(String mensagem, Long empresaId, Model model, HttpServletResponse resposta) {
+    private String recusar(String mensagem, UsuarioLogado usuario, Long empresaId, Model model,
+            HttpServletResponse resposta) {
         resposta.setStatus(HttpStatus.BAD_REQUEST.value());
         model.addAttribute("erro", mensagem);
         model.addAttribute("empresaEscolhida", empresaId);
-        return formulario(model);
+        return formulario(usuario, model);
     }
 }

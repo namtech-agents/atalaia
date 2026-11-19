@@ -234,7 +234,7 @@ classDiagram
     RecepcaoController ..> Notificacao : guarda
 ```
 
-No pacote `recepcao` há também a classe `ArquivoGrandeDemais`, que devolve o formulário com a mensagem quando o arquivo passa da trava do servidor.
+Quando o arquivo passa da trava do servidor (15 MB), o pedido é barrado antes do controller e a pessoa vê a página de erro (`error.html`) com a mensagem do limite.
 
 ## 4. Sequência: do PDF enviado até o prazo
 

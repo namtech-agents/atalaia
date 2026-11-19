@@ -1,8 +1,10 @@
 <!doctype html>
-<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<!-- th:with: guarda o título numa variável, para a aba e o cabeçalho da página dizerem a mesma coisa -->
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"
+      th:with="titulo=${status == 404} ? 'Página não encontrada' : (${status == 413} ? 'Arquivo grande demais' : (${status == 403} ? 'Entre de novo' : 'Algo deu errado'))">
 <!-- O Spring mostra esta página sozinho quando algo dá errado (endereço que não existe, pedido incompleto, falha).
      Sem ela, apareceria a página padrão dele, em inglês. -->
-<head th:replace="~{fragmentos :: cabeca(${status == 404} ? 'Página não encontrada' : 'Algo deu errado')}"></head>
+<head th:replace="~{fragmentos :: cabeca(${titulo})}"></head>
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
@@ -10,12 +12,19 @@
 
   <main>
     <div class="titulo">
-      <h1 th:text="${status == 404} ? 'Página não encontrada' : 'Algo deu errado'"></h1>
+      <h1 th:text="${titulo}"></h1>
     </div>
     <section class="vidro engano">
       <p th:if="${status == 404}">Este endereço não existe no Atalaia. Confira se o link está completo.</p>
-      <p th:unless="${status == 404}">Não foi possível concluir o que você pediu. Tente de novo; se continuar, avise quem cuida do sistema.</p>
-      <a class="botao cheio" th:href="@{/}">Voltar para Notificações</a>
+      <!-- 413: o servidor barrou o envio pelo tamanho, antes de o Atalaia olhar o arquivo -->
+      <p th:if="${status == 413}">Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.</p>
+      <!-- 403: o formulário foi enviado sem o código de proteção válido. O caso comum é a página ter ficado
+           aberta até a sessão vencer -->
+      <p th:if="${status == 403}">A página ficou aberta por muito tempo e o Atalaia não aceitou o envio. Entre de novo e repita o que estava fazendo.</p>
+      <p th:unless="${status == 404 or status == 413 or status == 403}">Não foi possível concluir o que você pediu. Tente de novo; se continuar, avise quem cuida do sistema.</p>
+      <a class="botao cheio" th:if="${status == 413}" th:href="@{/enviar}">Voltar para o envio</a>
+      <a class="botao cheio" th:if="${status == 403}" th:href="@{/entrar}">Entrar</a>
+      <a class="botao cheio" th:unless="${status == 413 or status == 403}" th:href="@{/}">Voltar para Notificações</a>
     </section>
   </main>
 </div>
