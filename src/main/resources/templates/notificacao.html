@@ -215,6 +215,7 @@
         <iframe th:src="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" title="PDF original da notificação"></iframe>
         <!-- Nem todo navegador mostra PDF dentro da página (no celular quase nenhum): o link sempre funciona -->
         <a class="abrir" th:href="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" target="_blank" rel="noopener">Abrir o PDF em outra aba</a>
+        <p class="dica" th:if="${notificacao.tinhaScripts}">Este PDF trazia scripts. Aqui aparece uma cópia sem eles; o original está guardado como chegou.</p>
       </section>
     </div>
   </main>

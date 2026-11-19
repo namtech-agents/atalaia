@@ -37,7 +37,7 @@ import br.com.namtech.atalaia.aviso.SituacaoDoAviso;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
 import br.com.namtech.atalaia.historico.Historico;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
-import br.com.namtech.atalaia.leitor.PaginasDemais;
+import br.com.namtech.atalaia.leitor.PdfRecusado;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
 import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
@@ -139,9 +139,9 @@ public class RecepcaoController {
         ResultadoLeitura leitura;
         try {
             leitura = leitor.ler(pdf);
-        } catch (PaginasDemais erro) {
-            return recusar("Este PDF tem páginas demais. O limite é " + LeitorPdf.MAXIMO_DE_PAGINAS
-                    + " páginas. Escolha outro arquivo.", usuario, empresaId, model, resposta);
+        } catch (PdfRecusado erro) {
+            //Páginas demais, conteúdo que incha ou leitura demorada: a mensagem já vem pronta do Leitor
+            return recusar(erro.getMessage() + " Escolha outro arquivo.", usuario, empresaId, model, resposta);
         } catch (IOException erro) {
             //Tem a assinatura de PDF mas o PDFBox nao conseguiu abrir: quebrado ou com senha
             return recusar("Não foi possível abrir este PDF. Ele pode estar corrompido ou protegido por senha. Escolha outro arquivo.",
@@ -150,6 +150,7 @@ public class RecepcaoController {
 
         //A IA responde fora da transação: segurar a conexão com o banco enquanto ela pensa travaria os outros pedidos
         Notificacao analisada = analisar(empresa, pdf, leitura);
+        analisada.guardarCopiaSemScripts(leitura.semScripts());
         //A notificação e o evento "Enviou o PDF" sao gravados juntos (o metodo nao é Transactional por causa da IA):
         //se o evento falhar, a notificação tambem nao fica, e a pessoa pode enviar de novo sem duplicar o caso
         Notificacao notificacao;
@@ -261,13 +262,14 @@ public class RecepcaoController {
         return "redirect:/notificacoes/" + id;
     }
 
-    //Entrega o PDF original para a tela mostrar ao lado do texto lido
+    //Entrega o PDF para a tela mostrar ao lado do texto lido. Se o original trazia scripts, vai a copia sem eles:
+    //o PDF abre dentro do Atalaia e no navegador de quem trabalha, e nao deve rodar nada sozinho ali
     @GetMapping("/notificacoes/{id}/pdf")
     public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", "inline; filename=\"notificacao-" + id + ".pdf\"")
-                .body(buscar(id, usuario).getArquivo());
+                .body(buscar(id, usuario).getArquivoParaMostrar());
     }
 
     //Notificação de outro escritório responde igual a uma que nao existe (404): nem a existencia dela vaza
