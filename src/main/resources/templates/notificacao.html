@@ -136,12 +136,17 @@
             </ul>
           </th:block>
 
-          <form class="resolver" method="post" th:if="${podeAvisar}" th:action="@{/notificacoes/{id}/aviso(id=${notificacao.id})}">
+          <!-- comSugestao: o campo do resumo abre com o rascunho da IA. Só vale enquanto a pessoa não digitou nada
+               (resumoDigitado volta do AvisoController quando o envio falha) e ainda não existe um aviso deste caso -->
+          <form class="resolver" method="post" th:if="${podeAvisar}" th:action="@{/notificacoes/{id}/aviso(id=${notificacao.id})}"
+                th:with="comSugestao=${resumoDigitado == null and aviso == null and notificacao.resumoSugerido != null}">
             <p class="erro" id="erro-aviso" role="alert" th:if="${erroDoAviso}" th:text="${erroDoAviso}"></p>
             <div>
               <label class="rotulo" for="resumo">Resumo para o cliente</label>
-              <textarea id="resumo" name="resumo" rows="4" maxlength="600" required th:text="${resumoDigitado}"
-                        th:attr="aria-invalid=${campoDoAvisoComErro == 'resumo'} ? 'true', aria-describedby=${campoDoAvisoComErro == 'resumo'} ? 'erro-aviso dica-resumo' : 'dica-resumo'"></textarea>
+              <textarea id="resumo" name="resumo" rows="4" maxlength="600" required th:text="${comSugestao} ? ${notificacao.resumoSugerido} : ${resumoDigitado}"
+                        th:attr="aria-invalid=${campoDoAvisoComErro == 'resumo'} ? 'true', aria-describedby=(${campoDoAvisoComErro == 'resumo'} ? 'erro-aviso ' : '') + (${comSugestao} ? 'rascunho-ia ' : '') + 'dica-resumo'"></textarea>
+              <!-- O id entra no aria-describedby do campo: o leitor de tela também diz que o texto é rascunho de IA -->
+              <p class="aviso-ia" id="rascunho-ia" th:if="${comSugestao}">Rascunho escrito por inteligência artificial. Leia e corrija antes de gerar o link: é o escritório que responde pelo que o cliente lê.</p>
               <p class="dica" id="dica-resumo">Em palavras simples: o que chegou e o que a empresa precisa fazer. Até 600 letras. A data limite vai junto, sozinha.</p>
             </div>
             <div>
