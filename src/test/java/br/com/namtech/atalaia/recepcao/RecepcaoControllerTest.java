@@ -39,6 +39,7 @@ import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
+import br.com.namtech.atalaia.analista.Degrau;
 import br.com.namtech.atalaia.analista.IaDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
@@ -108,7 +109,7 @@ class RecepcaoControllerTest {
 
     private void iaResponde(String prazo) {
         IaDeTeste.responde(ia, """
-                {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
+                {"tipo": "INTIMACAO", "confianca": "alta", "degrau": "PEDIDO_DE_DOCUMENTO", "dados": [
                   {"campo": "prazo", "valor": "%s", "trecho": "Prazo: 30 dias a contar da ciência"}],
                  "resumo": "A Receita pediu os livros da empresa. Separe os livros e avise o escritório."}
                 """.formatted(prazo));
@@ -165,6 +166,8 @@ class RecepcaoControllerTest {
         assertThat(guardada.getArquivo()).isEqualTo(pdf.getBytes());
         assertThat(guardada.isPrecisaDeRevisao()).isFalse();
         assertThat(guardada.getDataLimite()).isNull();
+        //O degrau sugerido pela IA (US28)
+        assertThat(guardada.getDegrau()).isEqualTo(Degrau.PEDIDO_DE_DOCUMENTO);
 
         //Conferir: guardou tambem o que o Analista entendeu, com o trecho de onde saiu o dado
         assertThat(guardada.getTipo()).isEqualTo(TipoDeDocumento.INTIMACAO);

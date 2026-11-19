@@ -29,6 +29,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import br.com.namtech.atalaia.analista.Analise;
 import br.com.namtech.atalaia.analista.Analista;
+import br.com.namtech.atalaia.analista.Degrau;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
@@ -180,6 +181,7 @@ public class RecepcaoController {
         //Os dados tambem sao buscados só quando alguem pede: a copia traz todos agora, com a conversa aberta
         model.addAttribute("dados", List.copyOf(notificacao.getDados()));
         model.addAttribute("desfechos", Desfecho.values());
+        model.addAttribute("degraus", Degrau.values());
         //As regras do escritório, para o cartão do prazo (quem calcula é o PrazoController)
         model.addAttribute("regras", regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
         //O campo da ciência nao deixa escolher dia no futuro; o aviso dos feriados fica logo abaixo da data
@@ -318,6 +320,7 @@ public class RecepcaoController {
         List<String> motivos = analista.motivosDaRevisao(analise, leitura.texto());
         Notificacao notificacao = new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
         notificacao.sugerirResumo(analise.resumoSugerido());
+        notificacao.sugerirDegrau(analise.degrau());
         return notificacao;
     }
 

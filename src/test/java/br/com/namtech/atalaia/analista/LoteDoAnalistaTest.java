@@ -67,6 +67,8 @@ class LoteDoAnalistaTest {
                     + " | " + (passou ? "sem revisão" : "REVISÃO: " + analise.motivo() + " " + verificacao.motivos())
                     //Os nomes de campo que a IA usou: um nome fora da lista do pedido manda o documento para revisao
                     + " | campos: " + analise.dados().stream().map(DadoExtraido::campo).toList()
+                    //O degrau sugerido (US28): só para acompanhar, nao tem meta
+                    + " | degrau: " + analise.degrau()
                     //O rascunho do aviso ao cliente (os documentos do lote sao inventados, pode aparecer no terminal)
                     + " | resumo: " + (analise.resumoSugerido() == null ? "(sem rascunho)" : analise.resumoSugerido()));
             Thread.sleep(PAUSA_EM_MILISSEGUNDOS);

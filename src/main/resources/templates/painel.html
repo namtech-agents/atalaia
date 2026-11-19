@@ -76,6 +76,8 @@
   <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}" th:with="aviso=${avisos.get(linha.id)}">
     <strong th:text="${linha.empresa}"></strong>
     <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
+    <!-- O degrau (gravidade), com "Degrau:" na frente, como o desfecho: sem isso, duas etiquetas lado a lado se confundem -->
+    <span class="etq" th:if="${linha.degrau != null}" th:text="'Degrau: ' + ${linha.degrau.nome}"></span>
     <!-- o vermelho de atenção só em caso aberto -->
     <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
     <!-- "Desfecho:" na frente: sem isso, duas etiquetas lado a lado ("Cobrança", "Arquivado") se confundem -->

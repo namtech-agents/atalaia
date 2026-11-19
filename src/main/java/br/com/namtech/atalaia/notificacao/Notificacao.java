@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import br.com.namtech.atalaia.analista.Degrau;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.verificador.DadoExtraido;
 import jakarta.persistence.CollectionTable;
@@ -56,6 +57,13 @@ public class Notificacao {
     //O tipo que o Analista deu. STRING: guarda o nome (INTIMACAO), nao a posição na lista. Vazio se nao classificou
     @Enumerated(EnumType.STRING)
     private TipoDeDocumento tipo;
+
+    //A gravidade (US28): sugerida pela IA, corrigida pelo contador. Vazio se ninguém deu um ainda
+    @Enumerated(EnumType.STRING)
+    private Degrau degrau;
+
+    //Quem corrigiu o degrau por último (e-mail). Vazio enquanto o degrau é o que a IA sugeriu
+    private String degrauPor;
 
     //Os dados que o Analista tirou do documento. Ficam numa tabela propria (dado_extraido), ligada por notificacao_id
     @ElementCollection
@@ -117,6 +125,27 @@ public class Notificacao {
     //se nem os dados dele sao mostrados, um resumo feito em cima deles tambem nao é
     public void sugerirResumo(String resumo) {
         this.resumoSugerido = precisaDeRevisao ? null : resumo;
+    }
+
+    //O degrau sugerido pela IA. Documento que foi para revisão não guarda, pela mesma regra do resumo:
+    //a leitura em que ninguém confia não decide a gravidade. A tela pede para a pessoa escolher
+    public void sugerirDegrau(Degrau degrau) {
+        this.degrau = precisaDeRevisao ? null : degrau;
+        this.degrauPor = null;
+    }
+
+    //A correção de uma pessoa. Quem chama grava no histórico (DegrauController)
+    public void corrigirDegrau(Degrau degrau, String quem) {
+        this.degrau = degrau;
+        this.degrauPor = quem;
+    }
+
+    public String getDegrauPor() {
+        return degrauPor;
+    }
+
+    public Degrau getDegrau() {
+        return degrau;
     }
 
     public String getResumoSugerido() {
