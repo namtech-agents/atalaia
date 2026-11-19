@@ -20,11 +20,7 @@
   <!-- A barra de cima -->
   <header th:fragment="topo" class="topo vidro">
     <a class="marca" th:href="@{/}">
-      <!-- O navegador escolhe o símbolo claro ou o escuro conforme o tema do aparelho -->
-      <picture>
-        <source th:srcset="@{/logo/atalaia-simbolo-escuro.svg}" media="(prefers-color-scheme: dark)">
-        <img th:src="@{/logo/atalaia-simbolo.svg}" alt="" width="28" height="28">
-      </picture>
+      <img th:src="@{/logo/atalaia-simbolo.svg}" alt="" width="28" height="28">
       <span>Atalaia</span>
     </a>
     <span class="previa">Prévia<span>&nbsp;· só documento de teste</span></span>
