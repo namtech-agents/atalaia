@@ -2,7 +2,6 @@ package br.com.namtech.atalaia.prazo;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -79,7 +78,7 @@ public class RegraController {
         } else if (semLetraNemNumero(artigoArrumado) || artigoArrumado.length() > 200) {
             campoComErro = "artigo";
             erro = "Escreva o artigo e a norma de onde a regra saiu, em até 200 letras.";
-        } else if (dataDaConferencia(conferidaEm) == null || dataDaConferencia(conferidaEm).isAfter(hoje)) {
+        } else if (PrazoController.data(conferidaEm) == null || PrazoController.data(conferidaEm).isAfter(hoje)) {
             campoComErro = "conferidaEm";
             erro = "Informe o dia em que a regra foi conferida na norma. Não pode ser uma data no futuro.";
         } else if (regras.existsByEscritorioIdAndNome(usuario.escritorioId(), nomeArrumado)) {
@@ -87,7 +86,7 @@ public class RegraController {
             erro = NOME_REPETIDO;
         } else {
             regra = new RegraDePrazo(nomeArrumado, Integer.parseInt(dias.strip()), TipoDeContagem.valueOf(contagem),
-                    suspendeNoRecesso, artigoArrumado, dataDaConferencia(conferidaEm));
+                    suspendeNoRecesso, artigoArrumado, PrazoController.data(conferidaEm));
             try {
                 regras.save(new RegraCadastrada(escritorios.getReferenceById(usuario.escritorioId()), regra));
             } catch (DataIntegrityViolationException repetida) {
@@ -128,14 +127,5 @@ public class RegraController {
     //Só espaços, inclusive os invisiveis, nao é nome nem artigo
     private static boolean semLetraNemNumero(String texto) {
         return texto.codePoints().noneMatch(Character::isLetterOrDigit);
-    }
-
-    //O campo de data do navegador manda 2026-11-18. Devolve null se nao for uma data
-    private static LocalDate dataDaConferencia(String texto) {
-        try {
-            return LocalDate.parse(texto.strip());
-        } catch (DateTimeParseException erro) {
-            return null;
-        }
     }
 }

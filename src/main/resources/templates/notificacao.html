@@ -58,10 +58,47 @@
           <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Tipo sugerido por inteligência artificial, ainda sem conferência. Os dados não aparecem porque o documento foi para revisão.</p>
         </section>
 
+        <!-- O prazo: a pessoa informa a ciência e escolhe a regra; a conta é feita por código (PrazoController), nunca pela IA -->
         <section class="vidro cartao" aria-labelledby="titulo-prazo">
           <h2 class="rotulo" id="titulo-prazo">Data limite</h2>
-          <strong class="grande">Ainda sem prazo</strong>
-          <p>O Atalaia só mostra uma data depois que a regra de prazo é conferida na norma. Por enquanto, confira o prazo no documento.</p>
+          <strong class="grande num" th:if="${notificacao.dataLimite != null}" th:text="${#temporals.format(notificacao.dataLimite, 'dd/MM/yyyy')}"></strong>
+          <!-- A conta foi feita, mas a Calculadora não fechou uma data: o motivo está nos passos -->
+          <strong class="grande" th:if="${notificacao.dataLimite == null and notificacao.ciencia != null}">Sem data: confira a conta</strong>
+          <strong class="grande" th:if="${notificacao.ciencia == null}">Ainda sem prazo</strong>
+
+          <!-- A conta passo a passo, com a regra e o artigo, para conferir ao lado do documento -->
+          <th:block th:if="${notificacao.ciencia != null}">
+            <ol class="motivos">
+              <li th:each="passo : ${notificacao.passosDoPrazo}" th:text="${passo}"></li>
+            </ol>
+            <p class="aviso-ia">Calculado por código em <span class="num" th:text="${prazoCalculadoEm}"></span>, a pedido de <span th:text="${notificacao.prazoCalculadoPor}"></span>.</p>
+          </th:block>
+
+          <p th:if="${notificacao.ciencia == null and regras.isEmpty() and not notificacao.resolvida}">O Atalaia só calcula com uma regra que o escritório conferiu na norma. <a th:href="@{/regras}">Cadastrar a primeira regra de prazo</a></p>
+          <p th:if="${notificacao.ciencia == null and notificacao.resolvida}">O caso foi fechado sem prazo calculado.</p>
+
+          <!-- Enquanto o caso está aberto dá para calcular, e refazer se a ciência ou a regra estavam erradas -->
+          <form class="resolver" method="post" th:unless="${notificacao.resolvida or regras.isEmpty()}"
+                th:action="@{/notificacoes/{id}/prazo(id=${notificacao.id})}">
+            <p class="erro" id="erro-prazo" role="alert" th:if="${erroDoPrazo}" th:text="${erroDoPrazo}"></p>
+            <div>
+              <label class="rotulo" for="ciencia">Dia da ciência</label>
+              <input id="ciencia" name="ciencia" type="date" required aria-describedby="dica-ciencia"
+                     th:value="${cienciaDigitada != null} ? ${cienciaDigitada} : ${notificacao.ciencia}"
+                     th:attr="aria-describedby=${erroDoPrazo} ? 'erro-prazo dica-ciencia' : 'dica-ciencia'">
+              <p class="dica" id="dica-ciencia">O dia em que a empresa tomou ciência do documento. O dia da ciência não entra na conta.</p>
+            </div>
+            <div>
+              <label class="rotulo" for="regraId">Regra de prazo</label>
+              <select id="regraId" name="regraId" required>
+                <option value="">Escolha a regra</option>
+                <option th:each="regra : ${regras}" th:value="${regra.id}" th:text="${regra.nome}"
+                        th:selected="${regra.id == regraEscolhida}"></option>
+              </select>
+            </div>
+            <button class="botao" th:classappend="${notificacao.ciencia == null} ? 'cheio'" type="submit"
+                    th:text="${notificacao.ciencia == null} ? 'Calcular o prazo' : 'Refazer a conta'"></button>
+          </form>
         </section>
 
         <!-- Fechar o caso: o desfecho e uma observação curta, para todo mundo saber que já foi tratado -->

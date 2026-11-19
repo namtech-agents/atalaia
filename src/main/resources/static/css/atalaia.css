@@ -123,7 +123,7 @@ html { scroll-padding-top: 92px; }
 /* formulário */
 .formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
 /* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
-.formulario select, .formulario input, .resolver select, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
+.formulario select, .formulario input, .resolver select, .resolver input, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 .formulario .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }

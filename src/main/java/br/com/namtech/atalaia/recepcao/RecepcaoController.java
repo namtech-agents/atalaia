@@ -32,6 +32,7 @@ import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
 import br.com.namtech.atalaia.verificador.Verificador;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -53,14 +54,17 @@ public class RecepcaoController {
 
     private final EmpresaRepository empresas;
     private final NotificacaoRepository notificacoes;
+    private final RegraCadastradaRepository regras;
     private final LeitorPdf leitor = new LeitorPdf();
     private final Analista analista;
     private final Verificador verificador = new Verificador();
 
-    //O Spring entrega os dois repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
-    public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes, ModeloDeIA ia) {
+    //O Spring entrega os repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
+    public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes,
+            RegraCadastradaRepository regras, ModeloDeIA ia) {
         this.empresas = empresas;
         this.notificacoes = notificacoes;
+        this.regras = regras;
         this.analista = new Analista(ia);
     }
 
@@ -118,6 +122,11 @@ public class RecepcaoController {
         //Os dados tambem sao buscados só quando alguem pede: a copia traz todos agora, com a conversa aberta
         model.addAttribute("dados", List.copyOf(notificacao.getDados()));
         model.addAttribute("desfechos", Desfecho.values());
+        //As regras do escritório, para o cartão do prazo (quem calcula é o PrazoController)
+        model.addAttribute("regras", regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
+        if (notificacao.getPrazoCalculadoEm() != null) {
+            model.addAttribute("prazoCalculadoEm", Notificacao.DIA_E_HORA.format(notificacao.getPrazoCalculadoEm()));
+        }
         if (notificacao.isResolvida()) {
             model.addAttribute("resolvidaEm", Notificacao.DIA_E_HORA.format(notificacao.getResolvidaEm()));
         }
