@@ -54,6 +54,10 @@ public class ClienteController {
     @Transactional
     public String confirmar(@PathVariable String token, @RequestParam(defaultValue = "") String resposta,
             RedirectAttributes recado) {
+        //Primeiro tranca o caso, depois o aviso: a mesma ordem do escritório quando gera outro link (caso, depois
+        //avisos). Na ordem contrária, os dois pedidos podiam ficar esperando um pelo outro (deadlock)
+        historico.trancar(avisos.casoDoToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
         AvisoAoCliente aviso = avisos.buscarParaConfirmar(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Instant agora = Instant.now(relogio);

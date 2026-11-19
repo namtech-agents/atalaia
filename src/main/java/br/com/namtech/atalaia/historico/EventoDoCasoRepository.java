@@ -21,6 +21,15 @@ interface EventoDoCasoRepository extends Repository<EventoDoCaso, Long> {
             """)
     Optional<Instant> ultimoMovimento(Long notificacaoId, Long escritorioId);
 
+    //A assinatura do ultimo evento gravado do caso (o maior id), para o proximo evento se encadear nela.
+    //Vazio se o caso nao tem evento; null dentro do Optional vira vazio também (evento de antes da trilha)
+    @Query("""
+            select e.assinatura from EventoDoCaso e
+            where e.notificacao.id = ?1 and e.notificacao.empresa.escritorio.id = ?2
+            order by e.id desc limit 1
+            """)
+    Optional<String> ultimaAssinatura(Long notificacaoId, Long escritorioId);
+
     //Os eventos de um caso, do mais antigo para o mais novo. O id desempata dois eventos no mesmo instante
     @Query("""
             select e from EventoDoCaso e

@@ -36,7 +36,9 @@ import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.aviso.SituacaoDoAviso;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
+import br.com.namtech.atalaia.historico.EventoDoCaso;
 import br.com.namtech.atalaia.historico.Historico;
+import br.com.namtech.atalaia.historico.Trilha;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
 import br.com.namtech.atalaia.leitor.PdfRecusado;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
@@ -194,7 +196,10 @@ public class RecepcaoController {
             model.addAttribute("resolvidaEm", Notificacao.DIA_E_HORA.format(notificacao.getResolvidaEm()));
         }
         avisoAoCliente(notificacao, usuario, model);
-        model.addAttribute("historico", historico.doCaso(id, usuario.escritorioId()));
+        List<EventoDoCaso> eventos = historico.doCaso(id, usuario.escritorioId());
+        model.addAttribute("historico", eventos);
+        //A conferência da trilha: refaz as assinaturas e diz se algum registro mudou depois de gravado
+        model.addAttribute("trilha", Trilha.conferir(eventos));
         return "notificacao";
     }
 

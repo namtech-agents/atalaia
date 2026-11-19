@@ -7,6 +7,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
+import br.com.namtech.atalaia.notificacao.Notificacao;
 import jakarta.persistence.LockModeType;
 
 //Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
@@ -42,6 +43,11 @@ public interface AvisoAoClienteRepository extends Repository<AvisoAoCliente, Lon
               and a.criadoEm = (select max(outro.criadoEm) from AvisoAoCliente outro where outro.notificacao = a.notificacao)
             """)
     List<AvisoAoCliente> dosCasosAbertos(Long escritorioId);
+
+    //O caso do aviso, sem trancar nada: a confirmação tranca primeiro o caso e só depois o aviso,
+    //na mesma ordem do escritório (caso, depois avisos). Ordem trocada entre dois pedidos dá deadlock no Postgres
+    @Query("select a.notificacao from AvisoAoCliente a where a.token = ?1")
+    Optional<Notificacao> casoDoToken(String token);
 
     //A pagina do cliente nao tem login: quem tem o token ve só aquele aviso, e nada mais
     Optional<AvisoAoCliente> findByToken(String token);
