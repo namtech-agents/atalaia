@@ -229,6 +229,10 @@ html { scroll-padding-top: 92px; }
 .resolver textarea { padding: 10px 12px; font-family: inherit; line-height: 1.45; resize: vertical; }
 .resolver .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
 .resolver .botao { align-self: flex-start; }
+/* histórico do caso: uma linha por evento, a data em cima, quem fez embaixo em cinza */
+.historico { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.historico li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.historico .quando, .historico .quem { font-size: 13px; color: var(--apagado); }
 .cartao .observacao { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); }
 
 /* tela inicial: o título com o botão de enviar ao lado, e os grupos de notificações */

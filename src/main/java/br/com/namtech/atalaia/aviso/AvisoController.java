@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
+import br.com.namtech.atalaia.historico.Historico;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 
@@ -35,8 +37,11 @@ public class AvisoController {
     private final NotificacaoRepository notificacoes;
     private final AvisoAoClienteRepository avisos;
     private final Clock relogio;
+    private final Historico historico;
 
-    public AvisoController(NotificacaoRepository notificacoes, AvisoAoClienteRepository avisos, Clock relogio) {
+    public AvisoController(NotificacaoRepository notificacoes, AvisoAoClienteRepository avisos, Clock relogio,
+            Historico historico) {
+        this.historico = historico;
         this.notificacoes = notificacoes;
         this.avisos = avisos;
         this.relogio = relogio;
@@ -95,6 +100,8 @@ public class AvisoController {
         anteriores.forEach(antigo -> antigo.substituir(agora));
         avisos.save(new AvisoAoCliente(notificacao, novoToken(), resumoArrumado,
                 documentosArrumados.isEmpty() ? null : documentosArrumados, usuario.email(), agora));
+        historico.registrar(notificacao, usuario.email(),
+                "Gerou o link para o cliente (data limite " + Datas.DIA.format(notificacao.getDataLimite()) + ")");
         return volta;
     }
 
