@@ -35,6 +35,50 @@ class VerificadorTest {
     }
 
     @Test
+    void campoComNomeInventadoMandaParaRevisao() {
+        //Arrumar: valor e trecho certos, mas com um nome de campo que o pedido nao tem.
+        //Sem esta conferencia, a tela mostraria "orgao emissor" como dado conferido
+        DadoExtraido inventado = new DadoExtraido("orgao_emissor", "30 dias", "Prazo: 30 dias a contar da ciência.");
+
+        //Agir: pede a conferencia
+        ResultadoVerificacao resultado = new Verificador().conferir(TEXTO, List.of(inventado));
+
+        //Conferir: vai para revisao, com o motivo dizendo qual dado
+        assertThat(resultado.precisaDeRevisao()).isTrue();
+        assertThat(resultado.motivos()).containsExactly("O dado \"orgao emissor\" não é um dos campos que o Atalaia confere.");
+    }
+
+    @Test
+    void campoSemNomeOuComONomeAntigoMandaParaRevisao() {
+        //Arrumar: valor e trecho certos, sem nome e com o "parte" que o pedido de hoje nao pede mais
+        String trecho = "Prazo: 30 dias a contar da ciência.";
+        List<DadoExtraido> dados = List.of(new DadoExtraido(null, "30 dias", trecho),
+                new DadoExtraido("  ", "30 dias", trecho), new DadoExtraido("parte", "30 dias", trecho));
+
+        //Agir
+        ResultadoVerificacao resultado = new Verificador().conferir(TEXTO, dados);
+
+        //Conferir: os tres vao para revisao, cada um com o seu motivo
+        assertThat(resultado.motivos()).containsExactly(
+                "O dado \"sem nome\" não é um dos campos que o Atalaia confere.",
+                "O dado \"sem nome\" não é um dos campos que o Atalaia confere.",
+                "O dado \"Parte\" não é um dos campos que o Atalaia confere.");
+    }
+
+    @Test
+    void nomeInventadoComTrechoForaDoPdfMostraSoOMotivoDoTrecho() {
+        //Arrumar: o nome é inventado e o trecho tambem nao esta no PDF
+        DadoExtraido dado = new DadoExtraido("orgao_emissor", "Receita", "Receita Federal do Brasil");
+
+        //Agir
+        ResultadoVerificacao resultado = new Verificador().conferir(TEXTO, List.of(dado));
+
+        //Conferir: um motivo por dado, o primeiro que falhou. O trecho fora do PDF ja manda para revisao,
+        //e é ele que a pessoa precisa conferir primeiro (decisão registrada aqui)
+        assertThat(resultado.motivos()).containsExactly("O trecho do dado \"orgao emissor\" não está no texto do PDF.");
+    }
+
+    @Test
     void trechoQueNaoEstaNoTextoMandaParaRevisaoComOMotivo() {
         //Arrumar: um dado com um trecho que nao existe no documento (a IA inventou)
         DadoExtraido prazo = new DadoExtraido("prazo", "15 dias", "Prazo: 15 dias a contar da ciência.");

@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
+import br.com.namtech.atalaia.verificador.DadoExtraido;
 import br.com.namtech.atalaia.verificador.ResultadoVerificacao;
 import br.com.namtech.atalaia.verificador.Verificador;
 
@@ -64,6 +65,8 @@ class LoteDoAnalistaTest {
             //Uma linha por documento, para ler o resultado no terminal
             System.out.println(documento.getFileName() + " | tipo: " + analise.tipo() + (tipoCerto ? " (certo)" : " (ERRADO)")
                     + " | " + (passou ? "sem revisão" : "REVISÃO: " + analise.motivo() + " " + verificacao.motivos())
+                    //Os nomes de campo que a IA usou: um nome fora da lista do pedido manda o documento para revisao
+                    + " | campos: " + analise.dados().stream().map(DadoExtraido::campo).toList()
                     //O rascunho do aviso ao cliente (os documentos do lote sao inventados, pode aparecer no terminal)
                     + " | resumo: " + (analise.resumoSugerido() == null ? "(sem rascunho)" : analise.resumoSugerido()));
             Thread.sleep(PAUSA_EM_MILISSEGUNDOS);

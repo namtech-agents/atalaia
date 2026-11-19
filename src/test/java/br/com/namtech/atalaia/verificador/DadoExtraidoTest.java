@@ -2,6 +2,9 @@ package br.com.namtech.atalaia.verificador;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 class DadoExtraidoTest {
@@ -22,5 +25,17 @@ class DadoExtraidoTest {
         assertThat(emBranco.rotulo()).isEqualTo("sem nome");
         //Maiuscula e espaço nas pontas nao atrapalham
         assertThat(comMaiuscula.rotulo()).isEqualTo("Número do processo");
+    }
+
+    @Test
+    void soOsSeisCamposDoPedidoSaoConhecidos() {
+        //Arrumar e agir e conferir: os seis do pedido valem, com maiuscula e espaço nas pontas tambem
+        for (String campo : List.of("valor", "tributo", "numero_do_processo", "remetente", "destinatario", " PRAZO ")) {
+            assertThat(new DadoExtraido(campo, "x", "x").conhecido()).as(campo).isTrue();
+        }
+        //Inventado, sem nome e o "parte" antigo (o pedido de hoje nao pede mais) nao valem
+        for (String campo : Arrays.asList("orgao_emissor", null, "  ", "parte")) {
+            assertThat(new DadoExtraido(campo, "x", "x").conhecido()).as(String.valueOf(campo)).isFalse();
+        }
     }
 }

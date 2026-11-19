@@ -2,6 +2,10 @@ package br.com.namtech.atalaia.analista;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -31,6 +35,22 @@ class AnalistaTest {
                 new DadoExtraido("prazo", "30 dias", "Prazo: 30 dias a contar da ciência."));
         assertThat(analise.precisaDeRevisao()).isFalse();
         assertThat(analise.motivo()).isNull();
+    }
+
+    @Test
+    void pedidoListaCadaCampoQueOVerificadorConhece() {
+        //Arrumar: só o pedaço do pedido que lista os campos ("valor" aparece tambem no molde do JSON e nas regras,
+        //e procurar no pedido inteiro passaria mesmo com o campo fora da lista)
+        String lista = Analista.PEDIDO.substring(Analista.PEDIDO.indexOf("entre estes campos:"),
+                Analista.PEDIDO.indexOf("Regras dos dados:"));
+
+        //Agir: junta os nomes entre aspas
+        Set<String> nomes = Pattern.compile("\"([a-z_]+)\"").matcher(lista).results()
+                .map(achado -> achado.group(1)).collect(Collectors.toSet());
+
+        //Conferir: as duas listas sao iguais, nos dois sentidos. Quem acrescentar um campo num lugar e esquecer
+        //o outro ve este teste falhar, em vez de todo documento com o campo novo ir para revisao
+        assertThat(nomes).isEqualTo(DadoExtraido.CAMPOS_PEDIDOS.keySet());
     }
 
     @Test
