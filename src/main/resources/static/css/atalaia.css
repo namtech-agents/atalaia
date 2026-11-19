@@ -198,6 +198,9 @@ html { scroll-padding-top: 92px; }
 /* a linha inteira é o link: alvo grande para o dedo e para o mouse */
 .lista a { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 10px 12px; border-radius: 18px; text-decoration: none; color: var(--texto); }
 .lista a strong, .lista .linha strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+/* Regras de prazo: a linha tem dois textos à direita; só o primeiro empurra, e o botão de excluir não ganha margem do formulário */
+.lista .quando + .quando { margin-left: 0; }
+.lista .linha form { margin: 0; }
 .lista .quando { margin-left: auto; font-size: 13.5px; color: var(--apagado); white-space: nowrap; }
 @media (hover: hover) { .lista a:hover { background: var(--campo-fundo); } }
 .vazio { padding: 22px; max-width: 560px; color: var(--apagado); }
