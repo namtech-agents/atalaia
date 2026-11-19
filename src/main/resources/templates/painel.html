@@ -17,39 +17,44 @@
     <section class="vidro vazio" th:if="${semEmpresa}">
       <p>Comece cadastrando a primeira empresa que o escritório atende. Depois é só enviar o PDF que chegou para ela.</p>
     </section>
-    <section class="vidro vazio" th:if="${not semEmpresa and precisaDeGente.isEmpty() and conferidas.isEmpty() and resolvidas.isEmpty()}">
+    <section class="vidro vazio" th:if="${not semEmpresa and nenhuma}">
       <p>Nenhuma notificação recebida ainda. Envie o PDF que chegou para o cliente e ele aparece aqui.</p>
     </section>
 
-    <!-- O que o Atalaia não conseguiu conferir sozinho vem primeiro -->
-    <section class="grupo" th:unless="${precisaDeGente.isEmpty()}" aria-labelledby="titulo-gente">
-      <h2 id="titulo-gente">Precisa de gente <span class="conta num" th:text="${precisaDeGente.size() == 1} ? '1 notificação' : ${precisaDeGente.size() + ' notificações'}"></span></h2>
-      <ul class="vidro lista">
-        <li th:each="linha : ${precisaDeGente}" th:insert="~{:: linha(${linha})}"></li>
-      </ul>
-    </section>
+    <!-- O filtro: abertas (o que pede ação) ou resolvidas (o histórico). Só aparece quando há resolvidas -->
+    <nav class="filtro" aria-label="Quais casos mostrar" th:unless="${resolvidas.isEmpty()}">
+      <a th:href="@{/}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas</a>
+      <a th:href="@{/(ver='resolvidas')}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
+    </nav>
 
-    <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
-    <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not (conferidas.isEmpty() and resolvidas.isEmpty())}">Nada precisa de gente agora.</p>
+    <th:block th:unless="${verResolvidas}">
+      <!-- Os três grupos seguem de quem é o próximo passo (Etapa): primeiro o que o escritório tem que fazer -->
+      <section th:replace="~{:: grupo('gente', 'Precisa de gente', ${precisaDeGente})}"></section>
 
-    <section class="grupo" th:unless="${conferidas.isEmpty()}" aria-labelledby="titulo-conferidas">
-      <h2 id="titulo-conferidas">Lidas e conferidas <span class="conta num" th:text="${conferidas.size() == 1} ? '1 notificação' : ${conferidas.size() + ' notificações'}"></span></h2>
-      <ul class="vidro lista">
-        <li th:each="linha : ${conferidas}" th:insert="~{:: linha(${linha})}"></li>
-      </ul>
-    </section>
+      <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
+      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma}">Nada precisa de gente agora.</p>
 
-    <section class="grupo" th:unless="${resolvidas.isEmpty()}" aria-labelledby="titulo-resolvidas">
-      <h2 id="titulo-resolvidas">Resolvidas <span class="conta num" th:text="${resolvidas.size() == 1} ? '1 notificação' : ${resolvidas.size() + ' notificações'}"></span></h2>
-      <ul class="vidro lista">
-        <li th:each="linha : ${resolvidas}" th:insert="~{:: linha(${linha})}"></li>
-      </ul>
-    </section>
+      <section th:replace="~{:: grupo('cliente', 'Esperando o cliente', ${esperandoOCliente})}"></section>
+      <section th:replace="~{:: grupo('fechar', 'Pronto para fechar', ${prontoParaFechar})}"></section>
+    </th:block>
+
+    <!-- th:block por fora: no mesmo elemento, o th:replace roda antes do th:if e o if seria ignorado -->
+    <th:block th:if="${verResolvidas}">
+      <section th:replace="~{:: grupo('resolvidas', 'Resolvidas', ${resolvidas})}"></section>
+    </th:block>
   </main>
 </div>
 
-<!-- Uma linha da lista: a linha inteira é o link para a notificação. Os três grupos usam o mesmo pedaço -->
 <th:block th:remove="all">
+  <!-- Um grupo da lista: título com a contagem e as linhas. Grupo vazio não aparece -->
+  <section th:fragment="grupo(chave, titulo, linhas)" class="grupo" th:unless="${linhas.isEmpty()}" th:attr="aria-labelledby='titulo-' + ${chave}">
+    <h2 th:id="'titulo-' + ${chave}"><th:block th:text="${titulo}"></th:block> <span class="conta num" th:text="${linhas.size() == 1} ? '1 notificação' : ${linhas.size() + ' notificações'}"></span></h2>
+    <ul class="vidro lista">
+      <li th:each="linha : ${linhas}" th:insert="~{:: linha(${linha})}"></li>
+    </ul>
+  </section>
+
+  <!-- Uma linha da lista: a linha inteira é o link para a notificação. Todos os grupos usam o mesmo pedaço -->
   <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}" th:with="aviso=${avisos.get(linha.id)}">
     <strong th:text="${linha.empresa}"></strong>
     <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
@@ -57,8 +62,13 @@
     <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
     <!-- "Desfecho:" na frente: sem isso, duas etiquetas lado a lado ("Cobrança", "Arquivado") se confundem -->
     <span class="etq" th:if="${linha.resolvida()}" th:text="'Desfecho: ' + ${linha.desfecho.nome}"></span>
-    <!-- O prazo, quando já foi calculado: em vermelho se faltam 3 dias ou menos. O texto já diz a situação -->
-    <span class="etq num" th:if="${linha.temPrazo()}" th:classappend="${linha.prazoApertado(hoje)} ? 'atencao'" th:text="${linha.prazo(hoje)}"></span>
+    <!-- O que falta fazer, no caso que ainda não tem aviso ao cliente (vem do PainelController, regra na Etapa) -->
+    <span class="etq falta" th:if="${faltas.get(linha.id) != null}" th:text="${faltas.get(linha.id)}"></span>
+    <!-- O prazo, quando já foi calculado, em três níveis: vermelho até 3 dias, amarelo até 7, sem cor com folga.
+         O texto já diz a situação: quem não distingue a cor não perde a informação -->
+    <span class="etq num" th:if="${linha.temPrazo()}"
+          th:classappend="${linha.prazoApertado(hoje)} ? 'atencao' : (${linha.prazoPerto(hoje)} ? 'perto' : '')"
+          th:text="${linha.prazo(hoje)}"></span>
     <!-- O aviso ao cliente, só em caso aberto (avisos vem do PainelController): aguardando, confirmado ou vencido.
          Em vermelho quando o escritório precisa agir; o texto e a regra ficam no AvisoAoCliente (naLista, pedeAtencao) -->
     <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora, linha.dataLimite)} ? 'atencao'"
