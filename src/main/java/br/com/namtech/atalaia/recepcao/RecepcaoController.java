@@ -49,6 +49,7 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 import br.com.namtech.atalaia.prazo.FeriadosNacionais;
 import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
 import br.com.namtech.atalaia.seguranca.LimiteDeTentativas;
+import br.com.namtech.atalaia.simulado.TemposDoSimulado;
 import jakarta.servlet.http.HttpServletResponse;
 
 //Recepção: a porta de entrada. O escritório envia o PDF de uma notificação e o Atalaia le, analisa, confere e guarda
@@ -170,11 +171,18 @@ public class RecepcaoController {
     }
 
     //Transactional: mantem a conversa com o banco aberta durante este metodo, para ler aqui o nome da empresa (LAZY).
-    //A tela recebe só o texto pronto; se ela mesma fosse buscar a empresa, a conversa ja estaria fechada
+    //A tela recebe só o texto pronto; se ela mesma fosse buscar a empresa, a conversa ja estaria fechada.
+    //Sem readOnly: a primeira abertura de um simulado grava a hora e um evento (US30). Caso comum só é lido
     @GetMapping("/notificacoes/{id}")
-    @Transactional(readOnly = true)
+    @Transactional
     public String notificacao(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id, Model model) {
         Notificacao notificacao = buscar(id, usuario);
+        //O cronômetro do simulado: a primeira pessoa que abre marca a hora. marcarAbertura é uma operação só no banco,
+        //e só uma de duas aberturas ao mesmo tempo encontra a hora vazia: o evento não sai duplicado
+        if (notificacao.isSimulado() && notificacao.getAbertaEm() == null
+                && notificacoes.marcarAbertura(id, usuario.escritorioId(), Instant.now(relogio)) == 1) {
+            historico.registrar(notificacao, usuario.email(), "Abriu o caso");
+        }
         model.addAttribute("notificacao", notificacao);
         model.addAttribute("empresa", notificacao.getEmpresa().getNome());
         model.addAttribute("recebidaEm", Notificacao.DIA_E_HORA.format(notificacao.getRecebidaEm()));
@@ -205,6 +213,11 @@ public class RecepcaoController {
     //Quem cria o aviso é o AvisoController; quem confirma é o cliente, no ClienteController
     private void avisoAoCliente(Notificacao notificacao, UsuarioLogado usuario, Model model) {
         List<AvisoAoCliente> doCaso = avisos.doCaso(notificacao.getId(), usuario.escritorioId());
+        //Simulado que terminou (cliente avisado ou caso fechado): o caso conta que era teste e mostra os tempos
+        if (notificacao.isSimulado()) {
+            TemposDoSimulado tempos = TemposDoSimulado.de(notificacao, doCaso);
+            model.addAttribute("tempos", tempos.terminou() ? tempos : null);
+        }
         AvisoAoCliente aviso = doCaso.isEmpty() ? null : doCaso.get(0);
         boolean prazoMudou = false;
         boolean confirmado = false;

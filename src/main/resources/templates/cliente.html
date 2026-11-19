@@ -19,6 +19,9 @@
       <p>Aviso do escritório <strong th:text="${escritorio}"></strong>: chegou uma comunicação do governo para a sua empresa.</p>
     </div>
 
+    <!-- Simulado: se o link de um teste chegar ao cliente por engano, ele sabe que não precisa fazer nada -->
+    <p class="recado" th:if="${simulado}">Este aviso é um teste (simulado) do escritório. Você não precisa fazer nada.</p>
+
     <!-- Link que não confirma mais: diz o porquê e o que fazer -->
     <p class="recado" th:if="${situacao.name() == 'SUBSTITUIDO'}">Este aviso foi substituído por um mais novo. Peça o link novo ao escritório.</p>
     <p class="recado" th:if="${situacao.name() == 'VENCIDO'}">Este link venceu. Peça um link novo ao escritório.</p>

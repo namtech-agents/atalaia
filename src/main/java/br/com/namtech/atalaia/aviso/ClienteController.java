@@ -45,6 +45,7 @@ public class ClienteController {
         model.addAttribute("aviso", aviso);
         model.addAttribute("situacao", aviso.situacao(Instant.now(relogio)));
         model.addAttribute("empresa", empresa.getNome());
+        model.addAttribute("simulado", aviso.getNotificacao().isSimulado());
         model.addAttribute("escritorio", empresa.getEscritorio().getNome());
         return "cliente";
     }

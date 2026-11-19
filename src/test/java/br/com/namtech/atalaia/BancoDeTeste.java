@@ -40,6 +40,14 @@ public class BancoDeTeste {
         return mesa.find(tipo, id);
     }
 
+    //Lê do banco de verdade: grava e limpa a mesa antes. Uma mudança feita direto no banco (um update em lote, como
+    //o marcarAbertura do simulado) não aparece no objeto que já estava na mesa
+    public <T> T releer(Class<T> tipo, Long id) {
+        mesa.flush();
+        mesa.clear();
+        return mesa.find(tipo, id);
+    }
+
     //Manda para o banco agora o que está só na mesa (o banco confere as regras dele nesse momento)
     public void gravar() {
         mesa.flush();

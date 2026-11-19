@@ -102,6 +102,12 @@ public class Notificacao {
     //O e-mail de quem pediu a conta
     private String prazoCalculadoPor;
 
+    //Simulado (US30): notificação de teste solta pelo escritório para medir o tempo da equipe
+    private boolean simulado;
+
+    //A primeira vez que alguém do escritório abriu o caso. Só é marcada no simulado (NotificacaoRepository.marcarAbertura)
+    private Instant abertaEm;
+
     protected Notificacao() {
     }
 
@@ -119,6 +125,23 @@ public class Notificacao {
                 ? motivosDaRevisao.stream().map(motivo -> motivo.replaceAll("\\R", " ")).collect(Collectors.joining("\n"))
                 : null;
         this.recebidaEm = Instant.now();
+    }
+
+    //Um simulado: o documento de teste, já classificado, sem passar pela IA (não gasta chamada) e sem motivo de revisão,
+    //para seguir o caminho de um caso comum: calcular o prazo, avisar o cliente, fechar
+    public static Notificacao simulado(Empresa empresa, byte[] pdf, String texto) {
+        Notificacao teste = new Notificacao(empresa, pdf, texto, TipoDeDocumento.INTIMACAO, List.of(), List.of());
+        teste.simulado = true;
+        teste.degrau = Degrau.PEDIDO_DE_DOCUMENTO;
+        return teste;
+    }
+
+    public boolean isSimulado() {
+        return simulado;
+    }
+
+    public Instant getAbertaEm() {
+        return abertaEm;
     }
 
     //Guarda o rascunho da IA para o aviso ao cliente. Documento que foi para revisao nao guarda:

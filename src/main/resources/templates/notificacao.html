@@ -22,6 +22,20 @@
       <!-- No HTML o cartão do prazo vem primeiro: quem usa teclado ou leitor de tela recebe a situação antes do PDF.
            Na tela larga o CSS põe o documento à esquerda -->
       <aside class="lado">
+        <!-- Simulado (US30): só aparece quando terminou (cliente avisado ou caso fechado). Antes disso a equipe trata o
+             caso como um de verdade, que é o que o simulado quer medir -->
+        <section class="vidro cartao" th:if="${tempos != null}" aria-labelledby="titulo-simulado">
+          <h2 class="rotulo" id="titulo-simulado">Era um simulado</h2>
+          <strong class="grande">Notificação de teste do escritório</strong>
+          <p>Não mande o link do aviso ao cliente: o documento é de exercício. Tempos contados da chegada:</p>
+          <dl class="dados">
+            <div><dt>Até alguém abrir</dt><dd class="num" th:text="${tempos.ateAbrir}"></dd></div>
+            <div><dt>Até ter responsável</dt><dd>o Atalaia ainda não tem responsável por caso</dd></div>
+            <div><dt>Até avisar o cliente</dt><dd class="num" th:text="${tempos.ateAvisar}"></dd></div>
+            <div><dt>Até fechar</dt><dd class="num" th:text="${tempos.ateFechar}"></dd></div>
+          </dl>
+        </section>
+
         <!-- Caso fechado: o que ficou registrado, sem formulário -->
         <section class="vidro cartao" th:if="${notificacao.resolvida}" aria-labelledby="titulo-desfecho">
           <h2 class="rotulo" id="titulo-desfecho">Resolvida em <span class="num" th:text="${resolvidaEm}"></span></h2>
