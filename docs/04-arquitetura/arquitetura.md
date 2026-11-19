@@ -146,6 +146,8 @@ Decisões:
 - **Tentar adivinhar senha trava** (filtro `TravaDeTentativas`, conta no `LimiteDeTentativas`): 10 senhas erradas ou 10 cadastros por endereço a cada 15 minutos. A vaga é reservada antes de conferir a senha, numa operação só (uma rajada não passa), e entrar certo devolve a vaga. A conta fica na memória do servidor.
 - **Envio de arquivo só de quem entrou** (filtro `ArquivoSoComSessao`, antes do CSRF): quem não entrou vai para `/entrar?expirou` sem o servidor ler o arquivo. Sem ele, o filtro do CSRF leria até 16 MB procurando o código do formulário.
 - **A IA tem teto** (issue #144): no máximo 60 envios por escritório a cada 15 minutos (a mesma peça `LimiteDeTentativas`, com o escritório como chave; passou disso, 429) e no máximo 5 análises ao mesmo tempo (`TetoDeChamadas` em volta do Gemini; sem vaga em 10 s, o caso vai para uma pessoa). Limite conhecido: quem cria várias contas soma as cotas.
+- **O PDF é lido num processo à parte** (`LeitorIsolado`, lançado pelo `LeitorPdf`; issue #144). O PDF vem de fora e pode ser montado para inchar: um arquivo de 1 MB virava 1 GB ao abrir e derrubava a memória, e o PDFBox abre cada parte inteira antes de deixar alguém contar. Então o PDFBox roda num `java` com 256 MB e 20 s, no máximo 2 leituras ao mesmo tempo. Se ele morrer (memória, tempo, defeito), morre só ele e o envio é recusado. Dentro dele: 100 páginas e 300 mil letras no máximo. No ar o servidor precisa de memória para o Atalaia mais 2 × 256 MB.
+- **O PDF original fica do jeito que chegou; a tela pode mostrar uma cópia.** A notificação pode vir assinada, e regravar quebraria a assinatura. Quando o PDF traz algo que age sozinho (script, abrir programa, arquivo da rede), o `TiraScripts` faz uma cópia que só mantém "ir para página" e links `http`, `https` e `mailto`, e é ela que a moldura mostra (V12).
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
 - **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
 - **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
@@ -167,10 +169,18 @@ classDiagram
         class LeitorPdf {
             +ler(bytes pdf) ResultadoLeitura
         }
+        class LeitorIsolado {
+            <<processo à parte>>
+            +main(String[] argumentos)
+        }
+        class TiraScripts {
+            +tirar(COSDocument documento) boolean
+        }
         class ResultadoLeitura {
             <<record>>
             String texto
             boolean precisaDeRevisao
+            bytes semScripts
         }
 
         class Verificador {
@@ -330,6 +340,8 @@ classDiagram
     AvisoAoCliente ..> SituacaoDoAviso : informa
     AvisoController ..> AvisoAoCliente : cria e substitui
     ClienteController ..> AvisoAoCliente : mostra e confirma
+    LeitorPdf ..> LeitorIsolado : lança e espera
+    LeitorIsolado ..> TiraScripts : usa
     LeitorPdf ..> ResultadoLeitura : devolve
     Verificador ..> DadoExtraido : recebe
     Verificador ..> ResultadoVerificacao : devolve
@@ -512,7 +524,7 @@ sequenceDiagram
         Recepcao-->>Contador: recusa com a mensagem
     else PDF aceito
         Recepcao->>Leitor: ler(pdf)
-        Leitor-->>Recepcao: texto + precisaDeRevisao
+        Leitor-->>Recepcao: texto + precisaDeRevisao (+ cópia sem scripts, se havia)
         Recepcao->>Analista: analisar(texto)
         Analista->>IA: tipo e dados, com o trecho literal de cada um
         IA-->>Analista: JSON com tipo, confiança e dados
@@ -699,6 +711,7 @@ erDiagram
 | `V9__aviso_ao_cliente.sql` | Cria `aviso_ao_cliente`: o link, a cópia do que o cliente viu, a validade e o registro de ciência (quando confirmou e qual data marcou, os dois vazios ou os dois preenchidos) |
 | `V10__notificacao_guarda_o_resumo_sugerido.sql` | A notificação passa a guardar o rascunho do resumo escrito pela IA |
 | `V11__historico_do_caso.sql` | Cria `evento_do_caso`: quando, quem e o que aconteceu em cada caso. Só recebe linhas novas (refazer a conta do prazo não apaga a anterior). Os casos que já existiam ganham o histórico que dá para tirar das colunas |
+| `V12__notificacao_guarda_copia_sem_scripts.sql` | A notificação passa a guardar, só quando o PDF trazia scripts, uma cópia sem eles; é a que a tela mostra (o original continua em `arquivo`) |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Ficou vazio: com o login, cada escritório cadastra as próprias empresas. O arquivo continua porque o Flyway já registrou o nome dele |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
