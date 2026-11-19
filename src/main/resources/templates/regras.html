@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro · Regras de prazo' : 'Regras de prazo')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo}"></header>
+
+  <main>
+    <div class="titulo">
+      <a class="volta" th:href="@{/}">Notificações</a>
+      <h1>Regras de prazo</h1>
+      <p>O Atalaia não traz regra pronta. Cadastre aqui só a regra que alguém do escritório leu na norma: o artigo e a data da conferência aparecem ao lado de todo prazo calculado com ela.</p>
+    </div>
+
+    <p class="recado" role="status" th:if="${cadastrada}">Regra cadastrada. Ela já pode ser escolhida na tela de uma notificação.</p>
+    <p class="recado" role="status" th:if="${excluida}">Regra excluída. Os prazos já calculados com ela continuam como estavam.</p>
+
+    <section class="grupo" th:unless="${regras.isEmpty()}" aria-labelledby="titulo-regras">
+      <h2 id="titulo-regras" th:text="${regras.size() == 1} ? '1 regra' : ${regras.size() + ' regras'}"></h2>
+      <ul class="vidro lista">
+        <!-- conta: a regra no formato da Calculadora (RegraDePrazo), que já sabe dizer se a conferência venceu -->
+        <li th:each="regra : ${regras}" th:with="conta=${regra.paraAConta()}">
+          <div class="linha">
+            <strong th:text="${conta.nome}"></strong>
+            <span class="num" th:text="${conta.prazoPorExtenso()}"></span>
+            <span th:if="${conta.suspendeNoRecesso}">· para no recesso</span>
+            <!-- Seis meses depois da conferência, alguém precisa ler a regra na norma de novo -->
+            <span class="etq atencao" th:if="${conta.conferenciaVencida(hoje)}">Conferência vencida</span>
+            <span class="fonte" th:text="${conta.artigo}"></span>
+            <span class="quando">Conferida em <span class="num" th:text="${#temporals.format(conta.conferidaEm, 'dd/MM/yyyy')}"></span></span>
+            <!-- Excluir é um formulário (POST): um link poderia ser acionado por outro site -->
+            <form method="post" th:action="@{/regras/{id}/excluir(id=${regra.id})}">
+              <button class="botao" type="submit" th:attr="aria-label='Excluir a regra ' + ${conta.nome}">Excluir</button>
+            </form>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <form class="vidro formulario" method="post" th:action="@{/regras}" aria-labelledby="titulo-nova">
+      <h2 class="rotulo" id="titulo-nova" th:text="${regras.isEmpty()} ? 'Cadastre a primeira regra' : 'Cadastrar outra regra'"></h2>
+      <p class="erro" id="erro-regra" role="alert" th:if="${erro}" th:text="${erro}"></p>
+
+      <div>
+        <label class="rotulo" for="nome">Nome da regra</label>
+        <!-- Só o campo que falhou recebe o foco e o aviso de erro (campoComErro vem do RegraController) -->
+        <input id="nome" name="nome" type="text" maxlength="120" required th:value="${nome}"
+               aria-describedby="dica-nome" th:autofocus="${campoComErro == 'nome'}"
+               th:attr="aria-invalid=${campoComErro == 'nome'} ? 'true', aria-describedby=${campoComErro == 'nome'} ? 'erro-regra dica-nome' : 'dica-nome'">
+        <p class="dica" id="dica-nome">Como o escritório chama este prazo. É por este nome que a regra é escolhida na notificação.</p>
+      </div>
+      <div>
+        <label class="rotulo" for="dias">Prazo em dias</label>
+        <input id="dias" name="dias" type="number" min="1" max="365" required th:value="${dias}"
+               th:autofocus="${campoComErro == 'dias'}"
+               th:attr="aria-invalid=${campoComErro == 'dias'} ? 'true', aria-describedby=${campoComErro == 'dias'} ? 'erro-regra'">
+      </div>
+      <div>
+        <label class="rotulo" for="contagem">Como os dias são contados</label>
+        <select id="contagem" name="contagem" required th:autofocus="${campoComErro == 'contagem'}"
+                th:attr="aria-invalid=${campoComErro == 'contagem'} ? 'true', aria-describedby=${campoComErro == 'contagem'} ? 'erro-regra'">
+          <option value="">Escolha</option>
+          <option value="DIAS_UTEIS" th:selected="${contagem == 'DIAS_UTEIS'}">Dias úteis</option>
+          <option value="DIAS_CORRIDOS" th:selected="${contagem == 'DIAS_CORRIDOS'}">Dias corridos</option>
+        </select>
+      </div>
+      <div>
+        <label class="rotulo" for="suspendeNoRecesso">Recesso de 20/12 a 20/01</label>
+        <select id="suspendeNoRecesso" name="suspendeNoRecesso">
+          <option value="false">O prazo corre normalmente</option>
+          <option value="true" th:selected="${suspendeNoRecesso}">O prazo para no recesso</option>
+        </select>
+      </div>
+      <div>
+        <label class="rotulo" for="artigo">Artigo e norma</label>
+        <input id="artigo" name="artigo" type="text" maxlength="200" required th:value="${artigo}"
+               aria-describedby="dica-artigo" th:autofocus="${campoComErro == 'artigo'}"
+               th:attr="aria-invalid=${campoComErro == 'artigo'} ? 'true', aria-describedby=${campoComErro == 'artigo'} ? 'erro-regra dica-artigo' : 'dica-artigo'">
+        <p class="dica" id="dica-artigo">De onde a regra saiu. Aparece ao lado de todo prazo calculado com ela.</p>
+      </div>
+      <div>
+        <label class="rotulo" for="conferidaEm">Conferida na norma em</label>
+        <input id="conferidaEm" name="conferidaEm" type="date" required th:value="${conferidaEm}" min="2000-01-01" th:max="${hoje}"
+               aria-describedby="dica-conferida" th:autofocus="${campoComErro == 'conferidaEm'}"
+               th:attr="aria-invalid=${campoComErro == 'conferidaEm'} ? 'true', aria-describedby=${campoComErro == 'conferidaEm'} ? 'erro-regra dica-conferida' : 'dica-conferida'">
+        <p class="dica" id="dica-conferida">O dia em que alguém do escritório leu a regra na norma. Depois de seis meses o Atalaia pede uma nova conferência.</p>
+      </div>
+
+      <button class="botao cheio" type="submit">Cadastrar regra</button>
+    </form>
+  </main>
+</div>
+</body>
+</html>
