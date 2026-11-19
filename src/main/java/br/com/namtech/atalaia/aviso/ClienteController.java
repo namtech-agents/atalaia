@@ -45,6 +45,7 @@ public class ClienteController {
         model.addAttribute("aviso", aviso);
         model.addAttribute("situacao", aviso.situacao(Instant.now(relogio)));
         model.addAttribute("empresa", empresa.getNome());
+        model.addAttribute("simulado", aviso.getNotificacao().isSimulado());
         model.addAttribute("escritorio", empresa.getEscritorio().getNome());
         return "cliente";
     }
@@ -61,8 +62,9 @@ public class ClienteController {
         AvisoAoCliente aviso = avisos.buscarParaConfirmar(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Instant agora = Instant.now(relogio);
-        //Ja confirmado, substituido ou vencido: nada muda, e a pagina explica a situação
-        if (aviso.situacao(agora) == SituacaoDoAviso.AGUARDANDO) {
+        //Ja confirmado, substituido ou vencido: nada muda, e a pagina explica a situação.
+        //Simulado também não: o documento é de exercício, e a página do cliente já diz que não há o que fazer
+        if (aviso.situacao(agora) == SituacaoDoAviso.AGUARDANDO && !aviso.getNotificacao().isSimulado()) {
             LocalDate marcada = Datas.ler(resposta);
             if (marcada == null || !aviso.opcoesDePrazo().contains(marcada)) {
                 recado.addFlashAttribute("erro", "Marque uma das datas para confirmar.");

@@ -145,6 +145,11 @@ public class AvisoAoCliente {
     }
 
     //As datas com hora, ja escritas no horario de Teresina, para as telas
+    //O simulado conta o tempo até o primeiro aviso (TemposDoSimulado)
+    public Instant getCriadoEm() {
+        return criadoEm;
+    }
+
     public String getCriadoEmPorExtenso() {
         return Notificacao.DIA_E_HORA.format(criadoEm);
     }
