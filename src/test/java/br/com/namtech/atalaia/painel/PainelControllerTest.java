@@ -132,9 +132,9 @@ class PainelControllerTest {
         assertThat(gente).isNotNegative();
         assertThat(gente).isLessThan(cliente);
         assertThat(cliente).isLessThan(fechar);
-        assertThat(pagina.indexOf("Empresa Sem Aviso")).isBetween(gente, cliente);
-        assertThat(pagina.indexOf("Empresa Aguardando")).isBetween(cliente, fechar);
-        assertThat(pagina.indexOf("Empresa Confirmou")).isGreaterThan(fechar);
+        assertThat(pagina.indexOf("<strong>Empresa Sem Aviso")).isBetween(gente, cliente);
+        assertThat(pagina.indexOf("<strong>Empresa Aguardando")).isBetween(cliente, fechar);
+        assertThat(pagina.indexOf("<strong>Empresa Confirmou")).isGreaterThan(fechar);
         assertThat(linhaDa(pagina, "Empresa Sem Aviso")).contains("etq falta\">Avisar o cliente<");
         //Um caso em cada grupo: a contagem no singular
         assertThat(pagina).contains("1 notificação");
@@ -247,12 +247,86 @@ class PainelControllerTest {
         String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
 
         //Conferir: perto, longe, sem prazo; e a de amanhã vem com o alerta
-        assertThat(pagina.indexOf("Empresa Perto")).isLessThan(pagina.indexOf("Empresa Longe"));
-        assertThat(pagina.indexOf("Empresa Longe")).isLessThan(pagina.indexOf("Empresa Sem Prazo"));
+        assertThat(pagina.indexOf("<strong>Empresa Perto")).isLessThan(pagina.indexOf("<strong>Empresa Longe"));
+        assertThat(pagina.indexOf("<strong>Empresa Longe")).isLessThan(pagina.indexOf("<strong>Empresa Sem Prazo"));
         assertThat(pagina).contains("Vence amanhã").contains("Vence em 20 dias");
     }
 
     //Um caso aberto, conferido e com data limite daqui a 20 dias, de uma empresa nova do escritório dado
+    @Test
+    void escolherUmClienteMostraSoOsCasosDeleEContaAsAbertasDeCada() throws Exception {
+        //Arrumar: a Padaria com dois casos abertos, a Oficina com um aberto e um resolvido, a Loja sem nenhum
+        Empresa padaria = empresas.save(new Empresa(escritorio, "99999009002000", "Padaria Escolhida"));
+        Empresa oficina = empresas.save(new Empresa(escritorio, "99999009002001", "Oficina Vizinha"));
+        empresas.save(new Empresa(escritorio, "99999009002002", "Loja Sem Casos"));
+        casoDa(padaria);
+        casoDa(padaria);
+        casoDa(oficina);
+        casoDa(oficina).resolver(Desfecho.ARQUIVADO, "Conferido com o cliente.");
+        banco.gravar();
+
+        //Agir: sem filtro, a escolha do cliente aparece com as abertas de cada um
+        String todos = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: as tres opções, com a contagem de abertas (a resolvida não conta)
+        assertThat(todos).contains("Todos os clientes", "Padaria Escolhida · 2 abertas", "Oficina Vizinha · 1 aberta",
+                "Loja Sem Casos · nenhuma aberta");
+
+        //Agir: escolhe a Oficina
+        String soOficina = navegador.perform(get("/").param("empresa", oficina.getId().toString()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        //Conferir: a lista só traz o caso aberto da Oficina (o nome da Padaria só aparece na opção da escolha),
+        //a Oficina fica marcada, e o link das resolvidas (só a dela: 1) leva o filtro junto
+        assertThat(soOficina).contains("1 notificação", "selected=\"selected\">Oficina Vizinha")
+                .doesNotContain("<strong>Padaria Escolhida</strong>")
+                .contains("href=\"/?ver=resolvidas&amp;empresa=" + oficina.getId() + "\"");
+    }
+
+    @Test
+    void clienteSemCasosDizQueNaoHaNadaDele() throws Exception {
+        //Arrumar: uma empresa com caso e outra sem nenhum
+        casoDa(empresas.save(new Empresa(escritorio, "99999009002000", "Padaria Com Caso")));
+        Empresa semCasos = empresas.save(new Empresa(escritorio, "99999009002001", "Loja Sem Casos"));
+
+        //Agir e conferir: escolher a loja explica que não há nada dela, com o caminho de volta, e não diz "tudo certo"
+        navegador.perform(get("/").param("empresa", semCasos.getId().toString()))
+                .andExpect(content().string(containsString("Nenhuma notificação deste cliente.")))
+                .andExpect(content().string(not(containsString("Nada precisa de gente agora."))))
+                .andExpect(content().string(not(containsString("<strong>Padaria Com Caso</strong>"))));
+    }
+
+    @Test
+    void empresaDeOutroEscritorioNoFiltroEIgnorada() throws Exception {
+        //Arrumar: um caso meu e um caso de outro escritório
+        casoDa(empresas.save(new Empresa(escritorio, "99999009002000", "Minha Padaria")));
+        casoDa(empresas.save(new Empresa(escritorio, "99999009002001", "Minha Oficina")));
+        Escritorio outro = escritorios.save(new Escritorio("Outro Escritório"));
+        Empresa alheia = empresas.save(new Empresa(outro, "99999009002002", "Empresa Alheia"));
+        casoDa(alheia);
+
+        //Agir: alguém troca o numero no endereço pela empresa do outro escritório
+        String pagina = navegador.perform(get("/").param("empresa", alheia.getId().toString()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        //Conferir: o filtro não vale, a tela mostra os meus dois casos e nada do outro escritório
+        assertThat(pagina).contains("2 notificações", "<strong>Minha Padaria</strong>", "<strong>Minha Oficina</strong>")
+                .doesNotContain("Empresa Alheia");
+    }
+
+    @Test
+    void comUmaEmpresaSoNaoHaEscolhaDeCliente() throws Exception {
+        //Arrumar: uma empresa, um caso
+        casoDa(empresas.save(new Empresa(escritorio, "99999009002000", "Única Empresa")));
+
+        //Agir e conferir: escolher entre um cliente só não ajuda; a escolha nem aparece
+        navegador.perform(get("/")).andExpect(content().string(not(containsString("Todos os clientes"))));
+    }
+
+    private Notificacao casoDa(Empresa empresa) {
+        return notificacoes.save(new Notificacao(empresa, PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+    }
+
     private Notificacao casoComPrazo(Escritorio dono, String cnpj, String nomeDaEmpresa) {
         Notificacao caso = notificacoes.save(new Notificacao(empresas.save(new Empresa(dono, cnpj, nomeDaEmpresa)),
                 PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
@@ -305,7 +379,7 @@ class PainelControllerTest {
         assertThat(linhaDa(pagina, "Empresa Mudou"))
                 .contains("etq atencao\">Cliente confirmou, mas a data limite mudou<");
         //Caso resolvido nem aparece na tela inicial (fica no filtro das resolvidas)
-        assertThat(pagina).doesNotContain("Empresa Resolvida");
+        assertThat(pagina).doesNotContain("<strong>Empresa Resolvida");
     }
 
     @Test
@@ -321,8 +395,9 @@ class PainelControllerTest {
     }
 
     //O pedaço da pagina com a linha de uma empresa: do nome dela ate o fim do link
+    //Procura o nome em negrito: o nome sozinho também aparece na escolha do cliente, antes da lista
     private static String linhaDa(String pagina, String empresa) {
-        int comeco = pagina.indexOf(empresa);
+        int comeco = pagina.indexOf("<strong>" + empresa);
         return pagina.substring(comeco, pagina.indexOf("</a>", comeco));
     }
 }

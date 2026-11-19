@@ -22,8 +22,6 @@ public interface EmpresaRepository extends Repository<Empresa, Long> {
     //Vazio se a empresa nao existe ou é de outro escritório (quem chama nao fica sabendo qual dos dois)
     Optional<Empresa> findByIdAndEscritorioId(Long id, Long escritorioId);
 
-    boolean existsByEscritorioId(Long escritorioId);
-
     boolean existsByEscritorioIdAndCnpj(Long escritorioId, String cnpj);
 
     //Apaga a empresa só se ela nao tiver nenhum caso, numa operação só: olhar e apagar em dois passos deixaria

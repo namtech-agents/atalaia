@@ -9,16 +9,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.conta.Escritorio;
@@ -40,6 +45,13 @@ class EmpresaControllerTest {
     @Autowired
     private NotificacaoRepository notificacoes;
 
+    //Para conferir e mexer no banco direto (a data de chegada de um caso antigo)
+    @Autowired
+    private BancoDeTeste banco;
+
+    @Autowired
+    private JdbcTemplate sql;
+
     private MockMvc navegador;
     private Escritorio escritorio;
 
@@ -47,6 +59,48 @@ class EmpresaControllerTest {
     void criaOEscritorioEEntra() {
         escritorio = escritorios.save(new Escritorio("Escritório de Teste"));
         navegador = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
+    }
+
+    @Test
+    void contaOsCasosDeCadaClienteNoPeriodoEscolhido() throws Exception {
+        //Arrumar: a Padaria com um caso de hoje e um de 60 dias atrás, a Oficina sem caso,
+        //e um caso de outro escritório que não pode entrar na conta
+        Empresa padaria = empresas.save(new Empresa(escritorio, "99999009003000", "Padaria Trabalhosa"));
+        empresas.save(new Empresa(escritorio, "99999009003001", "Oficina Tranquila"));
+        casoDa(padaria);
+        Notificacao antigo = casoDa(padaria);
+        Empresa alheia = empresas.save(new Empresa(escritorios.save(new Escritorio("Outro")), "99999009003002", "Alheia"));
+        casoDa(alheia);
+        banco.gravar();
+        //A data de chegada é posta pelo sistema na hora do envio; o teste volta a do caso antigo direto no banco
+        sql.update("update notificacao set recebida_em = ? where id = ?",
+                Timestamp.from(Instant.now().minus(60, ChronoUnit.DAYS)), antigo.getId());
+
+        //Agir e conferir: sem escolher, conta os últimos 30 dias, só o caso de hoje
+        String trintaDias = navegador.perform(get("/empresas")).andReturn().getResponse().getContentAsString();
+        assertThat(trintaDias).contains("selected=\"selected\">nos últimos 30 dias");
+        assertThat(linhaDa(trintaDias, "Padaria Trabalhosa")).contains("1 caso");
+        assertThat(linhaDa(trintaDias, "Oficina Tranquila")).contains("nenhum caso");
+
+        //Agir e conferir: em 90 dias o caso antigo entra
+        String noventaDias = navegador.perform(get("/empresas").param("periodo", "90")).andReturn().getResponse()
+                .getContentAsString();
+        assertThat(linhaDa(noventaDias, "Padaria Trabalhosa")).contains("2 casos");
+
+        //Agir e conferir: um periodo que não está na lista (endereço mexido) volta para 30 dias, sem erro
+        navegador.perform(get("/empresas").param("periodo", "7")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("selected=\"selected\">nos últimos 30 dias")));
+    }
+
+    private Notificacao casoDa(Empresa empresa) {
+        return notificacoes.save(new Notificacao(empresa, "%PDF-teste".getBytes(), "Texto.",
+                TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+    }
+
+    //O pedaço da página da linha de uma empresa: do nome até o fim do item da lista
+    private static String linhaDa(String pagina, String empresa) {
+        int comeco = pagina.indexOf(empresa);
+        return pagina.substring(comeco, pagina.indexOf("</li>", comeco));
     }
 
     @Test

@@ -20,11 +20,22 @@
 
     <section class="grupo" th:unless="${empresas.isEmpty()}" aria-labelledby="titulo-empresas">
       <h2 id="titulo-empresas" th:text="${empresas.size() == 1} ? '1 empresa' : ${empresas.size() + ' empresas'}"></h2>
+      <!-- O periodo da contagem de casos: formulário GET, o endereço guarda a escolha. O número aparece em cada empresa -->
+      <form class="por-cliente" method="get" th:action="@{/empresas}">
+        <label class="rotulo" for="periodo">Casos recebidos</label>
+        <select id="periodo" name="periodo">
+          <option th:each="dias : ${periodos}" th:value="${dias}" th:selected="${dias == periodo}"
+                  th:text="${dias == 365} ? 'nos últimos 12 meses' : 'nos últimos ' + ${dias} + ' dias'"></option>
+        </select>
+        <button class="botao" type="submit">Contar</button>
+      </form>
       <ul class="vidro lista">
         <!-- Cada empresa abre a tela dela (empresa.html), onde dá para corrigir o nome e o CNPJ -->
         <li th:each="empresa : ${empresas}">
           <a th:href="@{/empresas/{id}(id=${empresa.id})}">
             <strong th:text="${empresa.nome}"></strong>
+            <span class="etq num" th:with="casos=${casosNoPeriodo.getOrDefault(empresa.id, 0L)}"
+                  th:text="${casos == 0} ? 'nenhum caso' : (${casos == 1} ? '1 caso' : ${casos} + ' casos')"></span>
             <span class="quando">CNPJ <span class="num" th:text="${empresa.cnpjFormatado}"></span></span>
           </a>
         </li>

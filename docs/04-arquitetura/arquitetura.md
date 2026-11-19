@@ -74,7 +74,7 @@ flowchart TB
         seguranca["Segurança (Spring Security)<br/>fica na frente de todo pedido:<br/>sem sessão, leva para a tela de entrar"]
         conta["Conta<br/>entrar e criar a conta do escritório"]
         empresas["Empresas<br/>os clientes do escritório"]
-        painel["Painel<br/>casos em grupos pelo próximo passo:<br/>precisa de gente, esperando o cliente, pronto para fechar"]
+        painel["Painel<br/>casos em grupos pelo próximo passo:<br/>precisa de gente, esperando o cliente, pronto para fechar<br/>filtro por cliente"]
         recepcao["Recepção<br/>recebe o PDF e recusa o que não serve"]
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
         analista["Analista<br/>classifica e extrai os dados com o trecho de cada um"]
@@ -138,6 +138,7 @@ Decisões:
 - **O resumo da IA é rascunho.** Ele vem no mesmo pedido em que o Analista classifica o documento e abre o campo do aviso. O código joga fora o rascunho que cite data, dias, mês ou link, ou que traga um número que não esteja escrito igual no documento. Quem aprova e envia é o escritório.
 - **Um relógio só.** Todo controller pede ao Spring o mesmo relógio, no fuso de Teresina, em vez de olhar a hora do servidor.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
+- **Os clientes do escritório num painel só (US18 e US62).** A tela inicial tem a escolha do cliente quando o escritório atende duas empresas ou mais; cada opção diz quantos casos abertos o cliente tem, e escolher um deixa só os casos dele (`/?empresa=id`, formulário GET sem JavaScript). Número de empresa de outro escritório no endereço é ignorado. A tela de empresas mostra quantos casos cada cliente teve nos últimos 30 dias, 90 dias ou 12 meses (`NotificacaoRepository.contarPorEmpresa`, que devolve `CasosDaEmpresa`), para o escritório rever a cobrança de quem dá mais trabalho.
 - **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos. Os repositórios estendem `Repository` (e não `JpaRepository`): não existe `findAll` nem `findById` sem o escritório, e um teste confere que todo método de repositório recebe o `escritorioId` ou está numa lista curta de exceções com motivo (gravar, entrar pelo e-mail, a página do cliente pelo token).
 - **Empresa com caso não é excluída.** Nome e CNPJ podem ser corrigidos a qualquer momento; excluir só vale para empresa sem nenhum caso, numa operação só no banco (`excluirSemCasos`). Os casos são o histórico do escritório e a prova do que o cliente confirmou.
 - **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
@@ -430,13 +431,13 @@ classDiagram
         +devolver(String chave)
     }
     class EmpresaController {
-        +lista()
+        +lista(Integer periodo)
         +cadastrar(String nome, String cnpj)
         +corrigir(Long id, String nome, String cnpj)
         +excluir(Long id)
     }
     class PainelController {
-        +painel()
+        +painel(String ver, Long empresa)
     }
     class RecepcaoController
     class RegraCadastrada

@@ -18,9 +18,9 @@ class NotificacaoNaListaTest {
     @Test
     void linhaAbertaMostraQuandoChegouEResolvidaMostraQuandoFoiResolvida() {
         //Arrumar: a mesma notificação, aberta e depois resolvida
-        NotificacaoNaLista aberta = new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false,
+        NotificacaoNaLista aberta = new NotificacaoNaLista(1L, 1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false,
                 CHEGOU, null, null, null);
-        NotificacaoNaLista resolvida = new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false,
+        NotificacaoNaLista resolvida = new NotificacaoNaLista(1L, 1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false,
                 CHEGOU, Desfecho.ARQUIVADO, RESOLVEU, null);
 
         //Agir e conferir: cada uma mostra a sua data
@@ -61,13 +61,13 @@ class NotificacaoNaListaTest {
     void casoResolvidoOuSemDataNaoMostraPrazo() {
         //Agir e conferir
         assertThat(comPrazo(null).temPrazo()).isFalse();
-        assertThat(new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false, CHEGOU,
+        assertThat(new NotificacaoNaLista(1L, 1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false, CHEGOU,
                 Desfecho.ARQUIVADO, RESOLVEU, LocalDate.of(2026, 11, 20)).temPrazo()).isFalse();
         assertThat(comPrazo(LocalDate.of(2026, 11, 20)).temPrazo()).isTrue();
     }
 
     private NotificacaoNaLista comPrazo(LocalDate dataLimite) {
-        return new NotificacaoNaLista(1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false, CHEGOU, null, null,
+        return new NotificacaoNaLista(1L, 1L, "Empresa de Teste", TipoDeDocumento.COBRANCA, false, CHEGOU, null, null,
                 dataLimite);
     }
 }

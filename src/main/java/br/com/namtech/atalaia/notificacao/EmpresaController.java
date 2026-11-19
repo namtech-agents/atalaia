@@ -1,6 +1,12 @@
 package br.com.namtech.atalaia.notificacao;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -26,13 +32,18 @@ public class EmpresaController {
 
     private final EmpresaRepository empresas;
     private final EscritorioRepository escritorios;
+    //Os periodos da contagem por cliente, em dias: o mes, o trimestre e o ano. Outro valor no endereço vira o primeiro
+    static final List<Integer> PERIODOS = List.of(30, 90, 365);
+
     private final NotificacaoRepository notificacoes;
+    private final Clock relogio;
 
     public EmpresaController(EmpresaRepository empresas, EscritorioRepository escritorios,
-            NotificacaoRepository notificacoes) {
+            NotificacaoRepository notificacoes, Clock relogio) {
         this.empresas = empresas;
         this.escritorios = escritorios;
         this.notificacoes = notificacoes;
+        this.relogio = relogio;
     }
 
     //O que a pessoa digitou, ja limpo: nome sem espaço nas pontas, CNPJ só com as 14 letras e numeros, em maiusculas
@@ -49,12 +60,23 @@ public class EmpresaController {
     @GetMapping("/empresas")
     public String lista(@AuthenticationPrincipal UsuarioLogado usuario,
             @RequestParam(required = false) String cadastrada, @RequestParam(required = false) String alterada,
-            @RequestParam(required = false) String excluida, Model model) {
+            @RequestParam(required = false) String excluida, @RequestParam(required = false) Integer periodo,
+            Model model) {
         //?cadastrada, ?alterada ou ?excluida no endereço: a tela confirma o que acabou de acontecer
         model.addAttribute("cadastrada", cadastrada != null);
         model.addAttribute("alterada", alterada != null);
         model.addAttribute("excluida", excluida != null);
         model.addAttribute("empresas", empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
+        //Quantos casos cada cliente teve no periodo escolhido, para o escritório rever a cobrança de quem da mais trabalho.
+        //A conta sai dos casos do proprio Atalaia: conta a data em que o PDF foi enviado
+        //periodo nulo testado antes: List.of(...).contains(null) lança erro em vez de responder "não"
+        int dias = periodo != null && PERIODOS.contains(periodo) ? periodo : PERIODOS.get(0);
+        Instant desde = Instant.now(relogio).minus(dias, ChronoUnit.DAYS);
+        Map<Long, Long> casos = notificacoes.contarPorEmpresa(usuario.escritorioId(), desde).stream()
+                .collect(Collectors.toMap(CasosDaEmpresa::empresaId, CasosDaEmpresa::casos));
+        model.addAttribute("casosNoPeriodo", casos);
+        model.addAttribute("periodo", dias);
+        model.addAttribute("periodos", PERIODOS);
         return "empresas";
     }
 
@@ -70,7 +92,7 @@ public class EmpresaController {
         }
         if (recusa != null) {
             mostrarRecusa(recusa, nome, cnpj, model, resposta);
-            return lista(usuario, null, null, null, model);
+            return lista(usuario, null, null, null, null, model);
         }
         //Redireciona: recarregar a tela nao cadastra de novo
         return "redirect:/empresas?cadastrada";
