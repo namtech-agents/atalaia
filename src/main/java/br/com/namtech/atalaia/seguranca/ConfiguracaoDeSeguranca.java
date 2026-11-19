@@ -27,9 +27,11 @@ public class ConfiguracaoDeSeguranca {
                 .authorizeHttpRequests(pedidos -> pedidos
                         //Abertos: entrar, criar conta, o que as telas carregam (css, js, letra, logo), a pagina de erro,
                         //a saude do sistema e a pagina do cliente (/c/ + token: quem abre é o dono da empresa, que nao
-                        //tem conta; o segredo do link é a chave). Todo o resto exige sessão
+                        //tem conta; o segredo do link é a chave). E o que o app do celular busca antes de entrar
+                        //(manifesto, ícones, service worker e a tela sem conexão, que não têm dado nenhum).
+                        //Todo o resto exige sessão
                         .requestMatchers("/entrar", "/cadastro", "/css/**", "/js/**", "/fontes/**", "/logo/**", "/error",
-                                "/actuator/health", "/c/*")
+                                "/actuator/health", "/c/*", "/manifest.json", "/sw.js", "/offline.html", "/icones/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 //A tela de entrar é nossa (entrar.html); conferir e-mail e senha é com o Spring Security
