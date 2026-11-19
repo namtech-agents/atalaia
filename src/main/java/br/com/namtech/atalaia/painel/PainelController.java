@@ -1,15 +1,20 @@
 package br.com.namtech.atalaia.painel;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import br.com.namtech.atalaia.aviso.AvisoAoCliente;
+import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.NotificacaoNaLista;
@@ -21,11 +26,14 @@ public class PainelController {
 
     private final NotificacaoRepository notificacoes;
     private final EmpresaRepository empresas;
+    private final AvisoAoClienteRepository avisos;
     private final Clock relogio;
 
-    public PainelController(NotificacaoRepository notificacoes, EmpresaRepository empresas, Clock relogio) {
+    public PainelController(NotificacaoRepository notificacoes, EmpresaRepository empresas,
+            AvisoAoClienteRepository avisos, Clock relogio) {
         this.notificacoes = notificacoes;
         this.empresas = empresas;
+        this.avisos = avisos;
         this.relogio = relogio;
     }
 
@@ -48,6 +56,13 @@ public class PainelController {
         //As resolvidas mostram a data da resolução, entao a ordem delas segue essa data: a ultima resolvida em cima
         model.addAttribute("resolvidas", todas.stream().filter(NotificacaoNaLista::resolvida)
                 .sorted(Comparator.comparing(NotificacaoNaLista::resolvidaEm).reversed()).toList());
+        //O aviso ao cliente de cada caso aberto, guardado pelo numero da notificação: a linha da lista mostra
+        //se o cliente ainda nao respondeu ou se ja confirmou. "agora" serve para saber se o link venceu.
+        //(um, outro) -> um: dois avisos do mesmo caso criados no mesmo instante viriam os dois; fica um só.
+        //Na pratica nao acontece: criar um aviso tranca a notificação, e os pedidos entram em fila
+        model.addAttribute("avisos", avisos.dosCasosAbertos(usuario.escritorioId()).stream()
+                .collect(Collectors.toMap(AvisoAoCliente::getNotificacaoId, Function.identity(), (um, outro) -> um)));
+        model.addAttribute("agora", Instant.now(relogio));
         //Escritório novo, ainda sem empresa: o primeiro passo é cadastrar uma, e a tela aponta para la
         model.addAttribute("semEmpresa", !empresas.existsByEscritorioId(usuario.escritorioId()));
         return "painel";

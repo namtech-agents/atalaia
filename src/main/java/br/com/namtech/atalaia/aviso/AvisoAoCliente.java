@@ -107,6 +107,39 @@ public class AvisoAoCliente {
         return prazo.equals(resposta);
     }
 
+    //O cliente viu uma data e a conta do prazo foi refeita depois: o aviso ficou velho
+    public boolean prazoMudou(LocalDate dataLimiteDoCaso) {
+        return !prazo.equals(dataLimiteDoCaso);
+    }
+
+    //O que o escritório precisa saber alem da situação, ou null se nao ha nada. A data que mudou vem primeiro:
+    //ela pede um aviso novo, e ai a resposta antiga do cliente deixa de importar
+    private String ressalva(LocalDate dataLimiteDoCaso) {
+        if (prazoMudou(dataLimiteDoCaso)) {
+            return "mas a data limite mudou";
+        }
+        return confirmadoEm != null && !acertouOPrazo() ? "com a data errada" : null;
+    }
+
+    //O texto da etiqueta na lista da tela inicial: a situação e, se houver, a ressalva por extenso
+    //(quem nao distingue a cor nao perde a informação)
+    public String naLista(Instant agora, LocalDate dataLimiteDoCaso) {
+        String ressalva = ressalva(dataLimiteDoCaso);
+        return situacao(agora).getNome() + (ressalva == null ? "" : ", " + ressalva);
+    }
+
+    //Na lista, a etiqueta fica em vermelho quando o escritório precisa agir: o link venceu sem resposta,
+    //a data limite mudou depois do aviso, ou o cliente confirmou marcando a data errada (vale uma ligação)
+    public boolean pedeAtencao(Instant agora, LocalDate dataLimiteDoCaso) {
+        return situacao(agora) == SituacaoDoAviso.VENCIDO || ressalva(dataLimiteDoCaso) != null;
+    }
+
+    //De qual notificação é o aviso, para a lista juntar um com o outro. Pedir só o numero nao vai ao banco;
+    //qualquer outro campo da notificação, pedido de dentro da lista, daria erro: a conversa com o banco ja fechou
+    public Long getNotificacaoId() {
+        return notificacao.getId();
+    }
+
     public List<String> getListaDeDocumentos() {
         return documentos == null ? List.of() : documentos.lines().toList();
     }

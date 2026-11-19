@@ -165,7 +165,7 @@ public class RecepcaoController {
             SituacaoDoAviso situacao = aviso.situacao(Instant.now(relogio));
             confirmado = situacao == SituacaoDoAviso.CONFIRMADO;
             //O cliente viu uma data e a conta foi refeita depois: o aviso ficou velho
-            prazoMudou = !aviso.getPrazo().equals(notificacao.getDataLimite());
+            prazoMudou = aviso.prazoMudou(notificacao.getDataLimite());
             model.addAttribute("aviso", aviso);
             model.addAttribute("situacaoDoAviso", situacao);
             //O endereço completo, pronto para copiar. No ar vem da configuração (atalaia.endereco-publico):

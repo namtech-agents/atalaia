@@ -50,7 +50,7 @@
 
 <!-- Uma linha da lista: a linha inteira é o link para a notificação. Os três grupos usam o mesmo pedaço -->
 <th:block th:remove="all">
-  <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}">
+  <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}" th:with="aviso=${avisos.get(linha.id)}">
     <strong th:text="${linha.empresa}"></strong>
     <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
     <!-- o vermelho de atenção só em caso aberto -->
@@ -59,6 +59,10 @@
     <span class="etq" th:if="${linha.resolvida()}" th:text="'Desfecho: ' + ${linha.desfecho.nome}"></span>
     <!-- O prazo, quando já foi calculado: em vermelho se faltam 3 dias ou menos. O texto já diz a situação -->
     <span class="etq num" th:if="${linha.temPrazo()}" th:classappend="${linha.prazoApertado(hoje)} ? 'atencao'" th:text="${linha.prazo(hoje)}"></span>
+    <!-- O aviso ao cliente, só em caso aberto (avisos vem do PainelController): aguardando, confirmado ou vencido.
+         Em vermelho quando o escritório precisa agir; o texto e a regra ficam no AvisoAoCliente (naLista, pedeAtencao) -->
+    <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora, linha.dataLimite)} ? 'atencao'"
+          th:text="${aviso.naLista(agora, linha.dataLimite)}"></span>
     <!-- Caso fechado mostra quando foi resolvido; caso aberto, quando chegou -->
     <span class="quando"><th:block th:text="${linha.resolvida()} ? 'Resolvida em ' : 'Recebida em '"></th:block><span class="num" th:text="${linha.quando}"></span></span>
   </a>

@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import br.com.namtech.atalaia.NavegadorDeTeste;
+import br.com.namtech.atalaia.aviso.AvisoAoCliente;
+import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
@@ -55,6 +59,9 @@ class PainelControllerTest {
 
     @Autowired
     private NotificacaoRepository notificacoes;
+
+    @Autowired
+    private AvisoAoClienteRepository avisos;
 
     private static final byte[] PDF = "%PDF-teste".getBytes();
 
@@ -181,5 +188,78 @@ class PainelControllerTest {
         assertThat(pagina.indexOf("Empresa Perto")).isLessThan(pagina.indexOf("Empresa Longe"));
         assertThat(pagina.indexOf("Empresa Longe")).isLessThan(pagina.indexOf("Empresa Sem Prazo"));
         assertThat(pagina).contains("Vence amanhã").contains("Vence em 20 dias");
+    }
+
+    //Um caso aberto, conferido e com data limite daqui a 20 dias, de uma empresa nova do escritório dado
+    private Notificacao casoComPrazo(Escritorio dono, String cnpj, String nomeDaEmpresa) {
+        Notificacao caso = notificacoes.save(new Notificacao(empresas.save(new Empresa(dono, cnpj, nomeDaEmpresa)),
+                PDF, "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        caso.registrarPrazo(hoje, hoje.plusDays(20), List.of("Conta de teste."), "pessoa@escritorio.test");
+        return caso;
+    }
+
+    private AvisoAoCliente avisoDo(Notificacao caso, String token, Instant criadoEm) {
+        return avisos.save(new AvisoAoCliente(caso, token, "Resumo.", null, "pessoa@escritorio.test", criadoEm));
+    }
+
+    @Test
+    void listaMostraSeOClienteFoiAvisadoESeJaConfirmou() throws Exception {
+        //Arrumar: um caso para cada situação do aviso
+        Instant agora = Instant.now();
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        casoComPrazo(escritorio, "99999009001000", "Empresa Sem Aviso");
+        //Um aviso antigo foi substituído: na lista vale o mais novo
+        Notificacao aguardando = casoComPrazo(escritorio, "99999009001001", "Empresa Aguardando");
+        avisoDo(aguardando, "token-de-teste-antigo", agora.minusSeconds(60)).substituir(agora);
+        avisoDo(aguardando, "token-de-teste-aguardando", agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001002", "Empresa Acertou"), "token-de-teste-acertou", agora)
+                .confirmar(hoje.plusDays(20), agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001003", "Empresa Errou"), "token-de-teste-errou", agora)
+                .confirmar(hoje.plusDays(27), agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001004", "Empresa Vencida"), "token-de-teste-vencido",
+                agora.minus(31, ChronoUnit.DAYS));
+        //O cliente confirmou certo, e depois a conta do prazo foi refeita: ele viu outra data
+        Notificacao mudou = casoComPrazo(escritorio, "99999009001005", "Empresa Mudou");
+        avisoDo(mudou, "token-de-teste-mudou", agora).confirmar(hoje.plusDays(20), agora);
+        mudou.registrarPrazo(hoje, hoje.plusDays(13), List.of("Conta refeita."), "pessoa@escritorio.test");
+        //Caso ja resolvido nao mostra o aviso: nao ha mais o que esperar do cliente
+        Notificacao resolvido = casoComPrazo(escritorio, "99999009001006", "Empresa Resolvida");
+        avisoDo(resolvido, "token-de-teste-resolvido", agora);
+        resolvido.resolver(Desfecho.ARQUIVADO, "Arquivado pelo órgão.");
+        notificacoes.flush();
+
+        //Agir
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: cada linha diz a situação do aviso; só quem pede ação do escritório vem com o alerta
+        assertThat(linhaDa(pagina, "Empresa Sem Aviso")).doesNotContain(">Aguardando o cliente", ">Cliente confirmou",
+                ">Link vencido");
+        assertThat(linhaDa(pagina, "Empresa Aguardando")).contains("etq\">Aguardando o cliente<")
+                .doesNotContain("Substituído");
+        assertThat(linhaDa(pagina, "Empresa Acertou")).contains("etq\">Cliente confirmou<");
+        assertThat(linhaDa(pagina, "Empresa Errou")).contains("etq atencao\">Cliente confirmou, com a data errada<");
+        assertThat(linhaDa(pagina, "Empresa Vencida")).contains("etq atencao\">Link vencido sem confirmação<");
+        assertThat(linhaDa(pagina, "Empresa Mudou"))
+                .contains("etq atencao\">Cliente confirmou, mas a data limite mudou<");
+        assertThat(linhaDa(pagina, "Empresa Resolvida")).doesNotContain(">Aguardando o cliente");
+    }
+
+    @Test
+    void buscaDosAvisosDaListaNaoTrazODeOutroEscritorio() {
+        //Arrumar: um aviso neste escritório e outro no vizinho
+        Escritorio vizinho = escritorios.save(new Escritorio("Outro Escritório"));
+        AvisoAoCliente daqui = avisoDo(casoComPrazo(escritorio, "99999009001000", "Empresa Daqui"),
+                "token-de-teste-daqui", Instant.now());
+        avisoDo(casoComPrazo(vizinho, "99999009001001", "Empresa do Vizinho"), "token-de-teste-vizinho", Instant.now());
+
+        //Agir e conferir: cada escritório recebe só o seu
+        assertThat(avisos.dosCasosAbertos(escritorio.getId())).containsExactly(daqui);
+    }
+
+    //O pedaço da pagina com a linha de uma empresa: do nome dela ate o fim do link
+    private static String linhaDa(String pagina, String empresa) {
+        int comeco = pagina.indexOf(empresa);
+        return pagina.substring(comeco, pagina.indexOf("</a>", comeco));
     }
 }
