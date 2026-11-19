@@ -30,6 +30,12 @@ public class BancoDeTeste {
                 .setMaxResults(1).getSingleResult();
     }
 
+    //Quantos eventos do histórico há de um caso só (o contar de cima soma os de todos os casos)
+    public long contarEventosDo(Long notificacaoId) {
+        return mesa.createQuery("select count(e) from EventoDoCaso e where e.notificacao.id = :id", Long.class)
+                .setParameter("id", notificacaoId).getSingleResult();
+    }
+
     public <T> T buscar(Class<T> tipo, Long id) {
         return mesa.find(tipo, id);
     }

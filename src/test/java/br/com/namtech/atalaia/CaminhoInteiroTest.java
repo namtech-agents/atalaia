@@ -36,19 +36,22 @@ import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.prazo.RegraCadastrada;
-import br.com.namtech.atalaia.historico.EventoDoCaso;
 
 //O objetivo do Marco 3 num teste só: o caminho inteiro que o Atalaia promete, feito pela tela, como uma pessoa faria.
 //PDF → dados conferidos → prazo por código → cliente confirma com registro → caso resolvido.
 //Cada passo tem os seus testes detalhados em outras classes; este prova que os passos se encaixam.
 //Lido de cima para baixo, também serve de roteiro do sistema: cada bloco é uma tela.
-//Só a IA é de mentira (sem internet e sem gastar a chave); o resto é a aplicação de verdade, com o banco de teste
+//Só a IA é de mentira (sem internet e sem gastar a chave); o resto é a aplicação de verdade, com o banco de teste.
+//Limite conhecido: com o @Transactional, o caminho todo roda numa conversa só com o banco, desfeita no fim.
+//Por isso este teste não pega erro de relação LAZY fora de transação nem confere a gravação de verdade (commit)
+//entre um pedido e outro; isso fica com os testes sem transação, como o ResolverAoMesmoTempoTest
 @SpringBootTest
 @Transactional
 class CaminhoInteiroTest {
 
-    //O token do link do cliente: 43 letras de A a Z, a a z, 0 a 9, - e _ (Base64 de endereço)
-    private static final Pattern LINK_DO_CLIENTE = Pattern.compile("/c/([A-Za-z0-9_-]{43})");
+    //O token do link do cliente: letras de A a Z, a a z, 0 a 9, - e _ (Base64 de endereço). Sem tamanho fixo:
+    //se o token mudar de tamanho, o teste continua achando o link inteiro
+    private static final Pattern LINK_DO_CLIENTE = Pattern.compile("/c/([A-Za-z0-9_-]+)");
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -85,7 +88,7 @@ class CaminhoInteiroTest {
                 .andExpect(redirectedUrl("/empresas?cadastrada"));
         Empresa empresa = banco.ultima(Empresa.class);
         escritorioLogado.perform(post("/regras").param("nome", "Resposta à intimação").param("dias", "15")
-                .param("contagem", "DIAS_CORRIDOS").param("suspendeNoRecesso", "")
+                .param("contagem", "DIAS_CORRIDOS").param("suspendeNoRecesso", "") //vazio = a caixa desmarcada
                 .param("artigo", "Norma de Teste, art. 1").param("conferidaEm", hoje.toString()))
                 .andExpect(redirectedUrl("/regras?cadastrada"));
         RegraCadastrada regra = banco.ultima(RegraCadastrada.class);
@@ -109,10 +112,10 @@ class CaminhoInteiroTest {
                 .param("ciencia", hoje.toString()))
                 .andExpect(redirectedUrl(enderecoDoCaso + "#titulo-prazo"));
         LocalDate dataLimite = caso.getDataLimite();
-        //15 dias corridos depois da ciência, ou mais, se o último dia cair sem expediente
-        assertThat(dataLimite).isAfterOrEqualTo(hoje.plusDays(15));
-        String dataNaTela = String.format("%02d/%02d/%d", dataLimite.getDayOfMonth(), dataLimite.getMonthValue(),
-                dataLimite.getYear());
+        //15 dias corridos depois da ciência, ou alguns a mais se o último dia cair sem expediente (fim de semana
+        //com feriado colado empurra uns 4 dias no máximo). A conta exata fica com o CalculadoraDePrazoTest
+        assertThat(dataLimite).isBetween(hoje.plusDays(15), hoje.plusDays(15 + 7));
+        String dataNaTela = Datas.DIA.format(dataLimite);
         escritorioLogado.perform(get(enderecoDoCaso))
                 .andExpect(content().string(containsString("Data limite: " + dataNaTela + ".")))
                 .andExpect(content().string(containsString("Norma de Teste, art. 1")))
@@ -150,21 +153,20 @@ class CaminhoInteiroTest {
         escritorioLogado.perform(post(enderecoDoCaso + "/resolver").param("desfecho", "ARQUIVADO")
                 .param("observacao", "Livros entregues na Receita."))
                 .andExpect(redirectedUrl(enderecoDoCaso));
-        assertThat(caso.isResolvida()).isTrue();
         //Some das abertas e aparece nas resolvidas
         confereATelaInicial(escritorioLogado, 0, 0, 0, null);
         escritorioLogado.perform(get("/").param("ver", "resolvidas"))
                 .andExpect(model().attribute("resolvidas", hasSize(1)));
 
         //Conferir: o histórico do caso conta o caminho inteiro, na ordem, com quem fez cada passo
-        banco.gravar();
         escritorioLogado.perform(get(enderecoDoCaso))
                 .andExpect(content().string(containsString("Enviou o PDF")))
                 .andExpect(content().string(containsString("Calculou o prazo: data limite " + dataNaTela)))
                 .andExpect(content().string(containsString("Gerou o link para o cliente")))
                 .andExpect(content().string(containsString("Confirmou a ciência marcando " + dataNaTela)))
                 .andExpect(content().string(containsString("Resolveu o caso. Desfecho: Arquivado")));
-        assertThat(banco.contar(EventoDoCaso.class)).isEqualTo(5);
+        //Conta só os eventos deste caso: o banco H2 dos testes é o mesmo para todas as classes
+        assertThat(banco.contarEventosDo(caso.getId())).isEqualTo(5);
     }
 
     //A tela inicial separa os casos abertos pelo próximo passo; "falta" é a etiqueta do caso sem aviso
