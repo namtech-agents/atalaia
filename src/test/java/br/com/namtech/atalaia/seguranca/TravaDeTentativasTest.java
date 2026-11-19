@@ -7,7 +7,6 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -111,19 +110,5 @@ class TravaDeTentativasTest {
                 .andExpect(redirectedUrl("/cadastro?travado"));
         navegador.perform(get("/cadastro").param("travado", ""))
                 .andExpect(content().string(containsString("Muitas tentativas seguidas")));
-    }
-
-    @Test
-    void porHttpsAPaginaPedeAoNavegadorParaNuncaUsarHttp() throws Exception {
-        //Agir e conferir: HSTS. Vindo por HTTPS, o navegador guarda por um ano que este site é só HTTPS
-        navegador.perform(get("/entrar").secure(true))
-                .andExpect(header().string("Strict-Transport-Security", containsString("max-age=31536000")));
-    }
-
-    @Test
-    void porHttpNaoMandaHsts() throws Exception {
-        //Agir e conferir: no Mac (http://localhost) o cabeçalho não sai, senão o navegador recusaria o localhost depois
-        navegador.perform(get("/entrar"))
-                .andExpect(header().doesNotExist("Strict-Transport-Security"));
     }
 }

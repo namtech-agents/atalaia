@@ -2,9 +2,10 @@ package br.com.namtech.atalaia.seguranca;
 
 import java.io.IOException;
 
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-import org.springframework.stereotype.Component;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -13,12 +14,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 //Trava quem tenta adivinhar senha ou descobrir quais e-mails têm conta (achado do pentest, issue #144).
-//O que conta: senha errada em /entrar e todo envio de /cadastro (quem é de verdade cria a conta uma vez só).
-//Entrar certo não conta: o escritório inteiro pode entrar pelo mesmo endereço de manhã.
-//Order: logo depois dos cabeçalhos e antes do Spring Security, que é quem confere a senha
-@Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+//Cada envio de /entrar e de /cadastro gasta uma vaga do endereço ANTES de seguir; entrar com a senha certa
+//devolve a vaga (successHandler da ConfiguracaoDeSeguranca). Quem é de verdade cria a conta uma vez só.
+//Não é @Component: a ConfiguracaoDeSeguranca põe este filtro dentro do Spring Security, logo antes de conferir a senha.
+//Como @Component ele rodaria duas vezes, e antes do firewall do Spring
 public class TravaDeTentativas extends OncePerRequestFilter {
+
+    //O mesmo comparador de rota que o Spring Security usa no login: ele decodifica o endereço,
+    //então /%65ntrar (o "e" escrito em código) também cai aqui (achado da revisão do Hefesto)
+    private static final RequestMatcher ENTRAR = PathPatternRequestMatcher.withDefaults()
+            .matcher(HttpMethod.POST, "/entrar");
+    private static final RequestMatcher CADASTRO = PathPatternRequestMatcher.withDefaults()
+            .matcher(HttpMethod.POST, "/cadastro");
+    private static final RequestMatcher FORMULARIOS = new OrRequestMatcher(ENTRAR, CADASTRO);
 
     private final LimiteDeTentativas limite;
 
@@ -26,38 +34,21 @@ public class TravaDeTentativas extends OncePerRequestFilter {
         this.limite = limite;
     }
 
-    //A rota sem o prefixo do site (se um dia o Atalaia morar em /atalaia/..., continua "/entrar")
-    private static String rota(HttpServletRequest pedido) {
-        return pedido.getRequestURI().substring(pedido.getContextPath().length());
-    }
-
-    //O filtro só olha os dois formulários; o resto passa direto
     @Override
     protected boolean shouldNotFilter(HttpServletRequest pedido) {
-        String rota = rota(pedido);
-        return !"POST".equals(pedido.getMethod()) || !("/entrar".equals(rota) || "/cadastro".equals(rota));
+        return !FORMULARIOS.matches(pedido);
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest pedido, HttpServletResponse resposta, FilterChain proximo)
             throws ServletException, IOException {
-        String rota = rota(pedido);
-        //No ar, atrás do proxy da hospedagem, este é o endereço real de quem pediu (ver server.forward-headers-strategy)
-        String endereco = pedido.getRemoteAddr();
-
+        //No ar, atrás do proxy da hospedagem, este é o endereço real de quem pediu (ver server.forward-headers-strategy).
         //Travado: nem chega a conferir a senha. Se conferisse, o ataque saberia quando acertou
-        if (limite.travado(endereco)) {
-            resposta.sendRedirect(pedido.getContextPath() + rota + "?travado");
+        if (!limite.reservar(pedido.getRemoteAddr())) {
+            String tela = ENTRAR.matches(pedido) ? "/entrar" : "/cadastro";
+            resposta.sendRedirect(pedido.getContextPath() + tela + "?travado");
             return;
         }
-
         proximo.doFilter(pedido, resposta);
-
-        //Senha errada: o Spring Security mandou para /entrar?erro (failureUrl da ConfiguracaoDeSeguranca)
-        String destino = resposta.getHeader("Location");
-        boolean senhaErrada = "/entrar".equals(rota) && destino != null && destino.endsWith("/entrar?erro");
-        if (senhaErrada || "/cadastro".equals(rota)) {
-            limite.contar(endereco);
-        }
     }
 }

@@ -6,6 +6,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 //As regras de quem entra onde. O Spring Security fica na frente de todo pedido:
 //sem sessão aberta, a pessoa é levada para a tela de entrar
@@ -13,7 +15,9 @@ import org.springframework.security.web.SecurityFilterChain;
 public class ConfiguracaoDeSeguranca {
 
     @Bean
-    SecurityFilterChain regras(HttpSecurity http) throws Exception {
+    SecurityFilterChain regras(HttpSecurity http, LimiteDeTentativas limite) throws Exception {
+        //O que o Spring faria sozinho depois de entrar: voltar para a página que a pessoa tentou abrir, ou para a inicial
+        SavedRequestAwareAuthenticationSuccessHandler voltarParaAPagina = new SavedRequestAwareAuthenticationSuccessHandler();
         http
                 .authorizeHttpRequests(pedidos -> pedidos
                         //Abertos: entrar, criar conta, o que as telas carregam (css, js, letra, logo), a pagina de erro,
@@ -28,7 +32,14 @@ public class ConfiguracaoDeSeguranca {
                         .loginPage("/entrar")
                         .usernameParameter("email")
                         .passwordParameter("senha")
-                        .failureUrl("/entrar?erro"))
+                        .failureUrl("/entrar?erro")
+                        //Senha certa: devolve a vaga que a TravaDeTentativas reservou, e segue o caminho de sempre
+                        .successHandler((pedido, resposta, autenticacao) -> {
+                            limite.devolver(pedido.getRemoteAddr());
+                            voltarParaAPagina.onAuthenticationSuccess(pedido, resposta, autenticacao);
+                        }))
+                //A trava roda dentro do Spring Security (depois do firewall dele) e logo antes de conferir a senha
+                .addFilterBefore(new TravaDeTentativas(limite), UsernamePasswordAuthenticationFilter.class)
                 //Sair é por POST (um link nao serve: outro site poderia deslogar a pessoa com uma imagem)
                 .logout(saida -> saida
                         .logoutUrl("/sair")
