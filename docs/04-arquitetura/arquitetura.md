@@ -143,6 +143,8 @@ Decisões:
 - **A senha nunca é guardada.** Só o embaralhado dela (bcrypt). Quem confere e-mail e senha é o Spring Security; a sessão anda só pelo cookie, todo formulário leva o código contra pedido forjado (CSRF) e sair é por POST.
 - **Toda resposta sai com cabeçalhos de segurança** (filtro `CabecalhosDeSeguranca`): a página só carrega o que é do próprio Atalaia e não pode ser mostrada dentro de outro site.
 - **Tentar adivinhar senha trava** (filtro `TravaDeTentativas`, conta no `LimiteDeTentativas`): 10 senhas erradas ou 10 cadastros por endereço a cada 15 minutos. A vaga é reservada antes de conferir a senha, numa operação só (uma rajada não passa), e entrar certo devolve a vaga. A conta fica na memória do servidor.
+- **Envio de arquivo só de quem entrou** (filtro `ArquivoSoComSessao`, antes do CSRF): quem não entrou vai para `/entrar?expirou` sem o servidor ler o arquivo. Sem ele, o filtro do CSRF leria até 16 MB procurando o código do formulário.
+- **A IA tem teto** (issue #144): no máximo 60 envios por escritório a cada 15 minutos (a mesma peça `LimiteDeTentativas`, com o escritório como chave; passou disso, 429) e no máximo 5 análises ao mesmo tempo (`TetoDeChamadas` em volta do Gemini; sem vaga em 10 s, o caso vai para uma pessoa). Limite conhecido: quem cria várias contas soma as cotas.
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
 - **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
 - **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
@@ -255,6 +257,9 @@ classDiagram
         class Gemini {
             +responder(String pergunta) String
         }
+        class TetoDeChamadas {
+            +responder(String pergunta) String
+        }
 
         class Empresa {
             Long id
@@ -344,6 +349,8 @@ classDiagram
     Analista ..> Analise : devolve
     Analise --> TipoDeDocumento
     Gemini ..|> ModeloDeIA
+    TetoDeChamadas ..|> ModeloDeIA
+    TetoDeChamadas ..> Gemini : embrulha
     Notificacao "1" --> "*" DadoExtraido
     Notificacao --> Desfecho
     RecepcaoController ..> Notificacao : guarda
@@ -389,15 +396,20 @@ classDiagram
     }
     class ConfiguracaoDeSeguranca {
         +regras(HttpSecurity http, LimiteDeTentativas limite) SecurityFilterChain
+        +limiteDeEnvios(Clock relogio) LimiteDeTentativas
         +embaralhador() PasswordEncoder
     }
     class TravaDeTentativas {
         <<filtro>>
         #doFilterInternal(pedido, resposta, proximo)
     }
+    class ArquivoSoComSessao {
+        <<filtro>>
+        #doFilterInternal(pedido, resposta, proximo)
+    }
     class LimiteDeTentativas {
-        +reservar(String endereco) boolean
-        +devolver(String endereco)
+        +reservar(String chave) boolean
+        +devolver(String chave)
     }
     class EmpresaController {
         +lista()
@@ -421,6 +433,8 @@ classDiagram
     ConfiguracaoDeSeguranca ..> TravaDeTentativas : põe antes de conferir a senha
     TravaDeTentativas ..> LimiteDeTentativas : reserva a vaga
     ConfiguracaoDeSeguranca ..> LimiteDeTentativas : devolve a vaga ao entrar certo
+    ConfiguracaoDeSeguranca ..> ArquivoSoComSessao : põe antes do CSRF
+    RecepcaoController ..> LimiteDeTentativas : conta os envios do escritório
     EmpresaController ..> UsuarioLogado : recebe
     PainelController ..> UsuarioLogado : recebe
     RecepcaoController ..> UsuarioLogado : recebe
