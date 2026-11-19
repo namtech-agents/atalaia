@@ -107,6 +107,16 @@ Para ver se subiu, abra http://localhost:8080/actuator/health. Tem que aparecer 
 
 O endereço, o usuário e a senha do banco podem vir das variáveis `ATALAIA_DB_URL`, `ATALAIA_DB_USUARIO` e `ATALAIA_DB_SENHA`.
 
+No ar (com HTTPS e um proxy na frente), defina também:
+
+| Variável | Para quê |
+|---|---|
+| `ATALAIA_ENDERECO` | o endereço público, usado no link do aviso ao cliente |
+| `ATALAIA_COOKIE_SEGURO=true` | o cookie da sessão só viaja por HTTPS |
+| `ATALAIA_PROXY=native` | o Atalaia lê do proxy o endereço real de quem pediu (trava de tentativas) e que veio por HTTPS (liga o HSTS) |
+| `ATALAIA_PROXY_IP` | o IP do proxy, como expressão regular (ex.: `172\.18\.0\.5`). Sem ela, só um proxy na mesma máquina é aceito. A porta do Atalaia fica aberta só para o proxy |
+| `GEMINI_API_KEY` | a chave da IA. Sem ela, tudo vai para revisão |
+
 ## Como trabalho 
 
 - Scrum adaptado para um time pequeno, com uma entrega a cada marco do projeto.
