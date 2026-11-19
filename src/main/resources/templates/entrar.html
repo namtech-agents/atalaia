@@ -2,18 +2,18 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragmentos :: cabeca(${erro} ? 'Erro · Entrar' : 'Entrar')}"></head>
 <body>
-<div th:replace="~{fragmentos :: campo}"></div>
-<div class="pagina">
-  <header th:replace="~{fragmentos :: topo}"></header>
+<!-- A tela dividida em duas zonas, de borda a borda: a parede azul com a marca e a porta com o formulário.
+     No celular a parede vira uma faixa no alto -->
+<div class="entrada">
+  <div th:replace="~{fragmentos :: parede}"></div>
 
-  <main>
-    <div class="titulo">
-      <h1>Entrar</h1>
-    </div>
+  <main class="porta">
+    <span th:replace="~{fragmentos :: previa}"></span>
 
     <!-- Quem confere o e-mail e a senha é o Spring Security: este formulário só envia para ele (POST /entrar).
          O th:action põe junto o código escondido que protege o formulário (CSRF) -->
-    <form class="vidro formulario" method="post" th:action="@{/entrar}">
+    <form class="formulario" method="post" th:action="@{/entrar}">
+      <h1>Entrar</h1>
       <!-- A mensagem não diz se errou o e-mail ou a senha: assim ninguém descobre por aqui quais e-mails têm conta -->
       <p class="erro" id="erro-entrar" role="alert" th:if="${erro}">E-mail ou senha não conferem. Tente de novo.</p>
       <p class="recado" role="status" th:if="${saiu}">Você saiu do Atalaia.</p>
