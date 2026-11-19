@@ -52,6 +52,7 @@ O que já está pronto:
 - Backlog com 36 histórias de usuário nas Issues, organizado no Kanban
 - Projeto Spring Boot criado, com banco PostgreSQL e as tabelas criadas pelo Flyway
 - Leitor de PDF, Analista, Verificador e Calculadora de prazo, cada um com os seus testes
+- Um teste do caminho inteiro (`CaminhoInteiroTest`): do PDF enviado ao caso resolvido, pela tela
 - Login com cadastro do escritório, com teste de que um escritório não vê os dados de outro
 - Aviso ao cliente por link, com resumo rascunhado pela IA e aprovado pelo escritório, pergunta de conferência e registro de ciência; a lista inicial mostra quem ainda não confirmou
 - Arquitetura e diagramas UML ([docs/04-arquitetura](docs/04-arquitetura/arquitetura.md))
