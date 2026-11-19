@@ -1,4 +1,4 @@
-# Arquitetura e diagramas · Atalaia (18/11/2026, já com o login, o prazo na tela e o aviso ao cliente)
+# Arquitetura e diagramas · Atalaia (19/11/2026, já com o login, o prazo na tela, o aviso ao cliente e o histórico do caso)
 
 Como o Atalaia é montado por dentro e como as peças conversam. Os desenhos são feitos em Mermaid, que o GitHub desenha sozinho.
 
@@ -74,7 +74,7 @@ flowchart TB
         seguranca["Segurança (Spring Security)<br/>fica na frente de todo pedido:<br/>sem sessão, leva para a tela de entrar"]
         conta["Conta<br/>entrar e criar a conta do escritório"]
         empresas["Empresas<br/>os clientes do escritório"]
-        painel["Painel<br/>lista: precisa de gente, conferidas, resolvidas"]
+        painel["Painel<br/>casos em grupos pelo próximo passo:<br/>precisa de gente, esperando o cliente, pronto para fechar"]
         recepcao["Recepção<br/>recebe o PDF e recusa o que não serve"]
         leitor["Leitor<br/>tira o texto do PDF (PDFBox)"]
         analista["Analista<br/>classifica e extrai os dados com o trecho de cada um"]
@@ -85,6 +85,7 @@ flowchart TB
         aviso["Aviso ao cliente<br/>gera o link e guarda o que o cliente vai ver"]
         paginaDoCliente["Página do cliente<br/>pública, só com o link: mostra o aviso e grava a confirmação"]
         revisao["Fila 'precisa de gente'<br/>(primeiro grupo do Painel)"]
+        historico["Histórico<br/>uma linha por coisa que aconteceu no caso;<br/>só recebe linhas novas"]
     end
 
     banco[("PostgreSQL<br/>tabelas criadas pelo Flyway")]
@@ -109,6 +110,11 @@ flowchart TB
     conta --> banco
     empresas --> banco
     painel --> banco
+    recepcao --> historico
+    prazo --> historico
+    aviso --> historico
+    paginaDoCliente --> historico
+    historico --> banco
     recepcao --> leitor
     recepcao --> analista
     analista --> ia
@@ -144,7 +150,7 @@ Decisões:
 
 ## 3. Classes
 
-O que está no código hoje (o `PainelController` e os controllers da conta estão no 3.2). Os pacotes são `leitor`, `analista`, `verificador`, `prazo`, `notificacao`, `recepcao`, `painel`, `conta` e `seguranca`: cada peça mora no pacote com o nome dela.
+O que está no código hoje (o `PainelController` e os controllers da conta estão no 3.2). Os pacotes são `leitor`, `analista`, `verificador`, `prazo`, `notificacao`, `recepcao`, `painel`, `aviso`, `historico`, `conta` e `seguranca`: cada peça mora no pacote com o nome dela.
 
 São dois desenhos, para caber na tela: primeiro o caminho do PDF, depois a conta e a cerca do escritório.
 
@@ -573,6 +579,7 @@ erDiagram
     empresa ||--o{ notificacao : "recebe"
     notificacao ||--o{ dado_extraido : "tem"
     notificacao ||--o{ aviso_ao_cliente : "avisa"
+    notificacao ||--o{ evento_do_caso : "conta o que aconteceu"
 
     escritorio {
         bigint id PK
@@ -624,6 +631,13 @@ erDiagram
         timestamptz confirmado_em
         date resposta "a data que o cliente marcou"
     }
+    evento_do_caso {
+        bigint id PK
+        bigint notificacao_id FK
+        timestamptz quando
+        varchar quem "e-mail, ou Cliente, pelo link"
+        varchar acao "a frase pronta"
+    }
     regra_de_prazo {
         bigint id PK
         bigint escritorio_id FK
@@ -655,6 +669,7 @@ erDiagram
 | `V8__notificacao_guarda_a_conta_do_prazo.sql` | A notificação passa a guardar a ciência, a conta passo a passo, quem pediu e quando (os quatro vazios ou os quatro preenchidos) |
 | `V9__aviso_ao_cliente.sql` | Cria `aviso_ao_cliente`: o link, a cópia do que o cliente viu, a validade e o registro de ciência (quando confirmou e qual data marcou, os dois vazios ou os dois preenchidos) |
 | `V10__notificacao_guarda_o_resumo_sugerido.sql` | A notificação passa a guardar o rascunho do resumo escrito pela IA |
+| `V11__historico_do_caso.sql` | Cria `evento_do_caso`: quando, quem e o que aconteceu em cada caso. Só recebe linhas novas (refazer a conta do prazo não apaga a anterior). Os casos que já existiam ganham o histórico que dá para tirar das colunas |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Ficou vazio: com o login, cada escritório cadastra as próprias empresas. O arquivo continua porque o Flyway já registrou o nome dele |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
