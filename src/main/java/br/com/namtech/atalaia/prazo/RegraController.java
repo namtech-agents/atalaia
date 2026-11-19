@@ -28,6 +28,9 @@ public class RegraController {
     //O "hoje" do Atalaia é o de Teresina, mesmo com o servidor em outro fuso
     public static final ZoneId TERESINA = ZoneId.of("America/Fortaleza");
 
+    //Data de conferência antes disto é erro de digitação
+    static final LocalDate PRIMEIRA_CONFERENCIA = LocalDate.of(2000, 1, 1);
+
     private static final String NOME_REPETIDO = "Já existe uma regra com este nome no escritório.";
 
     private final RegraCadastradaRepository regras;
@@ -56,38 +59,43 @@ public class RegraController {
     public String cadastrar(@AuthenticationPrincipal UsuarioLogado usuario,
             @RequestParam(defaultValue = "") String nome, @RequestParam(defaultValue = "") String dias,
             @RequestParam(defaultValue = "") String contagem,
-            @RequestParam(defaultValue = "false") boolean suspendeNoRecesso,
+            @RequestParam(defaultValue = "") String suspendeNoRecesso,
             @RequestParam(defaultValue = "") String artigo, @RequestParam(defaultValue = "") String conferidaEm,
             Model model, HttpServletResponse resposta) {
         String nomeArrumado = nome.strip();
         String artigoArrumado = artigo.strip();
         LocalDate hoje = LocalDate.now(TERESINA);
 
+        //Cada campo é lido uma vez aqui; as conferencias de baixo só olham o resultado
+        String diasArrumado = dias.strip();
+        //Ate 3 algarismos: so entao vira numero, para "trinta" ou um numero gigante nao derrubar o pedido
+        int quantosDias = diasArrumado.matches("[0-9]{1,3}") ? Integer.parseInt(diasArrumado) : 0;
+        LocalDate conferida = dataDaConferencia(conferidaEm);
+
         String campoComErro = null;
         String erro = null;
-        RegraDePrazo regra = null;
-        if (semLetraNemNumero(nomeArrumado) || nomeArrumado.length() > 120) {
+        if (naoServeComoTexto(nomeArrumado) || nomeArrumado.length() > 120) {
             campoComErro = "nome";
             erro = "Escreva o nome da regra, em até 120 letras.";
-        } else if (!dias.strip().matches("[0-9]{1,3}") || Integer.parseInt(dias.strip()) < 1
-                || Integer.parseInt(dias.strip()) > 365) {
+        } else if (quantosDias < 1 || quantosDias > 365) {
             campoComErro = "dias";
             erro = "Escreva o prazo em dias, de 1 a 365.";
         } else if (!contagem.equals("DIAS_CORRIDOS") && !contagem.equals("DIAS_UTEIS")) {
             campoComErro = "contagem";
             erro = "Escolha como os dias são contados.";
-        } else if (semLetraNemNumero(artigoArrumado) || artigoArrumado.length() > 200) {
+        } else if (naoServeComoTexto(artigoArrumado) || artigoArrumado.length() > 200) {
             campoComErro = "artigo";
             erro = "Escreva o artigo e a norma de onde a regra saiu, em até 200 letras.";
-        } else if (dataDaConferencia(conferidaEm) == null || dataDaConferencia(conferidaEm).isAfter(hoje)) {
+        //Antes de 2000 é erro de digitação (0026 no lugar de 2026)
+        } else if (conferida == null || conferida.isAfter(hoje) || conferida.isBefore(PRIMEIRA_CONFERENCIA)) {
             campoComErro = "conferidaEm";
             erro = "Informe o dia em que a regra foi conferida na norma. Não pode ser uma data no futuro.";
         } else if (regras.existsByEscritorioIdAndNome(usuario.escritorioId(), nomeArrumado)) {
             campoComErro = "nome";
             erro = NOME_REPETIDO;
         } else {
-            regra = new RegraDePrazo(nomeArrumado, Integer.parseInt(dias.strip()), TipoDeContagem.valueOf(contagem),
-                    suspendeNoRecesso, artigoArrumado, dataDaConferencia(conferidaEm));
+            RegraDePrazo regra = new RegraDePrazo(nomeArrumado, quantosDias, TipoDeContagem.valueOf(contagem),
+                    "true".equals(suspendeNoRecesso), artigoArrumado, conferida);
             try {
                 regras.save(new RegraCadastrada(escritorios.getReferenceById(usuario.escritorioId()), regra));
             } catch (DataIntegrityViolationException repetida) {
@@ -104,7 +112,7 @@ public class RegraController {
             model.addAttribute("nome", nome);
             model.addAttribute("dias", dias);
             model.addAttribute("contagem", contagem);
-            model.addAttribute("suspendeNoRecesso", suspendeNoRecesso);
+            model.addAttribute("suspendeNoRecesso", "true".equals(suspendeNoRecesso));
             model.addAttribute("artigo", artigo);
             model.addAttribute("conferidaEm", conferidaEm);
             return lista(usuario, null, null, model);
@@ -118,16 +126,19 @@ public class RegraController {
     @PostMapping("/regras/{id}/excluir")
     @Transactional
     public String excluir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
-        //Regra de outro escritório responde igual a uma que nao existe (404)
-        RegraCadastrada regra = regras.findByIdAndEscritorioId(id, usuario.escritorioId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        regras.delete(regra);
+        //Regra de outro escritório responde igual a uma que nao existe (404). Clique duplo tambem cai aqui:
+        //o segundo pedido ja nao acha a regra, em vez de estourar ao tentar apagar o que nao existe mais
+        if (regras.excluirDoEscritorio(id, usuario.escritorioId()) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         return "redirect:/regras?excluida";
     }
 
-    //Só espaços, inclusive os invisiveis, nao é nome nem artigo
-    private static boolean semLetraNemNumero(String texto) {
-        return texto.codePoints().noneMatch(Character::isLetterOrDigit);
+    //Nao é nome nem artigo: só espaços (inclusive os invisiveis), ou com caractere de controle,
+    //que o banco recusaria com um erro que a pessoa nao entenderia
+    private static boolean naoServeComoTexto(String texto) {
+        return texto.codePoints().noneMatch(Character::isLetterOrDigit)
+                || texto.codePoints().anyMatch(Character::isISOControl);
     }
 
     //O campo de data do navegador manda 2026-11-18. Devolve null se nao for uma data

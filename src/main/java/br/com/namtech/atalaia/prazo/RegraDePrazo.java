@@ -20,6 +20,14 @@ public record RegraDePrazo(
         }
     }
 
+    //O prazo como se le: "1 dia útil", "30 dias corridos". Serve à conta passo a passo e à tela das regras
+    public String prazoPorExtenso() {
+        if (contagem == TipoDeContagem.DIAS_UTEIS) {
+            return dias == 1 ? "1 dia útil" : dias + " dias úteis";
+        }
+        return dias == 1 ? "1 dia corrido" : dias + " dias corridos";
+    }
+
     //Norma muda: seis meses depois da conferencia, alguem precisa ler a regra na norma de novo.
     //So faz sentido chamar em regra ja conferida (conferidaEm preenchida)
     public LocalDate proximaConferencia() {
