@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -65,13 +66,17 @@ public class RecepcaoController {
     private final RegraCadastradaRepository regras;
     private final AvisoAoClienteRepository avisos;
     private final Clock relogio;
+    private final String enderecoPublico;
     private final LeitorPdf leitor = new LeitorPdf();
     private final Analista analista;
     private final Verificador verificador = new Verificador();
 
     //O Spring entrega os repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
     public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes,
-            RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia) {
+            RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia,
+            @Value("${atalaia.endereco-publico:}") String enderecoPublico) {
+        //Sem a barra do fim, para montar o link sempre do mesmo jeito
+        this.enderecoPublico = enderecoPublico.strip().replaceAll("/+$", "");
         this.empresas = empresas;
         this.notificacoes = notificacoes;
         this.regras = regras;
@@ -163,9 +168,15 @@ public class RecepcaoController {
             prazoMudou = !aviso.getPrazo().equals(notificacao.getDataLimite());
             model.addAttribute("aviso", aviso);
             model.addAttribute("situacaoDoAviso", situacao);
-            //O endereço completo, com o dominio de onde o Atalaia esta sendo acessado, pronto para copiar
-            model.addAttribute("linkDoAviso", ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/c/{token}").buildAndExpand(aviso.getToken()).toUriString());
+            //O endereço completo, pronto para copiar. No ar vem da configuração (atalaia.endereco-publico):
+            //o endereço que chega no pedido pode ser o interno do servidor, ou ate forjado por quem pede.
+            //No Mac, sem a configuração, usa o endereço de onde o Atalaia esta sendo acessado
+            String base = enderecoPublico.isBlank()
+                    ? ServletUriComponentsBuilder.fromCurrentContextPath().toUriString() : enderecoPublico;
+            model.addAttribute("linkDoAviso", base + "/c/" + aviso.getToken());
+            //Registros de ciência de avisos anteriores (o cliente confirmou e depois a data mudou): continuam à vista
+            model.addAttribute("registrosAnteriores", doCaso.stream().skip(1)
+                    .filter(antigo -> antigo.getConfirmadoEmPorExtenso() != null).toList());
         }
         model.addAttribute("prazoMudou", prazoMudou);
         //Da para avisar com o caso aberto e a data limite calculada. Depois que o cliente confirmou,

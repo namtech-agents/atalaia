@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,8 +53,16 @@ public class AvisoController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         //O # no fim: a tela volta aberta no cartão do aviso
         String volta = "redirect:/notificacoes/" + id + "#titulo-aviso";
-        //Caso fechado nao ganha aviso novo
-        if (notificacao.isResolvida()) {
+        //Caso fechado nao ganha aviso novo, e sem data limite nao ha o que avisar (a tela nem mostra o formulario)
+        if (notificacao.isResolvida() || notificacao.getDataLimite() == null) {
+            return volta;
+        }
+        Instant agora = Instant.now(relogio);
+        //Tranca os avisos do caso: se o cliente estiver confirmando agora, este pedido espera e ja le a confirmação
+        List<AvisoAoCliente> anteriores = avisos.doCasoParaSubstituir(id, usuario.escritorioId());
+        //O cliente ja confirmou e a data limite é a mesma que ele viu: outro aviso só tiraria o registro da frente
+        if (!anteriores.isEmpty() && anteriores.get(0).situacao(agora) == SituacaoDoAviso.CONFIRMADO
+                && anteriores.get(0).getPrazo().equals(notificacao.getDataLimite())) {
             return volta;
         }
 
@@ -61,14 +70,17 @@ public class AvisoController {
         String documentosArrumados = arrumar(documentos);
         String campoComErro = "resumo";
         String erro = null;
-        if (notificacao.getDataLimite() == null) {
-            erro = "Calcule a data limite antes de avisar o cliente: o aviso leva ela junto.";
-        } else if (resumoArrumado.codePoints().noneMatch(Character::isLetterOrDigit)
-                || resumoArrumado.length() > RESUMO_MAXIMO || temControle(resumoArrumado)) {
+        if (resumoArrumado.codePoints().noneMatch(Character::isLetterOrDigit)
+                || resumoArrumado.length() > RESUMO_MAXIMO) {
             erro = "Escreva o resumo para o cliente, em até " + RESUMO_MAXIMO + " letras.";
-        } else if (documentosArrumados.length() > DOCUMENTOS_MAXIMO || temControle(documentosArrumados)) {
+        } else if (temControle(resumoArrumado)) {
+            erro = "O resumo tem um caractere que o Atalaia não aceita. Apague e digite o trecho de novo.";
+        } else if (documentosArrumados.length() > DOCUMENTOS_MAXIMO) {
             campoComErro = "documentos";
             erro = "A lista de documentos passa de " + DOCUMENTOS_MAXIMO + " letras. Encurte.";
+        } else if (temControle(documentosArrumados)) {
+            campoComErro = "documentos";
+            erro = "A lista de documentos tem um caractere que o Atalaia não aceita. Apague e digite o trecho de novo.";
         }
         if (erro != null) {
             recado.addFlashAttribute("erroDoAviso", erro);
@@ -79,9 +91,8 @@ public class AvisoController {
             return volta;
         }
 
-        Instant agora = Instant.now(relogio);
         //O link anterior deixa de confirmar; se ja tinha sido confirmado, fica guardado como registro
-        avisos.doCaso(id, usuario.escritorioId()).forEach(antigo -> antigo.substituir(agora));
+        anteriores.forEach(antigo -> antigo.substituir(agora));
         avisos.save(new AvisoAoCliente(notificacao, novoToken(), resumoArrumado,
                 documentosArrumados.isEmpty() ? null : documentosArrumados, usuario.email(), agora));
         return volta;
@@ -95,9 +106,10 @@ public class AvisoController {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    //O navegador envia cada Enter como dois caracteres (\r\n): fica só o \n, e saem as linhas vazias e os espaços das pontas
+    //O navegador envia cada Enter como dois caracteres (\r\n): fica só o \n, e saem as linhas vazias e os espaços
+    //das pontas. Texto colado de planilha traz tabulação: vira espaço
     private static String arrumar(String texto) {
-        return texto.replace("\r\n", "\n").lines().map(String::strip).filter(linha -> !linha.isEmpty())
+        return texto.replace("\r\n", "\n").replace('\t', ' ').lines().map(String::strip).filter(linha -> !linha.isEmpty())
                 .reduce((antes, linha) -> antes + "\n" + linha).orElse("");
     }
 

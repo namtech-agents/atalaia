@@ -95,7 +95,7 @@ class AvisoAoClienteTest {
     @Test
     void clienteAbreOLinkSemContaEVeOResumoOPrazoEOsDocumentos() throws Exception {
         //Agir: o escritório avisa
-        AvisoAoCliente aviso = avisa("Chegou uma intimação.\r\n\r\nSepare os documentos.", " Contrato social \r\n\r\nBalanço de 2025");
+        AvisoAoCliente aviso = avisa("Chegou uma intimação.\r\n\r\nSepare os documentos.", " Contrato\tsocial \r\n\r\nBalanço de 2025");
 
         //Conferir: o token tem as 43 letras de 32 bytes sorteados, e a pergunta traz a data limite entre tres datas
         assertThat(aviso.getToken()).hasSize(43);
@@ -125,7 +125,8 @@ class AvisoAoClienteTest {
 
         //Agir: o cliente marca a data limite e confirma
         cliente.perform(post("/c/" + aviso.getToken()).with(csrf()).param("resposta", PRAZO.toString()))
-                .andExpect(redirectedUrl("/c/" + aviso.getToken()));
+                //o # devolve a pagina aberta na pergunta
+                .andExpect(redirectedUrl("/c/" + aviso.getToken() + "#confirmar"));
 
         //Conferir: o registro ficou gravado, e as duas telas mostram
         assertThat(aviso.situacao(Instant.now())).isEqualTo(SituacaoDoAviso.CONFIRMADO);
@@ -142,6 +143,12 @@ class AvisoAoClienteTest {
         //Agir de novo: confirmar outra vez, com outra data, nao troca o registro
         cliente.perform(post("/c/" + aviso.getToken()).with(csrf()).param("resposta", dataErrada(aviso).toString()));
         assertThat(aviso.getResposta()).isEqualTo(PRAZO);
+
+        //E o escritório nao consegue trocar por outro aviso um que ja foi confirmado com a mesma data limite:
+        //o registro de ciência sairia da frente sem motivo
+        avisa("Outro resumo.", "");
+        assertThat(avisos.doCaso(notificacao.getId(), escritorio.getId())).hasSize(1);
+        assertThat(aviso.situacao(Instant.now())).isEqualTo(SituacaoDoAviso.CONFIRMADO);
     }
 
     @Test
@@ -203,7 +210,10 @@ class AvisoAoClienteTest {
         assertThat(segundo.situacao(Instant.now())).isEqualTo(SituacaoDoAviso.AGUARDANDO);
         cliente.perform(get("/c/" + primeiro.getToken()))
                 .andExpect(content().string(containsString("substituído por um mais novo")))
-                .andExpect(content().string(not(containsString("Confirmar que recebi"))));
+                .andExpect(content().string(not(containsString("Confirmar que recebi"))))
+                //nem o resumo nem a data do aviso antigo aparecem: podem estar velhos
+                .andExpect(content().string(not(containsString("Primeiro resumo."))))
+                .andExpect(content().string(not(containsString("10/12/2026"))));
     }
 
     @Test
@@ -218,7 +228,8 @@ class AvisoAoClienteTest {
         //Conferir
         assertThat(antigo.situacao(Instant.now())).isEqualTo(SituacaoDoAviso.VENCIDO);
         cliente.perform(get("/c/" + antigo.getToken()))
-                .andExpect(content().string(containsString("Este link venceu")));
+                .andExpect(content().string(containsString("Este link venceu")))
+                .andExpect(content().string(not(containsString("Resumo antigo."))));
     }
 
     @Test
@@ -227,9 +238,9 @@ class AvisoAoClienteTest {
         Notificacao semPrazo = notificacoes.save(new Notificacao(notificacao.getEmpresa(), "%PDF-teste".getBytes(),
                 "Texto de teste.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
 
-        //Agir e conferir
+        //Agir e conferir: sem data limite o pedido só volta para a tela (ela nem mostra o formulario)
         escritorioLogado.perform(post("/notificacoes/" + semPrazo.getId() + "/aviso").param("resumo", "Resumo."))
-                .andExpect(flash().attribute("erroDoAviso", containsString("Calcule a data limite")));
+                .andExpect(redirectedUrl("/notificacoes/" + semPrazo.getId() + "#titulo-aviso"));
         escritorioLogado.perform(post("/notificacoes/" + notificacao.getId() + "/aviso").param("resumo", "  \r\n "))
                 .andExpect(flash().attribute("erroDoAviso", containsString("Escreva o resumo")));
         escritorioLogado.perform(post("/notificacoes/" + notificacao.getId() + "/aviso")
@@ -273,5 +284,9 @@ class AvisoAoClienteTest {
         avisa("Resumo com a data nova.", "");
         assertThat(aviso.situacao(Instant.now())).isEqualTo(SituacaoDoAviso.CONFIRMADO);
         assertThat(avisos.doCaso(notificacao.getId(), escritorio.getId())).hasSize(2);
+        //e o registro anterior continua à vista na tela do escritório, com a data que o cliente viu
+        escritorioLogado.perform(get("/notificacoes/" + notificacao.getId()))
+                .andExpect(content().string(containsString("Aviso anterior confirmado em")))
+                .andExpect(content().string(containsString("10/12/2026")));
     }
 }

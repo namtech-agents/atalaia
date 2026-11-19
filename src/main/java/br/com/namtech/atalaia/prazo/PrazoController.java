@@ -2,7 +2,6 @@ package br.com.namtech.atalaia.prazo;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
@@ -56,7 +56,7 @@ public class PrazoController {
         }
 
         LocalDate hoje = LocalDate.now(relogio);
-        LocalDate diaDaCiencia = data(ciencia);
+        LocalDate diaDaCiencia = Datas.ler(ciencia);
         //Regra de outro escritório cai aqui tambem: para quem pede, ela nao existe
         RegraCadastrada regra = regraId == null ? null
                 : regras.findByIdAndEscritorioId(regraId, usuario.escritorioId()).orElse(null);
@@ -89,14 +89,5 @@ public class PrazoController {
         //Se a Calculadora mandou para revisão, a data vem vazia: a tela mostra a conta e o motivo, sem data nenhuma
         notificacao.registrarPrazo(diaDaCiencia, prazo.dataLimite(), prazo.passos(), usuario.email());
         return volta;
-    }
-
-    //O campo de data do navegador manda 2026-11-18. Devolve null se nao for uma data
-    static LocalDate data(String texto) {
-        try {
-            return LocalDate.parse(texto.strip());
-        } catch (DateTimeParseException erro) {
-            return null;
-        }
     }
 }

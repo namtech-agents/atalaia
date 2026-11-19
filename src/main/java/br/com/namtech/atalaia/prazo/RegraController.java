@@ -1,5 +1,6 @@
 package br.com.namtech.atalaia.prazo;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -14,9 +15,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
+import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
-import br.com.namtech.atalaia.notificacao.Notificacao;
 import jakarta.servlet.http.HttpServletResponse;
 
 //Regras de prazo: o escritório cadastra as regras que ele mesmo conferiu na norma. Nenhuma regra vem pronta no
@@ -31,10 +32,12 @@ public class RegraController {
 
     private final RegraCadastradaRepository regras;
     private final EscritorioRepository escritorios;
+    private final Clock relogio;
 
-    public RegraController(RegraCadastradaRepository regras, EscritorioRepository escritorios) {
+    public RegraController(RegraCadastradaRepository regras, EscritorioRepository escritorios, Clock relogio) {
         this.regras = regras;
         this.escritorios = escritorios;
+        this.relogio = relogio;
     }
 
     //Os avisos chegam pelo endereço (?cadastrada, ?excluida), como na tela Empresas
@@ -45,7 +48,7 @@ public class RegraController {
         model.addAttribute("cadastrada", cadastrada != null);
         model.addAttribute("excluida", excluida != null);
         model.addAttribute("regras", regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
-        model.addAttribute("hoje", LocalDate.now(Notificacao.TERESINA));
+        model.addAttribute("hoje", LocalDate.now(relogio));
         return "regras";
     }
 
@@ -60,13 +63,13 @@ public class RegraController {
             Model model, HttpServletResponse resposta) {
         String nomeArrumado = nome.strip();
         String artigoArrumado = artigo.strip();
-        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        LocalDate hoje = LocalDate.now(relogio);
 
         //Cada campo é lido uma vez aqui; as conferencias de baixo só olham o resultado
         String diasArrumado = dias.strip();
         //Ate 3 algarismos: so entao vira numero, para "trinta" ou um numero gigante nao derrubar o pedido
         int quantosDias = diasArrumado.matches("[0-9]{1,3}") ? Integer.parseInt(diasArrumado) : 0;
-        LocalDate conferida = PrazoController.data(conferidaEm);
+        LocalDate conferida = Datas.ler(conferidaEm);
 
         String campoComErro = null;
         String erro = null;

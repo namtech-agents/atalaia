@@ -130,6 +130,10 @@
               </div>
             </div>
             <p class="aviso-ia">Aviso feito por <span th:text="${aviso.criadoPor}"></span> em <span class="num" th:text="${aviso.criadoEmPorExtenso}"></span>. O cliente viu: <q th:text="${aviso.resumo}"></q></p>
+            <!-- Avisos anteriores que o cliente confirmou: o registro de ciência não some quando há um aviso mais novo -->
+            <ul class="motivos" th:unless="${registrosAnteriores.isEmpty()}" aria-label="Registros de ciência de avisos anteriores">
+              <li th:each="antigo : ${registrosAnteriores}">Aviso anterior confirmado em <span class="num" th:text="${antigo.confirmadoEmPorExtenso}"></span>, com a data limite <span class="num" th:text="${#temporals.format(antigo.prazo, 'dd/MM/yyyy')}"></span>.</li>
+            </ul>
           </th:block>
 
           <form class="resolver" method="post" th:if="${podeAvisar}" th:action="@{/notificacoes/{id}/aviso(id=${notificacao.id})}">

@@ -20,18 +20,21 @@
     </div>
 
     <!-- Link que não confirma mais: diz o porquê e o que fazer -->
-    <p class="recado" role="status" th:if="${situacao == 'SUBSTITUIDO'}">Este aviso foi substituído por um mais novo. Peça o link novo ao escritório.</p>
-    <p class="recado" role="status" th:if="${situacao == 'VENCIDO'}">Este link venceu. Peça um link novo ao escritório.</p>
+    <p class="recado" th:if="${situacao.name() == 'SUBSTITUIDO'}">Este aviso foi substituído por um mais novo. Peça o link novo ao escritório.</p>
+    <p class="recado" th:if="${situacao.name() == 'VENCIDO'}">Este link venceu. Peça um link novo ao escritório.</p>
 
     <!-- O registro de ciência, depois de confirmado -->
-    <section class="vidro cartao" th:if="${situacao == 'CONFIRMADO'}" aria-labelledby="titulo-registro">
+    <section class="vidro cartao" th:if="${situacao.name() == 'CONFIRMADO'}" aria-labelledby="titulo-registro">
       <h2 class="rotulo" id="titulo-registro">Registro de ciência</h2>
       <strong class="grande">Recebimento confirmado</strong>
-      <p>Confirmado em <span class="num" th:text="${aviso.confirmadoEmPorExtenso}"></span>. O escritório já foi avisado.</p>
+      <p>Confirmado em <span class="num" th:text="${aviso.confirmadoEmPorExtenso}"></span>. O escritório já consegue ver a sua confirmação.</p>
       <!-- Errou a pergunta: o aviso explica de novo, sem bronca -->
       <p class="erro" th:unless="${aviso.acertouOPrazo()}">Você marcou <span class="num" th:text="${#temporals.format(aviso.resposta, 'dd/MM/yyyy')}"></span>, mas a data limite é <strong class="num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></strong>. Se ficou alguma dúvida, fale com o escritório.</p>
     </section>
 
+    <!-- O conteúdo só aparece no aviso que vale. Link substituído ou vencido não mostra nada:
+         a data dele pode estar velha, e o leigo leria a data errada -->
+    <th:block th:if="${situacao.name() == 'AGUARDANDO' or situacao.name() == 'CONFIRMADO'}">
     <section class="vidro cartao" aria-labelledby="titulo-resumo">
       <h2 class="rotulo" id="titulo-resumo">O que é</h2>
       <p class="observacao" th:text="${aviso.resumo}"></p>
@@ -50,9 +53,11 @@
       </ul>
     </section>
 
+    </th:block>
+
     <!-- A confirmação: uma pergunta montada pelo código, com a data limite entre três datas.
          Responder mostra que a pessoa leu; errar não impede confirmar -->
-    <form class="vidro cartao confirmar" method="post" th:if="${situacao == 'AGUARDANDO'}" th:action="@{/c/{token}(token=${aviso.token})}">
+    <form class="vidro cartao confirmar" id="confirmar" method="post" th:if="${situacao.name() == 'AGUARDANDO'}" th:action="@{/c/{token}(token=${aviso.token})}">
       <p class="erro" id="erro-resposta" role="alert" th:if="${erro}" th:text="${erro}"></p>
       <fieldset th:attr="aria-describedby=${erro} ? 'erro-resposta'">
         <legend class="rotulo">Para confirmar, marque: qual é a data limite?</legend>

@@ -211,6 +211,9 @@ html { scroll-padding-top: 92px; }
 /* Página do cliente (cliente.html): uma coluna estreita, para ler no celular */
 .pagina.estreita { max-width: 620px; }
 .estreita main { display: flex; flex-direction: column; gap: 14px; }
+/* Quem lê é um leigo no celular: letra de leitura, não de painel */
+.estreita .cartao p, .estreita .motivos { font-size: 16px; }
+.estreita .confirmar .dica { font-size: 14px; }
 .cartao .erro { color: var(--vermelho); margin-top: 10px; }
 .cartao .recado, .estreita .recado { margin: 0; }
 /* A pergunta de conferência: cada data é uma linha inteira que dá para tocar (44px) */

@@ -3,7 +3,6 @@ package br.com.namtech.atalaia.aviso;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.notificacao.Empresa;
 
 //O lado do cliente: a pagina que o dono da empresa abre pelo link, sem login (liberada na ConfiguracaoDeSeguranca).
@@ -40,7 +40,7 @@ public class ClienteController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Empresa empresa = aviso.getNotificacao().getEmpresa();
         model.addAttribute("aviso", aviso);
-        model.addAttribute("situacao", aviso.situacao(Instant.now(relogio)).name());
+        model.addAttribute("situacao", aviso.situacao(Instant.now(relogio)));
         model.addAttribute("empresa", empresa.getNome());
         model.addAttribute("escritorio", empresa.getEscritorio().getNome());
         return "cliente";
@@ -56,22 +56,14 @@ public class ClienteController {
         Instant agora = Instant.now(relogio);
         //Ja confirmado, substituido ou vencido: nada muda, e a pagina explica a situação
         if (aviso.situacao(agora) == SituacaoDoAviso.AGUARDANDO) {
-            LocalDate marcada = data(resposta);
+            LocalDate marcada = Datas.ler(resposta);
             if (marcada == null || !aviso.opcoesDePrazo().contains(marcada)) {
                 recado.addFlashAttribute("erro", "Marque uma das datas para confirmar.");
             } else {
                 aviso.confirmar(marcada, agora);
             }
         }
-        //Redireciona: recarregar a pagina nao envia a resposta de novo
-        return "redirect:/c/" + aviso.getToken();
-    }
-
-    private static LocalDate data(String texto) {
-        try {
-            return LocalDate.parse(texto.strip());
-        } catch (DateTimeParseException erro) {
-            return null;
-        }
+        //Redireciona: recarregar a pagina nao envia a resposta de novo. O # abre a pagina na pergunta
+        return "redirect:/c/" + aviso.getToken() + "#confirmar";
     }
 }

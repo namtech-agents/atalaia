@@ -14,7 +14,11 @@
     <div class="titulo">
       <h1 th:text="${titulo}"></h1>
     </div>
-    <section class="vidro engano">
+    <!-- doCliente: o erro aconteceu na página do aviso (/c/...). Quem está aqui é o dono da empresa, sem conta:
+         não faz sentido mandar ele entrar nem voltar para as notificações do escritório -->
+    <section class="vidro engano" th:with="doCliente=${path != null and #strings.startsWith(path, '/c/')}">
+      <p th:if="${doCliente}">Não foi possível abrir este aviso. Abra de novo o link que o escritório mandou, completo. Se continuar, peça um link novo ao escritório.</p>
+      <th:block th:unless="${doCliente}">
       <p th:if="${status == 404}">Este endereço não existe no Atalaia. Confira se o link está completo.</p>
       <!-- 413: o servidor barrou o envio pelo tamanho, antes de o Atalaia olhar o arquivo -->
       <p th:if="${status == 413}">Este arquivo é grande demais. O limite é 10 MB. Escolha outro arquivo.</p>
@@ -25,6 +29,7 @@
       <a class="botao cheio" th:if="${status == 413}" th:href="@{/enviar}">Voltar para o envio</a>
       <a class="botao cheio" th:if="${status == 403}" th:href="@{/entrar}">Entrar</a>
       <a class="botao cheio" th:unless="${status == 413 or status == 403}" th:href="@{/}">Voltar para Notificações</a>
+      </th:block>
     </section>
   </main>
 </div>

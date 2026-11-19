@@ -20,6 +20,16 @@ public interface AvisoAoClienteRepository extends JpaRepository<AvisoAoCliente, 
             """)
     List<AvisoAoCliente> doCaso(Long notificacaoId, Long escritorioId);
 
+    //A mesma busca, trancando as linhas, para o aviso novo que vai substituir os anteriores. Sem a tranca,
+    //uma confirmação do cliente gravada no mesmo instante seria apagada: quem chega depois espera e le o que ficou
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select a from AvisoAoCliente a
+            where a.notificacao.id = ?1 and a.notificacao.empresa.escritorio.id = ?2
+            order by a.criadoEm desc, a.id desc
+            """)
+    List<AvisoAoCliente> doCasoParaSubstituir(Long notificacaoId, Long escritorioId);
+
     //A pagina do cliente nao tem login: quem tem o token ve só aquele aviso, e nada mais
     Optional<AvisoAoCliente> findByToken(String token);
 

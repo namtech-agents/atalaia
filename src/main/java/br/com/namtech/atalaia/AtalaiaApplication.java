@@ -15,8 +15,9 @@ public class AtalaiaApplication {
 		SpringApplication.run(AtalaiaApplication.class, args);
 	}
 
-	//O relogio do Atalaia: um só para o sistema inteiro, no fuso de Teresina. Quem precisa do "agora" ou do "hoje"
-	//pede este relogio ao Spring, em vez de olhar o do servidor; num teste da para trocar por um relogio parado
+	//O relogio do Atalaia, no fuso de Teresina. Todo controller que precisa do "agora" ou do "hoje" pede este
+	//relogio ao Spring, em vez de olhar o do servidor; num teste da para trocar por um relogio parado.
+	//(As entidades ainda marcam a propria hora de criação com Instant.now(), que nao depende de fuso)
 	@Bean
 	Clock relogio() {
 		return Clock.system(Notificacao.TERESINA);
