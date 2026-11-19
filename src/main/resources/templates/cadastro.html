@@ -15,6 +15,8 @@
         <p>A conta nasce com o seu escritório. Depois de entrar, você cadastra as empresas que atende.</p>
       </div>
       <p class="erro" id="erro-cadastro" role="alert" th:if="${erro}" th:text="${erro}"></p>
+      <!-- Vem da TravaDeTentativas: cadastros demais deste endereço -->
+      <p class="erro" role="alert" th:if="${travado}">Muitas tentativas seguidas. Espere 15 minutos e tente de novo.</p>
 
       <div>
         <label class="rotulo" for="escritorio">Nome do escritório</label>

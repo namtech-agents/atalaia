@@ -17,6 +17,8 @@
       <!-- A mensagem não diz se errou o e-mail ou a senha: assim ninguém descobre por aqui quais e-mails têm conta -->
       <p class="erro" id="erro-entrar" role="alert" th:if="${erro}">E-mail ou senha não conferem. Tente de novo.</p>
       <p class="recado" role="status" th:if="${saiu}">Você saiu do Atalaia.</p>
+      <!-- Vem da TravaDeTentativas: senha errada demais deste endereço -->
+      <p class="erro" role="alert" th:if="${travado}">Muitas tentativas seguidas. Espere 15 minutos e tente de novo.</p>
 
       <div>
         <label class="rotulo" for="email">E-mail</label>
