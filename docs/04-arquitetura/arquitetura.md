@@ -732,6 +732,7 @@ Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
 ## 7. Como a qualidade é conferida
 
 - Cada peça tem os próprios testes JUnit; o `./mvnw verify` roda todos antes de qualquer PR.
+- O `CaminhoInteiroTest` faz pela tela o caminho que o Atalaia promete, do PDF ao caso resolvido: cadastra a empresa e a regra, envia o PDF, calcula o prazo, gera o link, o cliente confirma sem conta e o escritório fecha o caso. Em cada passo ele confere o grupo da tela inicial e, no fim, os cinco eventos do histórico. Só a IA é de mentira. Lido de cima para baixo, serve de roteiro do sistema.
 - Toda mudança entra por PR com `Resolve #N`, e passa por uma revisão antes do merge.
 - Os testes usam o H2 em memória com as mesmas migrações do Flyway.
 - O isolamento entre escritórios tem teste próprio: dois escritórios, e um tenta ver, resolver, listar e enviar no lugar do outro.
