@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Faxina da semana')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo('faxina')}"></header>
+
+  <main id="conteudo">
+    <div class="titulo">
+      <a class="volta" th:href="@{/}">Notificações</a>
+      <h1>Faxina da semana</h1>
+      <p>Casos abertos em que ninguém mexe há mais de 7 dias. Feche o que já foi resolvido e só ficou sem baixa; o que continua pendente, anote e ele volta daqui a uma semana.</p>
+    </div>
+
+    <p class="recado" role="status" th:if="${anotado}" th:text="${anotado}"></p>
+
+    <section class="vidro vazio" th:if="${parados.isEmpty()}">
+      <p>Nenhum caso parado. Tudo o que está aberto teve movimento nos últimos 7 dias.</p>
+    </section>
+
+    <section class="grupo" th:unless="${parados.isEmpty()}" aria-labelledby="titulo-parados">
+      <h2 id="titulo-parados" th:text="${parados.size() == 1} ? '1 caso parado' : ${parados.size() + ' casos parados'}"></h2>
+      <ul class="vidro lista">
+        <li th:each="caso : ${parados}">
+          <div class="linha">
+            <strong th:text="${caso.empresa}"></strong>
+            <span class="etq" th:if="${caso.tipo != null}" th:text="${caso.tipo.nome}"></span>
+            <!-- Vencido em vermelho, com o texto dizendo a situação (quem não distingue a cor não perde a informação) -->
+            <span class="etq num atencao" th:if="${caso.vencido(hoje)}" th:text="'Venceu em ' + ${caso.dataLimitePorExtenso}"></span>
+            <span class="etq num" th:if="${caso.dataLimite != null and not caso.vencido(hoje)}" th:text="'Vence em ' + ${caso.dataLimitePorExtenso}"></span>
+            <span class="quando">Parado há <span class="num" th:text="${caso.diasParado(agora)}"></span> dias</span>
+            <!-- Resolvido leva ao cartão "Fechar o caso", que pede o desfecho e o que foi feito -->
+            <a class="botao" th:href="@{/notificacoes/{id}(id=${caso.id})} + '#titulo-resolver'"
+               th:attr="aria-label='Resolvido: fechar o caso de ' + ${caso.empresa}">Resolvido</a>
+            <!-- Os outros dois gravam no histórico (POST: um link poderia ser acionado por outro site) -->
+            <form method="post" th:action="@{/faxina/{id}(id=${caso.id})}">
+              <button class="botao" type="submit" name="acao" value="segue"
+                      th:attr="aria-label='Segue aberto: anotar no caso de ' + ${caso.empresa}">Segue aberto</button>
+              <button class="botao" type="submit" name="acao" value="adiar"
+                      th:attr="aria-label='Adiar uma semana o caso de ' + ${caso.empresa}">Adiar uma semana</button>
+            </form>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </main>
+</div>
+</body>
+</html>
