@@ -96,14 +96,14 @@ public class TrilhaController {
 
             List<String> quebradas = new ArrayList<>();
             for (String linha : linhas) {
-                quebradas.addAll(quebrar(semLetraForaDaFonte(linha), normal, largura));
+                quebradas.addAll(quebrar(semLetraForaDaFonte(linha, normal), normal, largura));
             }
 
             PDPage pagina = new PDPage(PDRectangle.A4);
             documento.addPage(pagina);
             PDPageContentStream tinta = new PDPageContentStream(documento, pagina);
             float y = PDRectangle.A4.getHeight() - MARGEM;
-            escrever(tinta, negrito, 15, MARGEM, y, semLetraForaDaFonte(titulo));
+            escrever(tinta, negrito, 15, MARGEM, y, semLetraForaDaFonte(titulo, negrito));
             y -= 2 * ENTRELINHA;
             for (String linha : quebradas) {
                 if (y < MARGEM) {
@@ -131,16 +131,17 @@ public class TrilhaController {
         tinta.endText();
     }
 
-    //A Helvetica embutida no PDF só escreve as letras do Latin-1 (acentos do português inclusive). Outra letra
-    //(emoji, travessão, aspas curvas) derrubaria a montagem: vira "?". Quebra de linha dentro do texto vira espaço
-    static String semLetraForaDaFonte(String texto) {
+    //A Helvetica padrão do PDF escreve as letras da tabela WinAnsi: acentos do português, aspas curvas, travessão
+    //e euro inclusive. Letra fora dela (emoji, letra de outro alfabeto) derrubaria a montagem: vira "?".
+    //Quebra de linha e tabulação dentro do texto viram espaço. A fonte responde letra por letra se sabe escrever
+    private static String semLetraForaDaFonte(String texto, PDType1Font fonte) {
         StringBuilder limpo = new StringBuilder();
         texto.codePoints().forEach(letra -> {
-            if (letra == '\n' || letra == '\r' || letra == '\t') {
-                limpo.append(' ');
-            } else if ((letra >= 0x20 && letra < 0x7F) || (letra >= 0xA0 && letra <= 0xFF)) {
-                limpo.appendCodePoint(letra);
-            } else {
+            String umaLetra = Character.isISOControl(letra) ? " " : Character.toString(letra);
+            try {
+                fonte.encode(umaLetra);
+                limpo.append(umaLetra);
+            } catch (IOException | IllegalArgumentException foraDaFonte) {
                 limpo.append('?');
             }
         });

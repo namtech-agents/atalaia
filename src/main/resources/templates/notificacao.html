@@ -212,6 +212,8 @@
           <!-- A trilha encadeada (Trilha): cada registro leva a assinatura do anterior. Se alguém mudar um registro
                depois de gravado, a conta não fecha dali em diante, e a tela diz a partir de qual -->
           <p class="trilha" th:if="${trilha.temAssinatura and trilha.integra}">Trilha conferida: nenhum registro foi alterado depois de gravado. <a th:href="@{/notificacoes/{id}/trilha(id=${notificacao.id})}">Baixar a trilha em PDF</a></p>
+          <!-- Nenhum registro assinado: caso de antes da trilha, ou alguém apagou todas as assinaturas. Não dá para afirmar nada -->
+          <p class="trilha" th:unless="${trilha.temAssinatura}">Este caso não tem registros assinados: a conferência da trilha não se aplica a ele.</p>
           <p class="erro" role="alert" th:unless="${trilha.integra}">A trilha não confere a partir do registro de <span class="num" th:text="${trilha.quebra.quandoPorExtenso}"></span>: um registro foi alterado ou apagado depois de gravado. <a th:href="@{/notificacoes/{id}/trilha(id=${notificacao.id})}">Baixar a trilha em PDF</a></p>
         </section>
 

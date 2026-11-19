@@ -127,6 +127,30 @@ class TrilhaEncadeadaTest {
     }
 
     @Test
+    void mudarAHoraOuQuemFezTambemQuebra() {
+        //Cada campo entra na assinatura: a hora e quem fez também
+        for (String adulteracao : new String[] {
+                "update evento_do_caso set quando = ? where notificacao_id = ? and acao = 'Enviou o PDF'",
+                "update evento_do_caso set quem = 'outra@pessoa.test' where ? is not null and notificacao_id = ? and acao = 'Enviou o PDF'" }) {
+            //Arrumar: um caso novo com três eventos
+            caso = notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "9999900900" + (6000 + empresasCriadas++),
+                    "Padaria Adulterada")), "%PDF-teste".getBytes(), "Texto.", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+            tresEventos();
+            mesa.flush();
+
+            //Agir: a adulteração (o SQL recebe um instante e o número do caso)
+            sql.update(adulteracao, Timestamp.from(Instant.parse("2026-11-01T12:00:00Z")), caso.getId());
+
+            //Conferir: quebra no primeiro registro
+            Trilha trilha = Trilha.conferir(relidos());
+            assertThat(trilha.integra()).as(adulteracao).isFalse();
+            assertThat(trilha.quebra().getAcao()).isEqualTo("Enviou o PDF");
+        }
+    }
+
+    private int empresasCriadas = 0;
+
+    @Test
     void apagarUmRegistroDoMeioTambemQuebra() {
         //Arrumar e agir: três eventos, e alguém apaga o do meio
         tresEventos();
@@ -186,6 +210,8 @@ class TrilhaEncadeadaTest {
         assertThat(trilha.integra()).isTrue();
         assertThat(trilha.temAssinatura()).isFalse();
         navegador.perform(get("/notificacoes/" + caso.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Este caso não tem registros assinados")))
                 .andExpect(content().string(not(containsString("Trilha conferida"))))
                 .andExpect(content().string(not(containsString("A trilha não confere"))));
     }
@@ -212,8 +238,9 @@ class TrilhaEncadeadaTest {
         //Conferir: o texto do PDF traz a empresa, a conferência, cada assinatura e o selo; a letra fora da fonte virou "?"
         try (PDDocument documento = Loader.loadPDF(pdf)) {
             String texto = new PDFTextStripper().getText(documento);
+            //As aspas curvas a fonte escreve; o emoji, não
             assertThat(texto).contains("Trilha do caso nº " + caso.getId(), "Padaria da Trilha",
-                    "todas as assinaturas conferem", "Selo da trilha", "?cliente ligou? ?");
+                    "todas as assinaturas conferem", "Selo da trilha", "“cliente ligou” ?");
             //A assinatura de 64 letras pode quebrar de linha no PDF: confere sem as quebras
             assertThat(texto.replaceAll("\\s", "")).contains(selo, eventos.get(0).getAssinatura());
         }

@@ -152,7 +152,7 @@ class IsolamentoEntreEscritoriosTest {
     //e a referência ao escritório de quem entrou (sempre com o id da sessão)
     private static final Set<String> SEM_ESCRITORIO = Set.of("save", "UsuarioRepository.findByEmail",
             "UsuarioRepository.existsByEmail", "AvisoAoClienteRepository.findByToken",
-            "AvisoAoClienteRepository.buscarParaConfirmar", "EscritorioRepository.getReferenceById");
+            "AvisoAoClienteRepository.buscarParaConfirmar", "AvisoAoClienteRepository.casoDoToken", "EscritorioRepository.getReferenceById");
 
     @Test
     void nenhumRepositorioTemBuscaSemOEscritorio() {

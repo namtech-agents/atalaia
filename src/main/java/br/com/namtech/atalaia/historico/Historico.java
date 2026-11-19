@@ -41,7 +41,7 @@ public class Historico {
         //Tranca a linha do caso: dois eventos ao mesmo tempo (o cliente confirma enquanto o escritório refaz o prazo)
         //leriam a mesma "ultima assinatura" e abririam duas correntes. Com a tranca, o segundo espera o primeiro gravar.
         //Quem chama ja costuma ter trancado (buscarParaAlterar); trancar de novo a mesma linha nao custa nada
-        mesa.lock(caso, LockModeType.PESSIMISTIC_WRITE);
+        trancar(caso);
         String anterior = eventos.ultimaAssinatura(caso.getId(), caso.getEmpresa().getEscritorio().getId()).orElse("");
         //Em milissegundos: o banco guarda menos casas que o relogio de alguns servidores, e a assinatura
         //precisa sair igual quando for refeita com o que o banco devolve
@@ -52,6 +52,12 @@ public class Historico {
     //Quando alguém mexeu pela última vez no caso (a faxina usa para não anotar duas vezes)
     public Optional<Instant> ultimoMovimento(Long notificacaoId, Long escritorioId) {
         return eventos.ultimoMovimento(notificacaoId, escritorioId);
+    }
+
+    //Tranca a linha do caso até o fim da transação. Regra de quem chama: tranque o caso ANTES de qualquer outra
+    //linha (aviso, evento). Todos na mesma ordem, dois pedidos nunca ficam esperando um pelo outro
+    public void trancar(Notificacao caso) {
+        mesa.lock(caso, LockModeType.PESSIMISTIC_WRITE);
     }
 
     public List<EventoDoCaso> doCaso(Long notificacaoId, Long escritorioId) {
