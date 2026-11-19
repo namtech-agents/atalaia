@@ -10,8 +10,8 @@ const chave = document.getElementById('menu-aberto');
 // Tela sem menu (ninguém entrou): não há o que fazer
 if (chave) {
   const GUARDADO = 'atalaia-menu-fixo';
-  // A mesma largura que o atalaia.css usa para trocar o menu lateral pela gaveta
-  const computador = matchMedia('(min-width: 861px)');
+  // A mesma condição que o atalaia.css usa para o menu lateral: janela larga e mouse. Fora dela, é a gaveta
+  const computador = matchMedia('(min-width: 861px) and (hover: hover) and (pointer: fine)');
   // O que fica atrás da gaveta: a barra de cima e o conteúdo
   const atras = document.querySelectorAll('.pagina > .topo, .pagina > main');
 
@@ -32,10 +32,11 @@ if (chave) {
   // pageshow: também vale para a tela que volta pelo botão "voltar" do navegador
   window.addEventListener('pageshow', arrumar);
 
-  // Esc fecha a gaveta e devolve o foco para a chave, que é quem abre de novo
+  // Esc fecha a gaveta e devolve o foco para a chave, que é quem abre de novo.
+  // preventScroll: a página não rola por causa disso (quem tinha rolado continua onde estava)
   document.addEventListener('keydown', tecla => {
     if (tecla.key !== 'Escape' || computador.matches || !chave.checked) return;
-    chave.checked = false; parar(); chave.focus();
+    chave.checked = false; parar(); chave.focus({ preventScroll: true });
   });
 
   arrumar();

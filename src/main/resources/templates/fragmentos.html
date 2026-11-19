@@ -34,14 +34,12 @@
   <!-- O menu e a barra de cima das telas de dentro. Cada tela diz onde está (atual), para o menu marcar o item.
        th:block: uma caixa que não vai para a página; só o que está dentro dela vai -->
   <th:block th:fragment="topo(atual)">
+    <!--/* A primeira parada do teclado: pula o menu e vai direto para o conteúdo (o <main id="conteudo"> de cada tela).
+           Só aparece quando recebe o foco */-->
+    <a class="botao cheio pular" href="#conteudo">Pular para o conteúdo</a>
+
     <!--/* O menu só aparece com a sessão aberta (quemEntrou vem do QuemEntrou.java) */-->
     <th:block th:if="${quemEntrou}">
-      <!--/* A chave do menu: uma caixa de marcar escondida. Marcada, o menu fica aberto (no computador, fixado ao
-             lado do conteúdo; no celular, a gaveta aberta). O CSS lê o estado dela, por isso funciona sem JavaScript.
-             Vem antes do menu para ser a primeira parada do teclado (a barra de espaço marca e desmarca).
-             autocomplete="off": ao voltar pelo histórico, o navegador não devolve a marca antiga */-->
-      <input class="m-chave" id="menu-aberto" type="checkbox" autocomplete="off" aria-label="Menu aberto">
-
       <nav class="menu" aria-label="Menu">
         <div class="m-dentro">
           <a class="m-item m-marca" th:href="@{/}">
@@ -76,15 +74,22 @@
           <p class="m-quem" th:text="${quemEntrou}"></p>
           <ul class="m-pe">
             <li>
-              <!--/* O botão que se vê é um rótulo da chave lá de cima: clicar nele marca e desmarca a caixa.
-                     Dois desenhos e dois nomes, e o CSS mostra um de cada: no computador fixa o menu, no celular fecha a gaveta */-->
-              <label class="m-item m-vira" for="menu-aberto">
+              <!--/* A CHAVE DO MENU: uma caixa de marcar escondida dentro do próprio rótulo. Marcada, o menu fica aberto
+                     (no computador, fixado ao lado do conteúdo; em tela de toque, a gaveta aberta). O CSS lê o estado
+                     dela com :has(), por isso funciona sem JavaScript. Clicar no rótulo marca e desmarca; no teclado
+                     é a barra de espaço. Ela mora aqui para a ordem do Tab bater com o lugar onde o botão aparece.
+                     O leitor de tela diz o nome que está à vista: dos três nomes, o CSS mostra um de cada vez.
+                     autocomplete="off": ao voltar pelo histórico, o navegador não devolve a marca antiga */-->
+              <label class="m-item m-vira">
+                <input class="m-chave" id="menu-aberto" type="checkbox" autocomplete="off">
                 <span class="m-ic"><i>
                   <svg class="ic so-largo" viewBox="0 0 20 20" aria-hidden="true"><path d="M7.2 3h5.6l-.7 4.6 2.9 3.4H5l2.9-3.4z"/><path d="M10 11v6"/></svg>
                   <svg class="ic so-estreito" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4v12"/><path d="M16.5 10H8M11.5 6.5 8 10l3.5 3.5"/></svg>
                 </i></span>
                 <span class="m-nome so-largo">Manter o menu aberto</span>
-                <span class="m-nome so-estreito">Fechar o menu</span>
+                <span class="m-nome so-estreito so-aberta">Fechar o menu</span>
+                <!--/* Com a gaveta fechada o botão que se vê é só o desenho da barra de cima: este nome é para o leitor de tela */-->
+                <span class="m-nome so-estreito so-fechada">Abrir o menu</span>
               </label>
             </li>
             <li>
@@ -99,14 +104,14 @@
           </ul>
         </div>
       </nav>
-      <!--/* O véu: no celular, escurece a tela atrás da gaveta. Também é um rótulo da chave: tocar fora fecha.
+      <!--/* O véu: escurece a tela atrás da gaveta. Também é um rótulo da chave (pelo for): tocar fora fecha.
              aria-hidden: para o leitor de tela, quem abre e fecha é a própria caixa de marcar */-->
       <label class="m-veu" for="menu-aberto" aria-hidden="true"></label>
     </th:block>
 
     <!--/* A barra de cima. No computador, com o menu ao lado, sobra nela só o selo de prévia */-->
     <header class="topo vidro">
-      <!--/* O botão que abre a gaveta no celular (outro rótulo da mesma chave) */-->
+      <!--/* O botão que abre a gaveta (outro rótulo da mesma chave) */-->
       <label class="m-abre" for="menu-aberto" aria-hidden="true" th:if="${quemEntrou}">
         <svg class="ic" viewBox="0 0 20 20"><path d="M3.5 6h13M3.5 10h13M3.5 14h8"/></svg>
       </label>
