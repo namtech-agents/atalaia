@@ -23,7 +23,7 @@
 
     <!-- Escolher um cliente: com duas empresas ou mais. Formulário GET sem JavaScript: o endereço guarda a escolha
          (dá para favoritar), e o botão "Mostrar" envia. Cada opção diz quantos casos abertos o cliente tem -->
-    <form class="por-cliente" method="get" th:action="@{/}" th:if="${clientes.size() > 1 and not nenhuma}">
+    <form class="escolha-linha" method="get" th:action="@{/}" th:if="${clientes.size() > 1 and not nenhuma}">
       <input type="hidden" name="ver" value="resolvidas" th:if="${verResolvidas}">
       <label class="rotulo" for="empresa">Cliente</label>
       <select id="empresa" name="empresa">

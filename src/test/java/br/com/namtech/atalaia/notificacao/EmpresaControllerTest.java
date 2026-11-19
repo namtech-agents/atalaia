@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,6 +14,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,8 +78,11 @@ class EmpresaControllerTest {
         sql.update("update notificacao set recebida_em = ? where id = ?",
                 Timestamp.from(Instant.now().minus(60, ChronoUnit.DAYS)), antigo.getId());
 
-        //Agir e conferir: sem escolher, conta os últimos 30 dias, só o caso de hoje
-        String trintaDias = navegador.perform(get("/empresas")).andReturn().getResponse().getContentAsString();
+        //Agir e conferir: sem escolher, conta os últimos 30 dias, só o caso de hoje. O mapa entregue à tela
+        //tem só a Padaria: o caso do outro escritório não entra (a tela nem mostraria a empresa dele)
+        String trintaDias = navegador.perform(get("/empresas"))
+                .andExpect(model().attribute("casosNoPeriodo", Map.of(padaria.getId(), 1L)))
+                .andReturn().getResponse().getContentAsString();
         assertThat(trintaDias).contains("selected=\"selected\">nos últimos 30 dias");
         assertThat(linhaDa(trintaDias, "Padaria Trabalhosa")).contains("1 caso");
         assertThat(linhaDa(trintaDias, "Oficina Tranquila")).contains("nenhum caso");
@@ -87,9 +92,12 @@ class EmpresaControllerTest {
                 .getContentAsString();
         assertThat(linhaDa(noventaDias, "Padaria Trabalhosa")).contains("2 casos");
 
-        //Agir e conferir: um periodo que não está na lista (endereço mexido) volta para 30 dias, sem erro
-        navegador.perform(get("/empresas").param("periodo", "7")).andExpect(status().isOk())
-                .andExpect(content().string(containsString("selected=\"selected\">nos últimos 30 dias")));
+        //Agir e conferir: um periodo que não está na lista, texto ou numero grande demais (endereço mexido)
+        //volta para 30 dias, sem erro
+        for (String mexido : new String[] { "7", "abc", "99999999999" }) {
+            navegador.perform(get("/empresas").param("periodo", mexido)).andExpect(status().isOk())
+                    .andExpect(content().string(containsString("selected=\"selected\">nos últimos 30 dias")));
+        }
     }
 
     private Notificacao casoDa(Empresa empresa) {

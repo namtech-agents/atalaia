@@ -289,9 +289,12 @@ class PainelControllerTest {
         casoDa(empresas.save(new Empresa(escritorio, "99999009002000", "Padaria Com Caso")));
         Empresa semCasos = empresas.save(new Empresa(escritorio, "99999009002001", "Loja Sem Casos"));
 
-        //Agir e conferir: escolher a loja explica que não há nada dela, com o caminho de volta, e não diz "tudo certo"
+        //Agir e conferir: escolher a loja explica que não há nada dela, com o caminho de volta, e não diz "tudo certo".
+        //Nem fala como escritório novo: a escolha do cliente continua lá para voltar
         navegador.perform(get("/").param("empresa", semCasos.getId().toString()))
                 .andExpect(content().string(containsString("Nenhuma notificação deste cliente.")))
+                .andExpect(content().string(containsString("Todos os clientes")))
+                .andExpect(content().string(not(containsString("Nenhuma notificação recebida ainda"))))
                 .andExpect(content().string(not(containsString("Nada precisa de gente agora."))))
                 .andExpect(content().string(not(containsString("<strong>Padaria Com Caso</strong>"))));
     }
@@ -308,6 +311,8 @@ class PainelControllerTest {
         //Agir: alguém troca o numero no endereço pela empresa do outro escritório
         String pagina = navegador.perform(get("/").param("empresa", alheia.getId().toString()))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        //E texto no lugar do numero também não vira erro
+        navegador.perform(get("/").param("empresa", "abc")).andExpect(status().isOk());
 
         //Conferir: o filtro não vale, a tela mostra os meus dois casos e nada do outro escritório
         assertThat(pagina).contains("2 notificações", "<strong>Minha Padaria</strong>", "<strong>Minha Oficina</strong>")

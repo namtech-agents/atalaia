@@ -47,16 +47,17 @@ public class PainelController {
     //"empresa" filtra os casos de um cliente só (o resto da tela funciona igual, só com menos linhas)
     @GetMapping("/")
     public String painel(@AuthenticationPrincipal UsuarioLogado usuario,
-            @RequestParam(defaultValue = "") String ver, @RequestParam(required = false) Long empresa, Model model) {
+            @RequestParam(defaultValue = "") String ver, @RequestParam(defaultValue = "") String empresa, Model model) {
         //Só as notificações do escritório de quem entrou
         List<NotificacaoNaLista> doEscritorio = notificacoes.listar(usuario.escritorioId());
         List<Empresa> clientes = empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId());
         //Quantos casos abertos cada cliente tem, contados antes do filtro: a escolha do cliente mostra o numero de todos
         Map<Long, Long> abertasPorCliente = doEscritorio.stream().filter(linha -> !linha.resolvida())
                 .collect(Collectors.groupingBy(NotificacaoNaLista::empresaId, Collectors.counting()));
-        //Só vale filtrar por uma empresa do proprio escritório. Numero de outra (endereço mexido) é ignorado:
+        //Só vale filtrar por uma empresa do proprio escritório. Numero de outra, ou texto (endereço mexido), é ignorado
+        //(chega como texto para "abc" nao virar erro 400):
         //a tela mostra todos os clientes, e nada da outra empresa aparece, porque a lista já é só do escritório
-        Long filtro = clientes.stream().map(Empresa::getId).filter(id -> id.equals(empresa)).findFirst().orElse(null);
+        Long filtro = clientes.stream().map(Empresa::getId).filter(id -> id.toString().equals(empresa)).findFirst().orElse(null);
         List<NotificacaoNaLista> todas = filtro == null ? doEscritorio
                 : doEscritorio.stream().filter(linha -> linha.empresaId().equals(filtro)).toList();
         Instant agora = Instant.now(relogio);

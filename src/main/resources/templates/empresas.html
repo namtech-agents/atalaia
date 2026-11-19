@@ -21,7 +21,7 @@
     <section class="grupo" th:unless="${empresas.isEmpty()}" aria-labelledby="titulo-empresas">
       <h2 id="titulo-empresas" th:text="${empresas.size() == 1} ? '1 empresa' : ${empresas.size() + ' empresas'}"></h2>
       <!-- O periodo da contagem de casos: formulário GET, o endereço guarda a escolha. O número aparece em cada empresa -->
-      <form class="por-cliente" method="get" th:action="@{/empresas}">
+      <form class="escolha-linha" method="get" th:action="@{/empresas}">
         <label class="rotulo" for="periodo">Casos recebidos</label>
         <select id="periodo" name="periodo">
           <option th:each="dias : ${periodos}" th:value="${dias}" th:selected="${dias == periodo}"

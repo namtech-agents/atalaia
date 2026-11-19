@@ -166,7 +166,7 @@ html { scroll-padding-top: 92px; }
    os outros cartões seguem com o título pequeno em cima do valor grande. Navegador sem :has fica com o rótulo */
 .formulario h2, .cartao > h2.rotulo:has(+ form) { font-size: 15px; font-weight: 700; color: var(--texto); }
 /* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
-.formulario select, .formulario input, .resolver select, .resolver input, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
+.formulario select, .formulario input, .escolha-linha select, .resolver select, .resolver input, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
 .formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
 /* Texto de apoio pequeno: abaixo de um campo ou da moldura do PDF */
@@ -248,9 +248,11 @@ html { scroll-padding-top: 92px; }
 .grupo .conta { font-size: 13px; font-weight: 500; color: var(--texto); }
 .tudo-certo { padding: 8px 6px; color: var(--apagado-fora); font-weight: 500; }
 /* filtro abertas/resolvidas: dois links simples; o escolhido fica em negrito e sublinhado (não só pela cor) */
-/* Escolher o cliente na tela inicial: rótulo, lista e botão numa linha; no celular a lista ocupa o que sobra */
-.por-cliente { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-.por-cliente select { flex: 1 1 220px; max-width: 420px; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
+/* Uma escolha numa linha só (o cliente na tela inicial, o período em Empresas): rótulo, lista e botão.
+   No celular a lista ocupa o que sobra; o resto do estilo da lista vem da regra comum dos campos */
+.escolha-linha { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.escolha-linha select { flex: 1 1 220px; max-width: 420px; }
+.escolha-linha .rotulo { margin-bottom: 0; }
 .filtro { display: flex; gap: 4px; margin-bottom: 4px; }
 .filtro a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: var(--raio-m); color: var(--apagado-fora); text-decoration: none; font-weight: 500; }
 .filtro a[aria-current="page"] { color: var(--texto); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }
