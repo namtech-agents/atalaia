@@ -189,6 +189,20 @@
           </form>
         </section>
 
+        <!-- O histórico: quem fez o quê e quando, do mais antigo ao mais novo. Vem da tabela evento_do_caso,
+             que só recebe linhas novas (a conta do prazo refeita não apaga a anterior aqui) -->
+        <section class="vidro cartao" th:unless="${historico.isEmpty()}" aria-labelledby="titulo-historico">
+          <h2 class="rotulo" id="titulo-historico">Histórico</h2>
+          <ol class="historico">
+            <li th:each="evento : ${historico}">
+              <span class="quando num" th:text="${evento.quandoPorExtenso}"></span>
+              <span th:text="${evento.acao}"></span>
+              <!-- Casos de antes do histórico existir não sabem quem fez: a linha fica sem o nome -->
+              <span class="quem" th:if="${evento.quem != null}" th:text="${evento.quem}"></span>
+            </li>
+          </ol>
+        </section>
+
         <section class="vidro cartao" th:unless="${notificacao.texto.isBlank()}">
           <h2 class="rotulo" id="titulo-lido">Texto lido do PDF</h2>
           <!-- tabindex=0: quem usa só o teclado consegue rolar o texto -->

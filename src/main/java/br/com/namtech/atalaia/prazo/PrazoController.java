@@ -15,6 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
+import br.com.namtech.atalaia.historico.Historico;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 
@@ -30,9 +31,12 @@ public class PrazoController {
     private final NotificacaoRepository notificacoes;
     private final RegraCadastradaRepository regras;
     private final Clock relogio;
+    private final Historico historico;
 
     //O relogio é o do Atalaia (AtalaiaApplication), entregue pelo Spring
-    public PrazoController(NotificacaoRepository notificacoes, RegraCadastradaRepository regras, Clock relogio) {
+    public PrazoController(NotificacaoRepository notificacoes, RegraCadastradaRepository regras, Clock relogio,
+            Historico historico) {
+        this.historico = historico;
         this.notificacoes = notificacoes;
         this.regras = regras;
         this.relogio = relogio;
@@ -88,6 +92,11 @@ public class PrazoController {
 
         //Se a Calculadora mandou para revisão, a data vem vazia: a tela mostra a conta e o motivo, sem data nenhuma
         notificacao.registrarPrazo(diaDaCiencia, prazo.dataLimite(), prazo.passos(), usuario.email());
+        //A notificação guarda só a ultima conta; o historico guarda todas
+        historico.registrar(notificacao, usuario.email(), prazo.dataLimite() == null
+                ? "Pediu a conta do prazo (ciência " + Datas.DIA.format(diaDaCiencia) + "), que foi para revisão"
+                : "Calculou o prazo: data limite " + Datas.DIA.format(prazo.dataLimite())
+                        + " (ciência " + Datas.DIA.format(diaDaCiencia) + ")");
         return volta;
     }
 }

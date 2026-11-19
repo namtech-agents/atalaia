@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import br.com.namtech.atalaia.Datas;
+import br.com.namtech.atalaia.historico.Historico;
 import br.com.namtech.atalaia.notificacao.Empresa;
 
 //O lado do cliente: a pagina que o dono da empresa abre pelo link, sem login (liberada na ConfiguracaoDeSeguranca).
@@ -25,8 +26,10 @@ public class ClienteController {
 
     private final AvisoAoClienteRepository avisos;
     private final Clock relogio;
+    private final Historico historico;
 
-    public ClienteController(AvisoAoClienteRepository avisos, Clock relogio) {
+    public ClienteController(AvisoAoClienteRepository avisos, Clock relogio, Historico historico) {
+        this.historico = historico;
         this.avisos = avisos;
         this.relogio = relogio;
     }
@@ -61,6 +64,10 @@ public class ClienteController {
                 recado.addFlashAttribute("erro", "Marque uma das datas para confirmar.");
             } else {
                 aviso.confirmar(marcada, agora);
+                //A data marcada vai junto: se nao for a data limite, quem le o historico ja ve que vale uma ligação
+                historico.registrar(aviso.getNotificacao(), Historico.CLIENTE,
+                        "Confirmou a ciência marcando " + Datas.DIA.format(marcada)
+                                + (aviso.acertouOPrazo() ? "" : ", que não é a data limite"));
             }
         }
         //Redireciona: recarregar a pagina nao envia a resposta de novo. O # abre a pagina na pergunta

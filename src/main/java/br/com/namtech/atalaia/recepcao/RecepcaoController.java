@@ -32,6 +32,7 @@ import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.aviso.SituacaoDoAviso;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
+import br.com.namtech.atalaia.historico.Historico;
 import br.com.namtech.atalaia.leitor.LeitorPdf;
 import br.com.namtech.atalaia.leitor.PaginasDemais;
 import br.com.namtech.atalaia.leitor.ResultadoLeitura;
@@ -70,10 +71,11 @@ public class RecepcaoController {
     private final LeitorPdf leitor = new LeitorPdf();
     private final Analista analista;
     private final Verificador verificador = new Verificador();
+    private final Historico historico;
 
     //O Spring entrega os repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
     public RecepcaoController(EmpresaRepository empresas, NotificacaoRepository notificacoes,
-            RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia,
+            RegraCadastradaRepository regras, AvisoAoClienteRepository avisos, Clock relogio, ModeloDeIA ia, Historico historico,
             @Value("${atalaia.endereco-publico:}") String enderecoPublico) {
         //Sem a barra do fim, para montar o link sempre do mesmo jeito
         this.enderecoPublico = enderecoPublico.strip().replaceAll("/+$", "");
@@ -83,6 +85,7 @@ public class RecepcaoController {
         this.avisos = avisos;
         this.relogio = relogio;
         this.analista = new Analista(ia);
+        this.historico = historico;
     }
 
     //AuthenticationPrincipal: o Spring Security entrega quem esta com a sessão aberta.
@@ -123,6 +126,7 @@ public class RecepcaoController {
         }
 
         Notificacao notificacao = notificacoes.save(analisar(empresa, pdf, leitura));
+        historico.registrar(notificacao, usuario.email(), "Enviou o PDF");
         //Redireciona para a pagina da notificação: recarregar a tela nao envia o arquivo de novo
         return "redirect:/notificacoes/" + notificacao.getId();
     }
@@ -151,6 +155,7 @@ public class RecepcaoController {
             model.addAttribute("resolvidaEm", Notificacao.DIA_E_HORA.format(notificacao.getResolvidaEm()));
         }
         avisoAoCliente(notificacao, usuario, model);
+        model.addAttribute("historico", historico.doCaso(id, usuario.escritorioId()));
         return "notificacao";
     }
 
@@ -213,6 +218,7 @@ public class RecepcaoController {
                 return notificacao(usuario, id, model);
             }
             notificacao.resolver(desfecho, texto);
+            historico.registrar(notificacao, usuario.email(), "Resolveu o caso. Desfecho: " + desfecho.getNome());
         }
         //Redireciona: recarregar a tela nao envia o formulario de novo
         return "redirect:/notificacoes/" + id;
