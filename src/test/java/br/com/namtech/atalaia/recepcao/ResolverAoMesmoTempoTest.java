@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
@@ -41,6 +42,10 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 class ResolverAoMesmoTempoTest {
 
     private MockMvc navegador;
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -70,13 +75,13 @@ class ResolverAoMesmoTempoTest {
     void apagaOQueCriou() {
         //Só apaga o que chegou a ser criado: se o teste quebrou antes, o erro que aparece é o dele, nao o daqui
         if (id != null) {
-            notificacoes.deleteById(id);
+            banco.apagar(Notificacao.class, id);
         }
         if (empresa != null) {
-            empresas.delete(empresa);
+            banco.apagar(Empresa.class, empresa.getId());
         }
         if (escritorio != null) {
-            escritorios.delete(escritorio);
+            banco.apagar(Escritorio.class, escritorio.getId());
         }
     }
 
@@ -118,7 +123,7 @@ class ResolverAoMesmoTempoTest {
         }
 
         //Conferir (é esta a prova da tranca): o segundo encontrou o caso ja resolvido e nao trocou nada
-        Notificacao guardada = notificacoes.findById(id).orElseThrow();
+        Notificacao guardada = banco.buscar(Notificacao.class, id);
         assertThat(guardada.getDesfecho()).isEqualTo(Desfecho.ARQUIVADO);
         assertThat(guardada.getObservacao()).isEqualTo("Primeira observação.");
     }

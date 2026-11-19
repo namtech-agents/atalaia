@@ -15,6 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.ListCrudRepository;
+import org.springframework.data.repository.support.Repositories;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
@@ -35,6 +39,10 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 @SpringBootTest
 @Transactional
 class IsolamentoEntreEscritoriosTest {
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -113,13 +121,29 @@ class IsolamentoEntreEscritoriosTest {
         //e o teste passaria mesmo sem a proteção), e a contagem de antes
         MockMultipartFile pdf = new MockMultipartFile("arquivo", "teste.pdf", MediaType.APPLICATION_PDF_VALUE,
                 getClass().getResourceAsStream("/pdfs/notificacao-simples.pdf").readAllBytes());
-        long antes = notificacoes.count();
+        long antes = banco.contar(Notificacao.class);
 
         //Agir: envia trocando, no formulario, o numero da empresa pelo da empresa alheia
         deFora.perform(multipart("/enviar").file(pdf).param("empresaId", empresaAlheia.getId().toString()))
                 .andExpect(status().isBadRequest());
 
         //Conferir: nada foi guardado
-        assertThat(notificacoes.count()).isEqualTo(antes);
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
+    }
+
+    @Test
+    void nenhumRepositorioTemBuscaSemOEscritorio() {
+        //Arrumar: todos os repositórios que o Spring Data montou para o sistema
+        Repositories repositorios = new Repositories(aplicacao);
+
+        //Conferir: nenhum herda o pacote pronto do Spring (CrudRepository, JpaRepository...), que traz findAll,
+        //findById, count e delete sem o escritório. Cada repositório estende Repository e declara só o que usa;
+        //se alguém trocar de volta, este teste avisa antes de o código esquecer o filtro
+        assertThat(repositorios).isNotEmpty();
+        for (Class<?> entidade : repositorios) {
+            Class<?> repositorio = repositorios.getRequiredRepositoryInformation(entidade).getRepositoryInterface();
+            assertThat(CrudRepository.class.isAssignableFrom(repositorio)).as(repositorio.getSimpleName()).isFalse();
+            assertThat(ListCrudRepository.class.isAssignableFrom(repositorio)).as(repositorio.getSimpleName()).isFalse();
+        }
     }
 }

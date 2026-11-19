@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 
@@ -33,6 +34,10 @@ import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 class ContaControllerTest {
 
     private static final String SENHA = "uma frase comprida";
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private MockMvc navegador;
@@ -117,7 +122,7 @@ class ContaControllerTest {
 
         //Conferir: só a primeira conta existe
         assertThat(usuarios.existsByEmail("bia@escritorio.test")).isFalse();
-        assertThat(usuarios.findAll()).filteredOn(usuario -> usuario.getEmail().equals("ana@escritorio.test")).hasSize(1);
+        assertThat(banco.todos(Usuario.class)).filteredOn(usuario -> usuario.getEmail().equals("ana@escritorio.test")).hasSize(1);
     }
 
     @Test

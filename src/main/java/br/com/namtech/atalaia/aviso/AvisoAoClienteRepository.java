@@ -3,13 +3,19 @@ package br.com.namtech.atalaia.aviso;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.Repository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import jakarta.persistence.LockModeType;
 
-public interface AvisoAoClienteRepository extends JpaRepository<AvisoAoCliente, Long> {
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, todos com o escritório, mais o save.
+//O compilador barra quem tentar um findAll ou findById sem filtro (ver EventoDoCasoRepository e o
+//IsolamentoEntreEscritoriosTest, que confere todos os repositórios)
+public interface AvisoAoClienteRepository extends Repository<AvisoAoCliente, Long> {
+
+    AvisoAoCliente save(AvisoAoCliente avisoAoCliente);
+
 
     //Os avisos de uma notificação, o mais novo primeiro. Leva o escritório de quem entrou:
     //um escritório nao ve o aviso de outro

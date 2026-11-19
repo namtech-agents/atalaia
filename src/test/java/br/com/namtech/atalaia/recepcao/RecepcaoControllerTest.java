@@ -32,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
@@ -55,6 +56,10 @@ class RecepcaoControllerTest {
 
     //O navegador de mentira é montado antes de cada teste, ja com a sessão de uma pessoa do escritório de teste
     private MockMvc navegador;
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -110,7 +115,7 @@ class RecepcaoControllerTest {
     private Notificacao ultimaGuardadaNoBanco() {
         mesa.flush();
         mesa.clear();
-        return notificacoes.findAll().getLast();
+        return banco.ultima(Notificacao.class);
     }
 
     private MockMultipartFile pdfDeExemplo(String nome) throws IOException {
@@ -297,7 +302,7 @@ class RecepcaoControllerTest {
         //Arrumar: um arquivo de texto com nome e tipo de PDF (o disfarce nao pode enganar)
         MockMultipartFile falso = new MockMultipartFile("arquivo", "notificacao.pdf",
                 MediaType.APPLICATION_PDF_VALUE, "isto nao é um PDF".getBytes());
-        long antes = notificacoes.count();
+        long antes = banco.contar(Notificacao.class);
 
         //Agir e conferir: volta para o formulario com a mensagem, e nada é guardado
         navegador.perform(multipart("/enviar").file(falso).param("empresaId", empresa.getId().toString()))
@@ -308,7 +313,7 @@ class RecepcaoControllerTest {
                 .andExpect(content().string(containsString("aria-describedby=\"erro-envio dica-arquivo\"")))
                 //a empresa escolhida volta marcada, para a pessoa nao escolher de novo
                 .andExpect(content().string(containsString("selected=\"selected\"")));
-        assertThat(notificacoes.count()).isEqualTo(antes);
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
     }
 
     @Test
@@ -317,7 +322,7 @@ class RecepcaoControllerTest {
         while (limiteDeEnvios.reservar(String.valueOf(empresa.getEscritorio().getId()))) {
             //gasta a próxima vaga
         }
-        long antes = notificacoes.count();
+        long antes = banco.contar(Notificacao.class);
 
         //Agir e conferir: o envio seguinte é recusado com 429 (pedidos demais), a IA não é chamada e nada é guardado
         navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
@@ -328,7 +333,7 @@ class RecepcaoControllerTest {
                 .andExpect(content().string(not(containsString("aria-invalid"))))
                 .andExpect(content().string(containsString("Muitos PDFs enviados em pouco tempo.")));
         verify(ia, never()).responder(anyString());
-        assertThat(notificacoes.count()).isEqualTo(antes);
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
     }
 
     @Test
@@ -362,11 +367,11 @@ class RecepcaoControllerTest {
                 LeitorPdfTest.pdfComPaginasDemais(true));
 
         //Agir e conferir: recusa com a mensagem e nao guarda nada
-        long antes = notificacoes.count();
+        long antes = banco.contar(Notificacao.class);
         navegador.perform(multipart("/enviar").file(pdf).param("empresaId", empresa.getId().toString()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Este PDF tem páginas demais")));
-        assertThat(notificacoes.count()).isEqualTo(antes);
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
     }
 
     //Guarda direto no banco uma notificação conferida, para os testes de resolver
@@ -489,10 +494,10 @@ class RecepcaoControllerTest {
     @Test
     void empresaQueNaoExisteERecusada() throws Exception {
         //Agir e conferir: um numero de empresa que nao esta no banco da 400 e nada é guardado
-        long antes = notificacoes.count();
+        long antes = banco.contar(Notificacao.class);
         navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-simples.pdf")).param("empresaId", "999999"))
                 .andExpect(status().isBadRequest());
-        assertThat(notificacoes.count()).isEqualTo(antes);
+        assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
     }
 
     @Test

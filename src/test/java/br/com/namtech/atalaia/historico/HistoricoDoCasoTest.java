@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.Datas;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
@@ -45,6 +46,10 @@ import br.com.namtech.atalaia.prazo.TipoDeContagem;
 @SpringBootTest
 @Transactional
 class HistoricoDoCasoTest {
+
+    //Para conferir o banco inteiro (os repositórios só buscam dentro de um escritório)
+    @Autowired
+    private BancoDeTeste banco;
 
     @Autowired
     private WebApplicationContext aplicacao;
@@ -101,7 +106,7 @@ class HistoricoDoCasoTest {
         escritorioNavegando.perform(multipart("/enviar")
                 .file(new MockMultipartFile("arquivo", "intimacao.pdf", MediaType.APPLICATION_PDF_VALUE, bytes))
                 .param("empresaId", empresa.getId().toString())).andExpect(status().is3xxRedirection());
-        Notificacao caso = notificacoes.findAll().getLast();
+        Notificacao caso = banco.ultima(Notificacao.class);
         String endereco = "/notificacoes/" + caso.getId();
         //...calcula o prazo com a ciência de hoje...
         escritorioNavegando.perform(post(endereco + "/prazo").param("regraId", regra.getId().toString())
