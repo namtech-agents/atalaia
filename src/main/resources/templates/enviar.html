@@ -36,7 +36,7 @@
       <div th:unless="${empresas.isEmpty()}">
         <label class="rotulo" for="arquivo">PDF da notificação</label>
         <input id="arquivo" name="arquivo" type="file" accept="application/pdf,.pdf" required aria-describedby="dica-arquivo"
-               th:attr="aria-invalid=${erro != null} ? 'true', aria-describedby=${erro != null} ? 'erro-envio dica-arquivo' : 'dica-arquivo'"
+               th:attr="aria-invalid=${erro != null and erroNaoEDoArquivo == null} ? 'true', aria-describedby=${erro != null} ? 'erro-envio dica-arquivo' : 'dica-arquivo'"
                th:autofocus="${erro != null}">
         <p class="dica" id="dica-arquivo">Só PDF, até 10 MB.</p>
       </div>

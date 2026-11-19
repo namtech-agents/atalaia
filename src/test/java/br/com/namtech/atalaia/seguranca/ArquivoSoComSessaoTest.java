@@ -7,7 +7,8 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,9 +34,9 @@ class ArquivoSoComSessaoTest {
     //Um envio de arquivo que falha o teste se alguém tentar ler o que veio dentro
     private static final class PedidoQueNaoPodeSerLido extends MockHttpServletRequest {
 
-        PedidoQueNaoPodeSerLido() {
+        PedidoQueNaoPodeSerLido(String tipo) {
             super("POST", "/enviar");
-            setContentType("multipart/form-data; boundary=fronteira");
+            setContentType(tipo);
         }
 
         private static AssertionError leu() {
@@ -78,18 +79,21 @@ class ArquivoSoComSessaoTest {
         }
     }
 
-    @Test
-    void envioDeArquivoSemSessaoVaiParaATelaDeEntrarSemSerLido() throws Exception {
+    //O tipo de sempre e os disfarces que o servidor também lê: maiúscula, espaço depois da barra, outro multipart
+    @ParameterizedTest
+    @ValueSource(strings = { "multipart/form-data; boundary=x", "Multipart/Form-Data; boundary=x",
+            "multipart/ form-data; boundary=x", "multipart/mixed; boundary=x" })
+    void envioDeArquivoSemSessaoVaiParaATelaDeEntrarSemSerLido(String tipo) throws Exception {
         //Arrumar: um envio de arquivo de quem não entrou
         MockHttpServletResponse resposta = new MockHttpServletResponse();
 
         //Agir: passa pela fila do Spring Security. Se chegar ao fim dela, algo deixou passar
-        springSecurity.doFilter(new PedidoQueNaoPodeSerLido(), resposta, (pedido, saida) -> {
+        springSecurity.doFilter(new PedidoQueNaoPodeSerLido(tipo), resposta, (pedido, saida) -> {
             throw new AssertionError("O envio sem sessão passou pelo Spring Security");
         });
 
         //Conferir: foi mandado para a tela de entrar, sem ninguém ler o arquivo
         assertThat(resposta.getStatus()).isEqualTo(302);
-        assertThat(resposta.getRedirectedUrl()).isEqualTo("/entrar");
+        assertThat(resposta.getRedirectedUrl()).isEqualTo("/entrar?expirou");
     }
 }

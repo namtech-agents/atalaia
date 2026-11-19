@@ -17,7 +17,8 @@ if (botao) {
   });
 
   // Voltar pelo navegador pode trazer a página guardada com o botão ainda desligado: liga de novo
-  window.addEventListener('pageshow', () => {
+  window.addEventListener('pageshow', evento => {
+    if (!evento.persisted) return;   // primeira carga: o botão já está ligado
     botao.disabled = false;
     botao.textContent = textoOriginal;
     botao.form.removeAttribute('aria-busy');

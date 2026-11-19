@@ -2,10 +2,10 @@ package br.com.namtech.atalaia.seguranca;
 
 import java.io.IOException;
 
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -23,19 +23,21 @@ public class ArquivoSoComSessao extends OncePerRequestFilter {
     //Sabe distinguir quem entrou de verdade de quem só está navegando (o "anônimo" do Spring Security)
     private final AuthenticationTrustResolver quemE = new AuthenticationTrustResolverImpl();
 
-    //Só os envios de arquivo (multipart). Os outros formulários são pequenos e o servidor já limita
+    //Todo tipo que começa com "multipart", escrito de qualquer jeito. Comparar com "multipart/form-data" inteiro
+    //deixava passar "multipart/ form-data" (com espaço) e "multipart/mixed", que o servidor também lê
+    //(achado da revisão do Hefesto). Os outros formulários são pequenos e o Tomcat corta em 2 MB
     @Override
     protected boolean shouldNotFilter(HttpServletRequest pedido) {
-        String tipo = pedido.getContentType();
-        return tipo == null || !tipo.toLowerCase().startsWith(MediaType.MULTIPART_FORM_DATA_VALUE);
+        return !StringUtils.startsWithIgnoreCase(pedido.getContentType(), "multipart");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest pedido, HttpServletResponse resposta, FilterChain proximo)
             throws ServletException, IOException {
-        //Quem entrou vem da sessão (cookie), sem olhar o corpo do pedido
+        //Quem entrou vem da sessão (cookie), sem olhar o corpo do pedido. Sem sessão, quase sempre é alguém que
+        //deixou a tela aberta até a sessão vencer: ?expirou faz a tela de entrar explicar que o envio não foi
         if (!quemE.isAuthenticated(SecurityContextHolder.getContext().getAuthentication())) {
-            resposta.sendRedirect(pedido.getContextPath() + "/entrar");
+            resposta.sendRedirect(pedido.getContextPath() + "/entrar?expirou");
             return;
         }
         proximo.doFilter(pedido, resposta);

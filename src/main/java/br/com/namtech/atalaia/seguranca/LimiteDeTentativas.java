@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LimiteDeTentativas {
 
-    static final Duration JANELA = Duration.ofMinutes(15);
+    public static final Duration JANELA = Duration.ofMinutes(15);
 
     //Teto de endereços guardados ao mesmo tempo. Sem teto, um ataque vindo de muitos endereços encheria a memória
     static final int TETO_PADRAO = 10_000;

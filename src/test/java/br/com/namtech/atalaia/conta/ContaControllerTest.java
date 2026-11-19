@@ -144,6 +144,14 @@ class ContaControllerTest {
     }
 
     @Test
+    void sessaoQueVenceuNoEnvioExplicaNaTelaDeEntrar() throws Exception {
+        //Agir e conferir: o ArquivoSoComSessao manda para /entrar?expirou, e a tela diz que o arquivo não foi
+        navegador.perform(get("/entrar").param("expirou", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sua sessão terminou e o arquivo não foi enviado.")));
+    }
+
+    @Test
     void sairFechaASessao() throws Exception {
         //Agir e conferir: o botão de sair leva para a tela de entrar com o aviso
         navegador.perform(post("/sair").with(csrf()).with(user(NavegadorDeTeste.pessoaDo(0L))))

@@ -115,8 +115,12 @@ public class RecepcaoController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
 
         //Cada envio pode custar uma chamada à IA: o escritório tem uma conta de envios por janela (ConfiguracaoDeSeguranca).
-        //429 = pedidos demais. Confere antes de trazer o arquivo para a memória
+        //Conta também o envio que vai ser recusado (grande, não é PDF): ler um PDF ruim também custa ao servidor.
+        //O arquivo já chegou ao servidor a esta altura; o que se poupa é o PDFBox e a IA.
+        //429 = pedidos demais; Retry-After diz em quantos segundos tentar de novo (a janela inteira, no pior caso)
         if (!limiteDeEnvios.reservar(String.valueOf(usuario.escritorioId()))) {
+            resposta.setHeader("Retry-After", String.valueOf(LimiteDeTentativas.JANELA.toSeconds()));
+            model.addAttribute("erroNaoEDoArquivo", true);
             return recusar(HttpStatus.TOO_MANY_REQUESTS, ENVIOS_DEMAIS, usuario, empresaId, model, resposta);
         }
         //Confere o tamanho antes de trazer o arquivo para a memoria

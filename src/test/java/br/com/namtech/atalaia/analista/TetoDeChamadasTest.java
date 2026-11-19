@@ -51,4 +51,13 @@ class TetoDeChamadasTest {
         assertThatThrownBy(() -> teto.responder("a")).hasMessage("fora do ar");
         assertThatThrownBy(() -> teto.responder("b")).hasMessage("fora do ar");
     }
+
+    @Test
+    void aIaDeVerdadeSaiComOTeto() {
+        //Agir: a configuração monta a IA com uma chave qualquer (montar não chama o Google)
+        ModeloDeIA ia = new ConfiguracaoDaIA().modeloDeIA("chave-de-teste");
+
+        //Conferir: o Gemini vem embrulhado no teto. Os outros testes usam uma IA de mentira e não veriam a falta dele
+        assertThat(ia).isInstanceOf(TetoDeChamadas.class);
+    }
 }

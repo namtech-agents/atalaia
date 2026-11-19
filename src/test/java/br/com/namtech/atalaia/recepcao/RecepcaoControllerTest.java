@@ -323,6 +323,9 @@ class RecepcaoControllerTest {
         navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
                         .param("empresaId", empresa.getId().toString()))
                 .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "900"))
+                //o problema não é o arquivo: o campo dele não fica marcado como inválido
+                .andExpect(content().string(not(containsString("aria-invalid"))))
                 .andExpect(content().string(containsString("Muitos PDFs enviados em pouco tempo.")));
         verify(ia, never()).responder(anyString());
         assertThat(notificacoes.count()).isEqualTo(antes);

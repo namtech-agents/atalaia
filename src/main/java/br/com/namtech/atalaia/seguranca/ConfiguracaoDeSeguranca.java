@@ -3,7 +3,6 @@ package br.com.namtech.atalaia.seguranca;
 import java.time.Clock;
 
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -62,9 +61,12 @@ public class ConfiguracaoDeSeguranca {
     //A conta de envios de PDF por escritório (issue #144): cada envio custa uma chamada à IA. Usa a mesma peça da
     //trava do login, com outra chave (o número do escritório, em vez do endereço) e outro máximo: 60 a cada 15 min
     //dá folga para um escritório que despeja a remessa do mês e para quem tenta gastar a IA à toa
+    //Limite conhecido (revisão do Hefesto): quem cria várias contas soma as cotas; fica registrado na issue #144
+    static final int ENVIOS_POR_JANELA = 60;
+
     @Bean
-    LimiteDeTentativas limiteDeEnvios(@Value("${atalaia.envios.maximo:60}") int maximo, Clock relogio) {
-        return new LimiteDeTentativas(maximo, LimiteDeTentativas.TETO_PADRAO, relogio);
+    LimiteDeTentativas limiteDeEnvios(Clock relogio) {
+        return new LimiteDeTentativas(ENVIOS_POR_JANELA, LimiteDeTentativas.TETO_PADRAO, relogio);
     }
 
     //Embaralha a senha com bcrypt antes de guardar, e sabe conferir depois
