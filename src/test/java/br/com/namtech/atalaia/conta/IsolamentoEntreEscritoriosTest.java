@@ -31,6 +31,7 @@ import br.com.namtech.atalaia.BancoDeTeste;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
 import br.com.namtech.atalaia.analista.TipoDeDocumento;
+import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
@@ -100,6 +101,19 @@ class IsolamentoEntreEscritoriosTest {
 
         //Conferir: o caso continua aberto
         assertThat(notificacaoAlheia.isResolvida()).isFalse();
+    }
+
+    @Test
+    void naoDaParaReabrirANotificacaoDeOutroEscritorio() throws Exception {
+        //Arrumar: o caso do outro escritório está resolvido
+        notificacaoAlheia.resolver(Desfecho.ARQUIVADO, "Resolvido pelo dono.");
+
+        //Agir: manda reabrir direto pelo endereço
+        deFora.perform(post("/notificacoes/" + notificacaoAlheia.getId() + "/reabrir"))
+                .andExpect(status().isNotFound());
+
+        //Conferir: continua resolvido
+        assertThat(notificacaoAlheia.isResolvida()).isTrue();
     }
 
     @Test

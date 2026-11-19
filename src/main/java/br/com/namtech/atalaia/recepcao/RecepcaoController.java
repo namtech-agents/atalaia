@@ -262,6 +262,23 @@ public class RecepcaoController {
         return "redirect:/notificacoes/" + id;
     }
 
+    //Reabre um caso resolvido. O desfecho e a observação saem da notificação, mas vão inteiros para o historico:
+    //quem olhar depois ve que o caso foi fechado, com o quê, e quem reabriu
+    @PostMapping("/notificacoes/{id}/reabrir")
+    @Transactional
+    public String reabrir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
+        //Mesma tranca do resolver: reabrir e resolver ao mesmo tempo esperam um pelo outro
+        Notificacao notificacao = notificacoes.buscarParaAlterar(id, usuario.escritorioId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        //Ja aberto (clique duplo, ou outra aba reabriu antes): nada a fazer
+        if (notificacao.isResolvida()) {
+            historico.registrar(notificacao, usuario.email(), "Reabriu o caso. Desfecho anterior: "
+                    + notificacao.getDesfecho().getNome() + ". Observação: " + notificacao.getObservacao());
+            notificacao.reabrir();
+        }
+        return "redirect:/notificacoes/" + id;
+    }
+
     //Entrega o PDF para a tela mostrar ao lado do texto lido. Se o original trazia scripts, vai a copia sem eles:
     //o PDF abre dentro do Atalaia e no navegador de quem trabalha, e nao deve rodar nada sozinho ali
     @GetMapping("/notificacoes/{id}/pdf")

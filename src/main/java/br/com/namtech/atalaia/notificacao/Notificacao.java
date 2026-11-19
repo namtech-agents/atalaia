@@ -123,7 +123,7 @@ public class Notificacao {
         return resumoSugerido;
     }
 
-    //Fecha o caso. Uma notificação só se resolve uma vez: o que foi registrado nao é trocado depois
+    //Fecha o caso. Resolver de novo um caso fechado nao troca o registro: para corrigir, primeiro reabre
     public void resolver(Desfecho desfecho, String observacao) {
         if (isResolvida()) {
             throw new IllegalStateException("A notificação " + id + " já foi resolvida");
@@ -131,6 +131,18 @@ public class Notificacao {
         this.desfecho = desfecho;
         this.observacao = observacao;
         this.resolvidaEm = Instant.now();
+    }
+
+    //Volta o caso para aberto (desfecho marcado errado, ou o caso voltou a andar).
+    //Os tres campos saem juntos: o banco só aceita os tres vazios ou os tres preenchidos (V4).
+    //Quem chama guarda antes o que estava registrado no historico, que nao apaga nada
+    public void reabrir() {
+        if (!isResolvida()) {
+            throw new IllegalStateException("A notificação " + id + " não está resolvida");
+        }
+        this.desfecho = null;
+        this.observacao = null;
+        this.resolvidaEm = null;
     }
 
     //Guarda a conta do prazo. dataLimite vem vazia quando a Calculadora mandou o caso para revisão.

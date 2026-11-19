@@ -161,8 +161,10 @@ html { scroll-padding-top: 92px; }
 /* formulário */
 .formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
 /* Título do formulário: o mesmo peso do título da lista ao lado (.grupo h2). Com o estilo de rótulo
-   ele ficava igual aos rótulos dos campos logo abaixo e não parecia título */
-.formulario h2 { font-size: 15px; font-weight: 700; }
+   ele ficava igual aos rótulos dos campos logo abaixo e não parecia título.
+   O mesmo vale para o título de cartão colado num formulário ("Fechar o caso"): :has(+ form) pega só esse caso;
+   os outros cartões seguem com o título pequeno em cima do valor grande. Navegador sem :has fica com o rótulo */
+.formulario h2, .cartao > h2.rotulo:has(+ form) { font-size: 15px; font-weight: 700; color: var(--texto); }
 /* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
 .formulario select, .formulario input, .resolver select, .resolver input, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
 .formulario input[type="file"] { padding: 6px; }
@@ -237,6 +239,7 @@ html { scroll-padding-top: 92px; }
 .historico li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
 .historico .quando, .historico .quem { font-size: 13px; color: var(--apagado); }
 .cartao .observacao { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); }
+.reabrir { margin-top: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 
 /* tela inicial: o título com o botão de enviar ao lado, e os grupos de notificações */
 .titulo.com-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

@@ -534,6 +534,65 @@ class RecepcaoControllerTest {
     }
 
     @Test
+    void reabrirVoltaOCasoParaAbertoEODesfechoAnteriorFicaNoHistorico() throws Exception {
+        //Arrumar: um caso resolvido com o desfecho errado (a observação longa testa a coluna do historico)
+        Notificacao aberta = notificacaoAberta();
+        String observacaoLonga = "x".repeat(500);
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", "ARQUIVADO").param("observacao", observacaoLonga))
+                .andExpect(status().is3xxRedirection());
+
+        //Agir: reabre
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir"))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: o caso voltou a ficar aberto, sem desfecho, e o formulario de fechar aparece de novo.
+        //O que estava registrado nao se perde: vai inteiro para o historico
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isResolvida()).isFalse();
+        assertThat(guardada.getDesfecho()).isNull();
+        assertThat(guardada.getObservacao()).isNull();
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(content().string(containsString("Marcar como resolvida")))
+                .andExpect(content().string(not(containsString("Reabrir o caso"))))
+                .andExpect(content().string(containsString(
+                        "Reabriu o caso. Desfecho anterior: Arquivado. Observação: " + observacaoLonga)));
+
+        //e o caso pode ser fechado de novo, com o desfecho certo
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/resolver")
+                .param("desfecho", "MULTA_REDUZIDA").param("observacao", "Corrigido."))
+                .andExpect(status().is3xxRedirection());
+        assertThat(ultimaGuardadaNoBanco().getDesfecho()).isEqualTo(Desfecho.MULTA_REDUZIDA);
+    }
+
+    @Test
+    void casoResolvidoMostraOBotaoDeReabrir() throws Exception {
+        //Arrumar: um caso resolvido
+        Notificacao aberta = notificacaoAberta();
+        aberta.resolver(Desfecho.OUTRO, "Observação.");
+
+        //Agir e conferir: a tela oferece reabrir, com o formulario que aponta para a rota certa
+        navegador.perform(get("/notificacoes/" + aberta.getId()))
+                .andExpect(content().string(containsString("Reabrir o caso")))
+                .andExpect(content().string(containsString("/notificacoes/" + aberta.getId() + "/reabrir")));
+    }
+
+    @Test
+    void reabrirCasoQueJaEstaAbertoNaoMudaNada() throws Exception {
+        //Arrumar: um caso aberto (clique duplo no reabrir, ou a pagina velha aberta em outra aba)
+        Notificacao aberta = notificacaoAberta();
+
+        //Agir: manda reabrir
+        navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir"))
+                .andExpect(status().is3xxRedirection());
+
+        //Conferir: continua aberto e nada entrou no historico
+        assertThat(ultimaGuardadaNoBanco().isResolvida()).isFalse();
+        navegador.perform(get("/notificacoes/" + aberta.getId()))
+                .andExpect(content().string(not(containsString("Reabriu o caso"))));
+    }
+
+    @Test
     void envioSemArquivoERecusadoComMensagem() throws Exception {
         //Arrumar: o campo do arquivo veio vazio
         MockMultipartFile vazio = new MockMultipartFile("arquivo", "", MediaType.APPLICATION_PDF_VALUE, new byte[0]);
