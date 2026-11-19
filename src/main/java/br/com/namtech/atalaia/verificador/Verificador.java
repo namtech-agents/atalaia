@@ -45,8 +45,9 @@ public class Verificador {
             } else if (!contemInteiro(trecho, valor)) {
                 motivos.add("O valor do dado \"" + dado.rotulo() + "\" não aparece no trecho de onde ele diz ter saído.");
             } else if (!dado.conhecido()) {
-                //Valor e trecho conferem, mas o nome nao é um dos que o pedido lista: quem garante que o dado é o que
-                //o nome diz? (a IA poderia chamar o valor da multa de "desconto") Uma pessoa confere
+                //Valor e trecho conferem, mas o nome nao é um dos que o pedido lista (a IA poderia chamar o valor
+                //da multa de "desconto"): o nome precisa ser um dos pedidos. Que o dado seja mesmo o que o nome diz,
+                //esta regra nao garante; isso continua com o trecho, que a tela mostra ao lado
                 motivos.add("O dado \"" + dado.rotulo() + "\" não é um dos campos que o Atalaia confere.");
             }
         }
