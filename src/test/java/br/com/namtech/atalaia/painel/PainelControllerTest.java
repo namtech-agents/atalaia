@@ -88,44 +88,100 @@ class PainelControllerTest {
     }
 
     @Test
-    void painelSeparaOQuePrecisaDeGenteDoQueFoiConferido() throws Exception {
-        //Arrumar: uma empresa inventada com uma notificação conferida e outra que foi para revisao
+    void casoSemPrazoPrecisaDeGenteEDizOQueFalta() throws Exception {
+        //Arrumar: uma notificação conferida e outra que foi para revisao, as duas ainda sem prazo
         Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
-        Notificacao conferida = notificacoes.save(
-                new Notificacao(empresa, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
-        Notificacao paraRevisao = notificacoes.save(
-                new Notificacao(empresa, PDF, "", null, List.of(), List.of("Este PDF não tem texto.")));
+        notificacoes.save(new Notificacao(empresa, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
+        notificacoes.save(new Notificacao(empresas.save(new Empresa(escritorio, "99999009000281", "Empresa Escaneada")),
+                PDF, "", null, List.of(), List.of("Este PDF não tem texto.")));
 
         //Agir: abre a tela inicial
         String pagina = navegador.perform(get("/"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        //Conferir: os dois grupos aparecem, "precisa de gente" primeiro, cada um com o link da sua notificação
-        assertThat(pagina).contains("Empresa de Teste", "Cobrança", "Sem tipo", "1 notificação");
-        assertThat(pagina.indexOf("Precisa de gente")).isLessThan(pagina.indexOf("Lidas e conferidas"));
-        assertThat(pagina.indexOf("/notificacoes/" + paraRevisao.getId()))
-                .isBetween(pagina.indexOf("Precisa de gente"), pagina.indexOf("Lidas e conferidas"));
-        assertThat(pagina.indexOf("/notificacoes/" + conferida.getId()))
-                .isGreaterThan(pagina.indexOf("Lidas e conferidas"));
+        //Conferir: as duas precisam de gente, cada uma com o que falta; os outros grupos nem aparecem
+        assertThat(pagina).contains("Precisa de gente", "2 notificações", "Cobrança", "Sem tipo")
+                .doesNotContain("Esperando o cliente", "Pronto para fechar");
+        assertThat(linhaDa(pagina, "Empresa de Teste")).contains("etq falta\">Calcular o prazo<");
+        assertThat(linhaDa(pagina, "Empresa Escaneada")).contains("etq falta\">Conferir a leitura<");
     }
 
     @Test
-    void notificacaoResolvidaSaiDosGruposAbertosEVaiParaOFim() throws Exception {
+    void casosVaoParaOGrupoDeQuemTemOProximoPasso() throws Exception {
+        //Arrumar: um caso sem aviso, um com o link valendo e um que o cliente confirmou com a data certa
+        Instant agora = Instant.now();
+        casoComPrazo(escritorio, "99999009001000", "Empresa Sem Aviso");
+        avisoDo(casoComPrazo(escritorio, "99999009001001", "Empresa Aguardando"), "token-de-teste-aguardando", agora);
+        avisoDo(casoComPrazo(escritorio, "99999009001002", "Empresa Confirmou"), "token-de-teste-confirmou", agora)
+                .confirmar(LocalDate.now(Notificacao.TERESINA).plusDays(20), agora);
+        notificacoes.flush();
+
+        //Agir
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+
+        //Conferir: os tres grupos, nesta ordem, cada caso no seu (pelo id do titulo de cada grupo)
+        int gente = pagina.indexOf("id=\"titulo-gente\"");
+        int cliente = pagina.indexOf("id=\"titulo-cliente\"");
+        int fechar = pagina.indexOf("id=\"titulo-fechar\"");
+        assertThat(gente).isNotNegative();
+        assertThat(gente).isLessThan(cliente);
+        assertThat(cliente).isLessThan(fechar);
+        assertThat(pagina.indexOf("Empresa Sem Aviso")).isBetween(gente, cliente);
+        assertThat(pagina.indexOf("Empresa Aguardando")).isBetween(cliente, fechar);
+        assertThat(pagina.indexOf("Empresa Confirmou")).isGreaterThan(fechar);
+        assertThat(linhaDa(pagina, "Empresa Sem Aviso")).contains("etq falta\">Avisar o cliente<");
+        //Um caso em cada grupo: a contagem no singular
+        assertThat(pagina).contains("1 notificação");
+    }
+
+    @Test
+    void prazoDaProximaSemanaSaiEmAmarelo() throws Exception {
+        //Arrumar: um caso que vence daqui a 5 dias
+        Notificacao caso = casoComPrazo(escritorio, "99999009001000", "Empresa Perto");
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
+        caso.registrarPrazo(hoje, hoje.plusDays(5), List.of("Conta de teste."), "pessoa@escritorio.test");
+        notificacoes.flush();
+
+        //Agir e conferir: o nivel do meio da cor chega na pagina
+        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+        assertThat(linhaDa(pagina, "Empresa Perto")).contains("etq num perto\">Vence em 5 dias");
+    }
+
+    @Test
+    void resolvidaSaiDaTelaInicialEApareceNoFiltro() throws Exception {
         //Arrumar: uma notificação que precisava de gente e ja foi resolvida
         Empresa empresa = empresas.save(new Empresa(escritorio, "99999009000100", "Empresa de Teste"));
         Notificacao resolvida = notificacoes.save(
                 new Notificacao(empresa, PDF, "", null, List.of(), List.of("Este PDF não tem texto.")));
         resolvida.resolver(Desfecho.ARQUIVADO, "Conferido com o cliente.");
 
-        //Agir: abre a tela inicial
-        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+        //Agir: abre a tela inicial e depois o filtro das resolvidas
+        String inicial = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+        String filtro = navegador.perform(get("/").param("ver", "resolvidas"))
+                .andReturn().getResponse().getContentAsString();
 
-        //Conferir: ela aparece só no grupo das resolvidas, com o desfecho e a data em que foi resolvida
-        assertThat(pagina).doesNotContain("Precisa de gente", "Recebida em")
-                .contains("Nada precisa de gente", "Desfecho: Arquivado", "Resolvida em");
-        assertThat(pagina.indexOf("/notificacoes/" + resolvida.getId() + "\""))
-                .isGreaterThan(pagina.indexOf("Resolvidas"));
+        //Conferir: a tela inicial diz que nada precisa de gente e aponta para o filtro, sem listar o caso;
+        //no filtro ele aparece com o desfecho e a data em que foi resolvido
+        assertThat(inicial).doesNotContain("/notificacoes/" + resolvida.getId() + "\"", "Precisa de gente")
+                .contains("Nada precisa de gente", "href=\"/?ver=resolvidas\"", "aria-current=\"page\">Abertas");
+        assertThat(filtro).contains("/notificacoes/" + resolvida.getId() + "\"", "Desfecho: Arquivado", "Resolvida em")
+                .doesNotContain("Nada precisa de gente", "Recebida em")
+                .contains("aria-current=\"page\">Resolvidas");
+    }
+
+    @Test
+    void filtroDasResolvidasSemNenhumaCaiNasAbertas() throws Exception {
+        //Arrumar: um caso aberto e nenhum resolvido
+        casoComPrazo(escritorio, "99999009001000", "Empresa Aberta");
+        notificacoes.flush();
+
+        //Agir: alguem abre o filtro das resolvidas por um link antigo
+        String pagina = navegador.perform(get("/").param("ver", "resolvidas"))
+                .andReturn().getResponse().getContentAsString();
+
+        //Conferir: a tela mostra as abertas, em vez de ficar vazia
+        assertThat(pagina).contains("Empresa Aberta", "Precisa de gente");
     }
 
     @Test
@@ -141,8 +197,9 @@ class PainelControllerTest {
         Thread.sleep(20);
         chegouPrimeiro.resolver(Desfecho.OUTRO, "Resolvida por ultimo.");
 
-        //Agir: abre a tela inicial
-        String pagina = navegador.perform(get("/")).andReturn().getResponse().getContentAsString();
+        //Agir: abre o filtro das resolvidas
+        String pagina = navegador.perform(get("/").param("ver", "resolvidas"))
+                .andReturn().getResponse().getContentAsString();
 
         //Conferir: a ultima resolvida aparece em cima, mesmo tendo chegado antes
         assertThat(pagina.indexOf("/notificacoes/" + chegouPrimeiro.getId() + "\""))
@@ -242,7 +299,8 @@ class PainelControllerTest {
         assertThat(linhaDa(pagina, "Empresa Vencida")).contains("etq atencao\">Link vencido sem confirmação<");
         assertThat(linhaDa(pagina, "Empresa Mudou"))
                 .contains("etq atencao\">Cliente confirmou, mas a data limite mudou<");
-        assertThat(linhaDa(pagina, "Empresa Resolvida")).doesNotContain(">Aguardando o cliente");
+        //Caso resolvido nem aparece na tela inicial (fica no filtro das resolvidas)
+        assertThat(pagina).doesNotContain("Empresa Resolvida");
     }
 
     @Test

@@ -48,7 +48,15 @@ public record NotificacaoNaLista(Long id, String empresa, TipoDeDocumento tipo, 
         return "Vence em " + dias + " dias, " + DIA.format(dataLimite);
     }
 
+    //Ate 7 dias (e fora do alerta), o prazo fica no nivel do meio: é a semana que vem
+    static final int DIAS_DE_PERTO = 7;
+
     public boolean prazoApertado(LocalDate hoje) {
         return ChronoUnit.DAYS.between(hoje, dataLimite) <= DIAS_DE_ALERTA;
+    }
+
+    //Tres niveis de cor: apertado (vermelho), perto (amarelo) e com folga (sem cor). Cada caso fica em um só
+    public boolean prazoPerto(LocalDate hoje) {
+        return !prazoApertado(hoje) && ChronoUnit.DAYS.between(hoje, dataLimite) <= DIAS_DE_PERTO;
     }
 }

@@ -46,6 +46,18 @@ class NotificacaoNaListaTest {
     }
 
     @Test
+    void prazoDaProximaSemanaFicaNoNivelDoMeio() {
+        //Arrumar: hoje é 18/11/2026
+        LocalDate hoje = LocalDate.of(2026, 11, 18);
+
+        //Agir e conferir: de 4 a 7 dias é "perto"; apertado nao é perto (cada caso tem uma cor só); 8 dias é folga
+        assertThat(comPrazo(hoje.plusDays(3)).prazoPerto(hoje)).isFalse();
+        assertThat(comPrazo(hoje.plusDays(4)).prazoPerto(hoje)).isTrue();
+        assertThat(comPrazo(hoje.plusDays(7)).prazoPerto(hoje)).isTrue();
+        assertThat(comPrazo(hoje.plusDays(8)).prazoPerto(hoje)).isFalse();
+    }
+
+    @Test
     void casoResolvidoOuSemDataNaoMostraPrazo() {
         //Agir e conferir
         assertThat(comPrazo(null).temPrazo()).isFalse();
