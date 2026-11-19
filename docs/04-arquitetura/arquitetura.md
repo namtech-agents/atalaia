@@ -1,4 +1,4 @@
-# Arquitetura e diagramas · Atalaia (Marco 2, 18/11/2026, já com o login e o prazo na tela)
+# Arquitetura e diagramas · Atalaia (18/11/2026, já com o login, o prazo na tela e o aviso ao cliente)
 
 Como o Atalaia é montado por dentro e como as peças conversam. Os desenhos são feitos em Mermaid, que o GitHub desenha sozinho.
 
@@ -6,7 +6,7 @@ Em cada diagrama separei o que **já existe no código** do que está **planejad
 
 ## A ideia em uma frase
 
-O PDF passa por uma fila de peças pequenas. Cada peça faz uma coisa só e sabe dizer "precisa de gente". A IA participa de duas peças e nunca calcula prazo.
+O PDF passa por uma fila de peças pequenas. Cada peça faz uma coisa só e sabe dizer "precisa de gente". A IA participa de uma peça só (o Analista), com duas tarefas: separar os dados e rascunhar o resumo. Ela nunca calcula prazo.
 
 ## 1. Casos de uso
 
@@ -30,9 +30,10 @@ flowchart LR
         fila["Ver o que precisa de alguém hoje"]
         resolver["Abrir um caso e marcar resolvido"]
         areas["Definir quem cuida de cada área"]
-        ciencia["Confirmar que recebeu o aviso"]
+        avisar["Aprovar o resumo e gerar o link do aviso ao cliente"]
+        ciencia["Abrir o link, responder a pergunta e confirmar que recebeu"]
         extrair["Extrair os dados do documento"]
-        resumo["Escrever o resumo simples"]
+        resumo["Rascunhar o resumo simples"]
     end
 
     contador --> conta
@@ -41,6 +42,7 @@ flowchart LR
     contador --> enviar
     contador --> ver
     contador --> conferir
+    contador --> avisar
     responsavel --> fila
     responsavel --> resolver
     dono --> areas
@@ -51,8 +53,8 @@ flowchart LR
 
     classDef pronto fill:#dfe5ff,stroke:#2438a6,color:#141922
     classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
-    class conta,empresas,regras,enviar,ver,conferir,fila,resolver,extrair pronto
-    class areas,ciencia,resumo planejado
+    class conta,empresas,regras,enviar,ver,conferir,avisar,ciencia,fila,resolver,extrair,resumo pronto
+    class areas planejado
 ```
 
 Azul: já dá para fazer. Tracejado: planejado.
@@ -66,6 +68,7 @@ Um sistema só (monólito) em Spring Boot. As telas são páginas HTML montadas 
 ```mermaid
 flowchart TB
     navegador["Navegador do escritório"]
+    navegadorDoCliente["Navegador do cliente<br/>(dono da empresa, sem conta)"]
 
     subgraph app["Atalaia (Spring Boot, Java 21)"]
         seguranca["Segurança (Spring Security)<br/>fica na frente de todo pedido:<br/>sem sessão, leva para a tela de entrar"]
@@ -79,7 +82,8 @@ flowchart TB
         regras["Regras de prazo<br/>cadastradas pelo escritório, com artigo e data da conferência"]
         prazo["Prazo<br/>recebe a ciência e a regra, grava a conta na notificação"]
         calculadora["Calculadora de prazo<br/>conta de dois jeitos, mostra os passos"]
-        avisos["Avisos (planejado)<br/>e-mail e Telegram"]
+        aviso["Aviso ao cliente<br/>gera o link e guarda o que o cliente vai ver"]
+        paginaDoCliente["Página do cliente<br/>pública, só com o link: mostra o aviso e grava a confirmação"]
         revisao["Fila 'precisa de gente'<br/>(primeiro grupo do Painel)"]
     end
 
@@ -93,6 +97,11 @@ flowchart TB
     seguranca -->|envia o PDF| recepcao
     seguranca -->|cadastra uma regra| regras
     seguranca -->|informa a ciência e escolhe a regra| prazo
+    seguranca -->|aprova o resumo e gera o link| aviso
+    navegadorDoCliente -->|abre o link, sem sessão| seguranca
+    seguranca -->|só o endereço do link é liberado| paginaDoCliente
+    aviso --> banco
+    paginaDoCliente --> banco
     prazo --> regras
     prazo --> calculadora
     prazo --> banco
@@ -104,17 +113,13 @@ flowchart TB
     recepcao --> analista
     analista --> ia
     recepcao --> verificador
-    calculadora -.-> avisos
     recepcao --> banco
     leitor -->|PDF sem texto| revisao
     analista -->|IA em dúvida ou fora do ar| revisao
     verificador -->|dado não bate| revisao
-
-    classDef planejado fill:#ffffff,stroke:#aab3bf,stroke-dasharray:4 3,color:#47505e
-    class avisos planejado
 ```
 
-Seta cheia: ligação que já funciona. Seta tracejada: a peça existe (ou está planejada), mas a ligação ainda não foi feita.
+Todas as ligações do desenho já funcionam. Aviso por e-mail e por Telegram fica para depois de 03/12: hoje o escritório copia o link e manda pelo canal que já usa com o cliente.
 
 Decisões:
 
@@ -122,6 +127,10 @@ Decisões:
 - **Nenhuma regra de prazo vem no código.** Cada escritório cadastra as regras que ele mesmo leu na norma, com o artigo e a data da conferência (RNF09). Seis meses depois, a regra aparece como vencida, pedindo nova conferência.
 - **O prazo nasce de uma pessoa.** Ela informa o dia da ciência e escolhe a regra; a Calculadora faz a conta de dois jeitos e a notificação guarda a data com a conta inteira, o artigo, quem pediu e quando. A conta é uma cópia: excluir a regra depois não muda o que foi mostrado. Se as duas contas não baterem, a notificação fica sem data e mostra o motivo.
 - **Feriados: só os nacionais de data fixa.** Toda conta avisa que feriado estadual, municipal, ponto facultativo e Sexta-feira Santa não entram, para a pessoa conferir.
+- **O aviso ao cliente é um link sem senha.** O endereço leva um código sorteado de 32 bytes, vale 30 dias e mostra só aquele aviso. O aviso guarda uma cópia do resumo, dos documentos e da data limite: é a prova do que o cliente viu. Um aviso novo tira a validade do anterior, mas nunca apaga uma confirmação já feita.
+- **A confirmação tem uma pergunta de conferência.** O código monta três datas, uma delas a data limite, e o cliente marca uma. Errar não impede confirmar: a página explica a data certa e o escritório fica sabendo que vale uma ligação. A confirmação se chama "registro de ciência" e prova que o link foi aberto e confirmado, não quem é a pessoa.
+- **O resumo da IA é rascunho.** Ele vem no mesmo pedido em que o Analista classifica o documento e abre o campo do aviso. O código joga fora o rascunho que cite data, dias, mês ou link, ou que traga um número que não esteja escrito igual no documento. Quem aprova e envia é o escritório.
+- **Um relógio só.** Todo controller pede ao Spring o mesmo relógio, no fuso de Teresina, em vez de olhar a hora do servidor.
 - **Toda peça devolve um aviso `precisaDeRevisao`.** É o mesmo desenho no Leitor, no Verificador e na Calculadora. Se uma falhar, o caso fica sem prazo e vai para uma pessoa (RNF01).
 - **O escritório é a cerca dos dados.** Cada usuário e cada empresa pertencem a um escritório. Toda busca de empresa ou de notificação leva o `escritorioId` de quem entrou, e a notificação de outro escritório responde como se não existisse (404). O `IsolamentoEntreEscritoriosTest` tenta furar essa cerca de quatro jeitos.
 - **A pessoa se cadastra sozinha.** O cadastro grava o escritório e a primeira pessoa dele juntos (ou os dois, ou nenhum) e a conta já nasce com a sessão aberta. Ainda não há papéis nem convite de colegas.
@@ -281,6 +290,33 @@ classDiagram
             +pdf(Long id)
         }
 
+    class AvisoAoCliente {
+        String token
+        String resumo
+        LocalDate prazo
+        +situacao(Instant agora) SituacaoDoAviso
+        +confirmar(LocalDate resposta, Instant agora)
+        +substituir(Instant agora)
+        +opcoesDePrazo() List~LocalDate~
+    }
+    class SituacaoDoAviso {
+        <<enumeration>>
+        AGUARDANDO
+        CONFIRMADO
+        SUBSTITUIDO
+        VENCIDO
+    }
+    class AvisoController {
+        +avisar(Long id, String resumo, String documentos)
+    }
+    class ClienteController {
+        +aviso(String token)
+        +confirmar(String token, String resposta)
+    }
+    AvisoAoCliente "*" --> "1" Notificacao
+    AvisoAoCliente ..> SituacaoDoAviso : informa
+    AvisoController ..> AvisoAoCliente : cria e substitui
+    ClienteController ..> AvisoAoCliente : mostra e confirma
     LeitorPdf ..> ResultadoLeitura : devolve
     Verificador ..> DadoExtraido : recebe
     Verificador ..> ResultadoVerificacao : devolve
@@ -469,6 +505,38 @@ sequenceDiagram
     end
 ```
 
+### 4.3 Do aviso até o registro de ciência
+
+```mermaid
+sequenceDiagram
+    actor Contador
+    participant Aviso as Aviso (com sessão)
+    participant Banco
+    participant Pagina as Página do cliente (sem sessão)
+    actor Cliente
+
+    Note over Contador,Aviso: Só com o caso aberto e a data limite calculada
+    Contador->>Aviso: aprova ou corrige o resumo, lista os documentos
+    Aviso->>Banco: tranca os avisos do caso e tira a validade do anterior
+    Aviso->>Banco: grava o aviso novo: código sorteado, resumo, documentos e a data limite
+    Aviso-->>Contador: mostra o link para copiar
+    Contador-->>Cliente: manda o link pelo canal que já usa
+
+    Cliente->>Pagina: abre o link
+    Pagina->>Banco: busca o aviso pelo código
+    alt código que não existe
+        Pagina-->>Cliente: página de erro, sem dizer nada do caso
+    else aviso substituído ou vencido
+        Pagina-->>Cliente: pede um link novo ao escritório, sem mostrar o conteúdo
+    else aviso aguardando
+        Pagina-->>Cliente: resumo, data limite, documentos e a pergunta com três datas
+        Cliente->>Pagina: marca uma data e confirma
+        Pagina->>Banco: tranca o aviso e grava o registro de ciência (quando e qual data marcou)
+        Pagina-->>Cliente: confirma; se marcou a data errada, explica a certa
+    end
+    Note over Contador,Banco: A tela do caso e a lista inicial mostram: aguardando, confirmou, data errada ou link vencido
+```
+
 ## 5. Estados da notificação
 
 ```mermaid
@@ -482,15 +550,18 @@ stateDiagram-v2
     PrecisaDeGente --> ComPrazo: pessoa confere o documento, informa a ciência e a regra
     PrecisaDeGente --> Resolvida: pessoa fecha o caso com o desfecho
     Conferida --> Resolvida: pessoa fecha o caso com o desfecho
-    ComPrazo --> AvisadaAoCliente: link enviado
+    ComPrazo --> AvisadaAoCliente: escritório gera o link
+    AvisadaAoCliente --> ClienteConfirmou: cliente responde a pergunta e confirma
+    AvisadaAoCliente --> AvisadaAoCliente: link venceu ou a data mudou, aviso novo
     AvisadaAoCliente --> Resolvida: caso fechado com o desfecho
+    ClienteConfirmou --> Resolvida: caso fechado com o desfecho
     ComPrazo --> Resolvida: caso fechado com o desfecho
     Resolvida --> [*]
 ```
 
-Hoje o código chega a **Conferida** ou **Precisa de gente** (pelo aviso `precisaDeRevisao`), das duas a **Com prazo**, e de qualquer uma a **Resolvida**. **Avisada ao cliente** é o plano do Marco 3.
+O código já percorre todos os estados do desenho.
 
-O estado não é uma coluna do banco: sai dos campos da notificação (`precisaDeRevisao`, `dataLimite`, `resolvidaEm`).
+O estado não é uma coluna do banco: sai dos campos da notificação (`precisaDeRevisao`, `dataLimite`, `resolvidaEm`) e do aviso mais novo do caso (`confirmado_em`, `cancelado_em`, `vale_ate`).
 
 ## 6. O banco
 
@@ -501,6 +572,7 @@ erDiagram
     escritorio ||--o{ regra_de_prazo : "conferiu"
     empresa ||--o{ notificacao : "recebe"
     notificacao ||--o{ dado_extraido : "tem"
+    notificacao ||--o{ aviso_ao_cliente : "avisa"
 
     escritorio {
         bigint id PK
@@ -536,6 +608,21 @@ erDiagram
         text conta_do_prazo
         timestamptz prazo_calculado_em
         varchar prazo_calculado_por
+        varchar resumo_sugerido "rascunho da IA"
+    }
+    aviso_ao_cliente {
+        bigint id PK
+        bigint notificacao_id FK
+        varchar token UK "código sorteado do link"
+        varchar resumo "cópia do que o cliente viu"
+        varchar documentos
+        date prazo "cópia da data limite"
+        timestamptz criado_em
+        varchar criado_por
+        timestamptz vale_ate
+        timestamptz cancelado_em
+        timestamptz confirmado_em
+        date resposta "a data que o cliente marcou"
     }
     regra_de_prazo {
         bigint id PK
@@ -566,6 +653,8 @@ erDiagram
 | `V6__escritorio_e_usuario.sql` | Cria `escritorio` e `usuario` (e-mail único, senha embaralhada); cada empresa passa a ser de um escritório, e o CNPJ deixa de ser único no sistema inteiro para ser único dentro do escritório |
 | `V7__regra_de_prazo.sql` | Cria `regra_de_prazo`: as regras que cada escritório conferiu na norma, com artigo e data da conferência |
 | `V8__notificacao_guarda_a_conta_do_prazo.sql` | A notificação passa a guardar a ciência, a conta passo a passo, quem pediu e quando (os quatro vazios ou os quatro preenchidos) |
+| `V9__aviso_ao_cliente.sql` | Cria `aviso_ao_cliente`: o link, a cópia do que o cliente viu, a validade e o registro de ciência (quando confirmou e qual data marcou, os dois vazios ou os dois preenchidos) |
+| `V10__notificacao_guarda_o_resumo_sugerido.sql` | A notificação passa a guardar o rascunho do resumo escrito pela IA |
 | `db/exemplo/R__empresas_de_exemplo.sql` | Ficou vazio: com o login, cada escritório cadastra as próprias empresas. O arquivo continua porque o Flyway já registrou o nome dele |
 
 Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
@@ -577,4 +666,6 @@ Arquivo que entrou na `main` não se edita: mudou, cria o próximo número.
 - Os testes usam o H2 em memória com as mesmas migrações do Flyway.
 - O isolamento entre escritórios tem teste próprio: dois escritórios, e um tenta ver, resolver, listar e enviar no lugar do outro.
 - O login passou por teste de invasão antes de entrar na `main`, sem achado crítico ou alto. O que ficou para antes de ir ao ar está na issue #144.
+- O aviso ao cliente também passou por teste de invasão na cópia local antes de entrar na `main`, sem achado crítico, alto ou médio: página pública, confirmação repetida, dez confirmações ao mesmo tempo e acesso entre escritórios.
+- A leitura da IA é medida num lote de 20 documentos inventados (`LoteDoAnalistaTest`, só roda com a chave): o mínimo é acertar o tipo de 18 e passar 16 sem revisão.
 - Só dado inventado: regra de prazo de exemplo, empresas de exemplo, PDFs de exemplo.

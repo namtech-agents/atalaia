@@ -39,7 +39,7 @@ A lista do que entra na prévia, do que vem depois e do que foi descartado está
 
 ## Situação
 
-O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: criar a conta do escritório e entrar com e-mail e senha, cadastrar as empresas clientes (cada escritório só vê as suas), enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, mostrar tudo na tela, listar as notificações (o que precisa de gente primeiro) e marcar um caso como resolvido, com o desfecho. O prazo já aparece na tela: o escritório cadastra as regras que ele mesmo conferiu na norma (o Atalaia não traz regra pronta), informa o dia da ciência, e a data limite é calculada por código, com a conta passo a passo e o artigo ao lado. A lista mostra primeiro o prazo mais perto. O que falta para o caminho ficar inteiro: definir o responsável, os avisos e a confirmação do cliente.
+O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: criar a conta do escritório e entrar com e-mail e senha, cadastrar as empresas clientes (cada escritório só vê as suas), enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, mostrar tudo na tela, listar as notificações (o que precisa de gente primeiro) e marcar um caso como resolvido, com o desfecho. O prazo já aparece na tela: o escritório cadastra as regras que ele mesmo conferiu na norma (o Atalaia não traz regra pronta), informa o dia da ciência, e a data limite é calculada por código, com a conta passo a passo e o artigo ao lado. A lista mostra primeiro o prazo mais perto. O caminho já fecha: o escritório aprova um resumo simples (rascunhado pela IA), gera um link para o cliente, e a confirmação dele fica gravada como registro de ciência, com uma pergunta que confere se ele entendeu a data. O que falta até 03/12: acabamento das telas e colocar no ar. Aviso por e-mail e responsável por área ficaram para depois.
 
 Em 10/11 a pesquisa de concorrentes mostrou que só monitorar as caixas já existe. Em 11/11 o rumo mudou para o que vem depois do aviso, e o Canvas, o backlog e este README foram ajustados.
 
@@ -53,6 +53,7 @@ O que já está pronto:
 - Projeto Spring Boot criado, com banco PostgreSQL e as tabelas criadas pelo Flyway
 - Leitor de PDF, Analista, Verificador e Calculadora de prazo, cada um com os seus testes
 - Login com cadastro do escritório, com teste de que um escritório não vê os dados de outro
+- Aviso ao cliente por link, com resumo rascunhado pela IA e aprovado pelo escritório, pergunta de conferência e registro de ciência; a lista inicial mostra quem ainda não confirmou
 - Arquitetura e diagramas UML ([docs/04-arquitetura](docs/04-arquitetura/arquitetura.md))
 
 Próximos marcos:
