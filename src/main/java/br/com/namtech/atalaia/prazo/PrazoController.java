@@ -3,8 +3,6 @@ package br.com.namtech.atalaia.prazo;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,8 +23,9 @@ import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 @Controller
 public class PrazoController {
 
-    //Ciência muito longe de hoje é erro de digitação (2206 no lugar de 2026)
-    static final int ANOS_DE_FOLGA = 2;
+    //Ciência de mais de dois anos atras é erro de digitação (2016 no lugar de 2026).
+    //O FeriadosNacionais conta com este piso: o feriado de 20/11 só existe desde 2024
+    private static final int ANOS_PARA_TRAS = 2;
 
     private final NotificacaoRepository notificacoes;
     private final RegraCadastradaRepository regras;
@@ -61,15 +60,22 @@ public class PrazoController {
         RegraCadastrada regra = regraId == null ? null
                 : regras.findByIdAndEscritorioId(regraId, usuario.escritorioId()).orElse(null);
         String erro = null;
-        if (diaDaCiencia == null || diaDaCiencia.isBefore(hoje.minusYears(ANOS_DE_FOLGA))
-                || diaDaCiencia.isAfter(hoje.plusYears(ANOS_DE_FOLGA))) {
+        //O campo que falhou: a tela marca ele e liga o aviso de erro a ele
+        String campoComErro = "ciencia";
+        if (diaDaCiencia == null || diaDaCiencia.isBefore(hoje.minusYears(ANOS_PARA_TRAS))) {
             erro = "Informe o dia da ciência. Confira o ano.";
+        //Ciência no futuro quase sempre é o ano digitado errado, e daria uma data limite um ano tarde
+        } else if (diaDaCiencia.isAfter(hoje)) {
+            erro = "O dia da ciência não pode ser no futuro.";
         } else if (regra == null) {
+            campoComErro = "regraId";
             erro = "Escolha a regra de prazo.";
         }
         if (erro != null) {
             recado.addFlashAttribute("erroDoPrazo", erro);
-            recado.addFlashAttribute("cienciaDigitada", ciencia);
+            recado.addFlashAttribute("campoDoPrazoComErro", campoComErro);
+            //So devolve o que tem tamanho de data: o recado fica guardado na sessão ate a proxima tela
+            recado.addFlashAttribute("cienciaDigitada", ciencia.length() <= 10 ? ciencia : "");
             recado.addFlashAttribute("regraEscolhida", regraId);
             return volta;
         }
@@ -79,10 +85,8 @@ public class PrazoController {
         CalculadoraDePrazo calculadora = new CalculadoraDePrazo(FeriadosNacionais.entre(ano, ano + 2), relogio);
         PrazoCalculado prazo = calculadora.calcular(regra.paraAConta(), diaDaCiencia);
 
-        List<String> passos = new ArrayList<>(prazo.passos());
-        passos.add(FeriadosNacionais.AVISO);
         //Se a Calculadora mandou para revisão, a data vem vazia: a tela mostra a conta e o motivo, sem data nenhuma
-        notificacao.registrarPrazo(diaDaCiencia, prazo.dataLimite(), passos, usuario.email());
+        notificacao.registrarPrazo(diaDaCiencia, prazo.dataLimite(), prazo.passos(), usuario.email());
         return volta;
     }
 
