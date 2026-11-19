@@ -254,7 +254,9 @@ public class RecepcaoController {
         if (analise.tipo() == TipoDeDocumento.INFORMATIVO && verificador.falaEmObrigacao(leitura.texto())) {
             motivos.add("A IA classificou como informativo, mas o texto fala em prazo, intimação, citação ou multa.");
         }
-        return new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
+        Notificacao notificacao = new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
+        notificacao.sugerirResumo(analise.resumoSugerido());
+        return notificacao;
     }
 
     //Devolve a mensagem para a pessoa, ou null se o arquivo pode seguir

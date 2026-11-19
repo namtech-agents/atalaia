@@ -228,4 +228,50 @@ class AnalistaTest {
         assertThat(analise.precisaDeRevisao()).isTrue();
         assertThat(analise.motivo()).isEqualTo("A IA não respondeu. O documento não foi analisado.");
     }
+
+    @Test
+    void resumoSugeridoSaiNumaLinhaSoSemEspacosRepetidos() {
+        //Arrumar: a IA manda o resumo com quebra de linha e espaços sobrando
+        ModeloDeIA ia = pergunta -> """
+                {"tipo": "INTIMACAO", "confianca": "alta", "dados": [],
+                 "resumo": "  A Receita pediu os livros da empresa.\\n\\nSepare os livros   e avise o escritório. "}
+                """;
+
+        //Agir
+        Analise analise = new Analista(ia).analisar(TEXTO);
+
+        //Conferir
+        assertThat(analise.resumoSugerido())
+                .isEqualTo("A Receita pediu os livros da empresa. Separe os livros e avise o escritório.");
+    }
+
+    @Test
+    void resumoQueCitaPrazoDataOuLinkEJogadoFora() {
+        //Quem escreve prazo é o codigo, nunca a IA: sugestão que cita data, dias, horas ou link nao serve
+        assertThat(Analista.resumoQueServe("Você tem 30 dias para responder.")).isNull();
+        assertThat(Analista.resumoQueServe("Responda em 48 horas.")).isNull();
+        assertThat(Analista.resumoQueServe("Responda até 10/12.")).isNull();
+        assertThat(Analista.resumoQueServe("Responda até 10/12/2026.")).isNull();
+        assertThat(Analista.resumoQueServe("Responda até 1º de Dezembro.")).isNull();
+        assertThat(Analista.resumoQueServe("Pague em https://exemplo.test/boleto")).isNull();
+        assertThat(Analista.resumoQueServe("Acesse www.exemplo.test")).isNull();
+        //Tambem nao serve: vazio, sem letra nenhuma e maior que o campo do aviso
+        assertThat(Analista.resumoQueServe(null)).isNull();
+        assertThat(Analista.resumoQueServe(" ... ")).isNull();
+        assertThat(Analista.resumoQueServe("a".repeat(Analista.RESUMO_MAXIMO + 1))).isNull();
+
+        //Valor em dinheiro e numero de lei ou de processo passam: nao sao prazo
+        assertThat(Analista.resumoQueServe("Cobrança de R$ 1.250,00, pela Lei 8.212/91, processo 123/2024."))
+                .isEqualTo("Cobrança de R$ 1.250,00, pela Lei 8.212/91, processo 123/2024.");
+    }
+
+    @Test
+    void iaEmDuvidaNaoDeixaResumoSugerido() {
+        //Arrumar: confiança baixa, mas com resumo
+        ModeloDeIA ia = pergunta -> "{\"tipo\": \"COBRANCA\", \"confianca\": \"baixa\", \"dados\": [], "
+                + "\"resumo\": \"Chegou uma cobrança.\"}";
+
+        //Agir e conferir: documento que vai para revisao nao leva rascunho
+        assertThat(new Analista(ia).analisar(TEXTO).resumoSugerido()).isNull();
+    }
 }

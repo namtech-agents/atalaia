@@ -58,7 +58,9 @@ class LoteDoAnalistaTest {
             }
             //Uma linha por documento, para ler o resultado no terminal
             System.out.println(documento.getFileName() + " | tipo: " + analise.tipo() + (tipoCerto ? " (certo)" : " (ERRADO)")
-                    + " | " + (passou ? "sem revisão" : "REVISÃO: " + analise.motivo() + " " + verificacao.motivos()));
+                    + " | " + (passou ? "sem revisão" : "REVISÃO: " + analise.motivo() + " " + verificacao.motivos())
+                    //O rascunho do aviso ao cliente (os documentos do lote sao inventados, pode aparecer no terminal)
+                    + " | resumo: " + (analise.resumoSugerido() == null ? "(sem rascunho)" : analise.resumoSugerido()));
             Thread.sleep(PAUSA_EM_MILISSEGUNDOS);
         }
         System.out.println("Tipos certos: " + tiposCertos + " de " + documentos.size()

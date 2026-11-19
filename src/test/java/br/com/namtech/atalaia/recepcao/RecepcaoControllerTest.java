@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -92,7 +93,8 @@ class RecepcaoControllerTest {
     private void iaResponde(String prazo) {
         when(ia.responder(anyString())).thenReturn("""
                 {"tipo": "INTIMACAO", "confianca": "alta", "dados": [
-                  {"campo": "prazo", "valor": "%s", "trecho": "Prazo: 30 dias a contar da ciência"}]}
+                  {"campo": "prazo", "valor": "%s", "trecho": "Prazo: 30 dias a contar da ciência"}],
+                 "resumo": "A Receita pediu os livros da empresa. Separe os livros e avise o escritório."}
                 """.formatted(prazo));
     }
 
@@ -155,6 +157,39 @@ class RecepcaoControllerTest {
                 .andExpect(header().doesNotExist("Content-Security-Policy"))
                 .andExpect(header().string("X-Content-Type-Options", "nosniff"))
                 .andExpect(content().bytes(pdf.getBytes()));
+    }
+
+    @Test
+    void resumoSugeridoPelaIaAbreOCampoDoAvisoComoRascunho() throws Exception {
+        //Arrumar: o PDF enviado, e depois a data limite calculada (sem ela a tela nao mostra o formulario do aviso)
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()));
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.getResumoSugerido())
+                .isEqualTo("A Receita pediu os livros da empresa. Separe os livros e avise o escritório.");
+        guardada.registrarPrazo(LocalDate.of(2026, 11, 10), LocalDate.of(2026, 12, 10), List.of("Conta de teste."),
+                "pessoa@escritorio.test");
+
+        //Agir e conferir: o campo do resumo abre com o rascunho, e a tela diz quem escreveu
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(content().string(containsString(
+                        ">A Receita pediu os livros da empresa. Separe os livros e avise o escritório.</textarea>")))
+                .andExpect(content().string(containsString("Rascunho escrito por inteligência artificial")));
+    }
+
+    @Test
+    void documentoQueVaiParaRevisaoNaoGuardaResumoSugerido() throws Exception {
+        //Arrumar: a IA inventa um prazo que nao esta no documento (o Verificador manda para revisao)
+        iaResponde("45 dias");
+
+        //Agir
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()));
+
+        //Conferir: se os dados nao valem, o resumo feito em cima deles tambem nao
+        Notificacao guardada = ultimaGuardadaNoBanco();
+        assertThat(guardada.isPrecisaDeRevisao()).isTrue();
+        assertThat(guardada.getResumoSugerido()).isNull();
     }
 
     @Test
