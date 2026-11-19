@@ -293,9 +293,14 @@ html { scroll-padding-top: 92px; }
   /* A CURVA: os dois lados do vidro entram para dentro no meio. Cada lado é uma "mordida" em forma de elipse com
      o centro fora do menu: tamanho (largura e altura do raio) e posição do centro. A da direita é medida em % da
      largura do menu, então cresce sozinha quando ele abre (5px recolhido, 20px aberto). A altura do raio faz a
-     elipse cruzar a borda reta bem onde o canto redondo começa (57,7% da altura menos 30px). */
-  --m-curva-direita: ellipse 14% calc(57.7% - 30px) at 107% 50%;
-  --m-curva-esquerda: ellipse 12px calc(57.7% - 30px) at -6px 50%;
+     elipse cruzar a borda reta bem onde o canto redondo começa (57,7% da altura menos 30px).
+     A altura entra como medida (--m-altura), e não como %: o Chrome e o Edge recusam raio de elipse que mistura
+     % com px, e uma declaração recusada derruba o vidro inteiro (máscara e fundo). O menu tem sempre a altura
+     da janela menos as duas bordas, no computador e na gaveta */
+  --m-altura: calc(100dvh - 2 * var(--borda));
+  --m-raio-curva: calc(var(--m-altura) * .577 - 30px);
+  --m-curva-direita: ellipse 14% var(--m-raio-curva) at 107% 50%;
+  --m-curva-esquerda: ellipse 12px var(--m-raio-curva) at -6px 50%;
   /* o fio de luz: um risco de 1,2px logo depois da borda da elipse, do lado do vidro */
   --m-fio: transparent 100%, var(--menu-luz) 100%, var(--menu-luz) calc(100% + 1.2px), transparent calc(100% + 1.2px);
   --m-fundo: var(--vidro-solido); }
@@ -410,8 +415,9 @@ html { scroll-padding-top: 92px; }
   .so-largo { display: none; }
   .so-estreito { display: block; }
   .menu:has(.m-chave:checked) .so-fechada, .menu:not(:has(.m-chave:checked)) .so-aberta { display: none; }
-  /* gaveta fechada: o nome "Abrir o menu" fica fora da tela junto com ela, mas continua existindo para o leitor de tela */
-  .so-fechada { visibility: visible; }
+  /* gaveta fechada: o rótulo da chave fica fora da tela junto com ela, mas continua existindo para o leitor de
+     tela. Tem que ser o rótulo inteiro: rótulo com visibility: hidden não dá nome ao campo, mesmo com o texto visível */
+  .m-vira { visibility: visible; }
   /* o botão de abrir, na barra de cima: 44px, encostado na borda da barra */
   .topo .m-abre { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; border-radius: var(--raio-m); color: var(--marca); cursor: pointer; }
   .topo .m-abre .ic { width: 20px; height: 20px; }

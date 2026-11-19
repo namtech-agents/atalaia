@@ -12,8 +12,8 @@ if (chave) {
   const GUARDADO = 'atalaia-menu-fixo';
   // A mesma condição que o atalaia.css usa para o menu lateral: janela larga e mouse. Fora dela, é a gaveta
   const computador = matchMedia('(min-width: 861px) and (hover: hover) and (pointer: fine)');
-  // O que fica atrás da gaveta: a barra de cima e o conteúdo
-  const atras = document.querySelectorAll('.pagina > .topo, .pagina > main');
+  // O que fica atrás da gaveta: o link de pular (o destino dele também fica parado), a barra de cima e o conteúdo
+  const atras = document.querySelectorAll('.pagina > .pular, .pagina > .topo, .pagina > main');
 
   // Em janela privada o navegador pode recusar o localStorage: o menu só não lembra
   const lembrar = () => { try { return localStorage.getItem(GUARDADO) === '1'; } catch (e) { return false; } };
