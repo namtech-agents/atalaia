@@ -16,10 +16,10 @@ public class ConfiguracaoDeSeguranca {
     SecurityFilterChain regras(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(pedidos -> pedidos
-                        //Abertos: entrar, criar conta, o que as telas carregam (css, letra, logo), a pagina de erro,
+                        //Abertos: entrar, criar conta, o que as telas carregam (css, js, letra, logo), a pagina de erro,
                         //a saude do sistema e a pagina do cliente (/c/ + token: quem abre é o dono da empresa, que nao
                         //tem conta; o segredo do link é a chave). Todo o resto exige sessão
-                        .requestMatchers("/entrar", "/cadastro", "/css/**", "/fontes/**", "/logo/**", "/error",
+                        .requestMatchers("/entrar", "/cadastro", "/css/**", "/js/**", "/fontes/**", "/logo/**", "/error",
                                 "/actuator/health", "/c/*")
                         .permitAll()
                         .anyRequest().authenticated())

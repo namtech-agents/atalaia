@@ -4,9 +4,9 @@
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
-  <header th:replace="~{fragmentos :: topo}"></header>
+  <header th:replace="~{fragmentos :: topo('regras')}"></header>
 
-  <main>
+  <main id="conteudo">
     <div class="titulo">
       <a class="volta" th:href="@{/}">Notificações</a>
       <h1>Regras de prazo</h1>

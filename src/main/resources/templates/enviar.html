@@ -5,9 +5,9 @@
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
-  <header th:replace="~{fragmentos :: topo}"></header>
+  <header th:replace="~{fragmentos :: topo('notificacoes')}"></header>
 
-  <main>
+  <main id="conteudo">
     <div class="titulo">
       <h1>Enviar notificação</h1>
       <p th:unless="${empresas.isEmpty()}">Envie o PDF que chegou para o cliente. O Atalaia lê o documento e guarda o original para conferência.</p>

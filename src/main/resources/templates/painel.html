@@ -4,9 +4,9 @@
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
-  <header th:replace="~{fragmentos :: topo}"></header>
+  <header th:replace="~{fragmentos :: topo('notificacoes')}"></header>
 
-  <main>
+  <main id="conteudo">
     <div class="titulo com-acao">
       <h1>Notificações</h1>
       <a class="botao cheio" th:unless="${semEmpresa}" th:href="@{/enviar}">Enviar notificação</a>

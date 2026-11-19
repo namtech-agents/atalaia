@@ -2,17 +2,18 @@
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro · Criar conta' : 'Criar conta')}"></head>
 <body>
-<div th:replace="~{fragmentos :: campo}"></div>
-<div class="pagina">
-  <header th:replace="~{fragmentos :: topo}"></header>
+<!-- A mesma tela dividida do entrar.html: a parede azul com a marca e a porta com o formulário -->
+<div class="entrada">
+  <div th:replace="~{fragmentos :: parede}"></div>
 
-  <main>
-    <div class="titulo">
-      <h1>Criar a conta do escritório</h1>
-      <p>A conta nasce com o seu escritório. Depois de entrar, você cadastra as empresas que atende.</p>
-    </div>
+  <main class="porta">
+    <span th:replace="~{fragmentos :: previa}"></span>
 
-    <form class="vidro formulario" method="post" th:action="@{/cadastro}">
+    <form class="formulario" method="post" th:action="@{/cadastro}">
+      <div class="chamada">
+        <h1>Criar a conta do escritório</h1>
+        <p>A conta nasce com o seu escritório. Depois de entrar, você cadastra as empresas que atende.</p>
+      </div>
       <p class="erro" id="erro-cadastro" role="alert" th:if="${erro}" th:text="${erro}"></p>
 
       <div>
