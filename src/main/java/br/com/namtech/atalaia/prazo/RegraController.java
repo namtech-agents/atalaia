@@ -1,8 +1,6 @@
 package br.com.namtech.atalaia.prazo;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -18,15 +16,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import br.com.namtech.atalaia.conta.EscritorioRepository;
 import br.com.namtech.atalaia.conta.UsuarioLogado;
+import br.com.namtech.atalaia.notificacao.Notificacao;
 import jakarta.servlet.http.HttpServletResponse;
 
 //Regras de prazo: o escritório cadastra as regras que ele mesmo conferiu na norma. Nenhuma regra vem pronta no
 //codigo (RNF09): quem responde pela regra é quem leu o artigo, e o artigo e a data aparecem ao lado de todo prazo
 @Controller
 public class RegraController {
-
-    //O "hoje" do Atalaia é o de Teresina, mesmo com o servidor em outro fuso
-    public static final ZoneId TERESINA = ZoneId.of("America/Fortaleza");
 
     //Data de conferência antes disto é erro de digitação
     static final LocalDate PRIMEIRA_CONFERENCIA = LocalDate.of(2000, 1, 1);
@@ -49,7 +45,7 @@ public class RegraController {
         model.addAttribute("cadastrada", cadastrada != null);
         model.addAttribute("excluida", excluida != null);
         model.addAttribute("regras", regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
-        model.addAttribute("hoje", LocalDate.now(TERESINA));
+        model.addAttribute("hoje", LocalDate.now(Notificacao.TERESINA));
         return "regras";
     }
 
@@ -64,13 +60,13 @@ public class RegraController {
             Model model, HttpServletResponse resposta) {
         String nomeArrumado = nome.strip();
         String artigoArrumado = artigo.strip();
-        LocalDate hoje = LocalDate.now(TERESINA);
+        LocalDate hoje = LocalDate.now(Notificacao.TERESINA);
 
         //Cada campo é lido uma vez aqui; as conferencias de baixo só olham o resultado
         String diasArrumado = dias.strip();
         //Ate 3 algarismos: so entao vira numero, para "trinta" ou um numero gigante nao derrubar o pedido
         int quantosDias = diasArrumado.matches("[0-9]{1,3}") ? Integer.parseInt(diasArrumado) : 0;
-        LocalDate conferida = dataDaConferencia(conferidaEm);
+        LocalDate conferida = PrazoController.data(conferidaEm);
 
         String campoComErro = null;
         String erro = null;
@@ -139,14 +135,5 @@ public class RegraController {
     private static boolean naoServeComoTexto(String texto) {
         return texto.codePoints().noneMatch(Character::isLetterOrDigit)
                 || texto.codePoints().anyMatch(Character::isISOControl);
-    }
-
-    //O campo de data do navegador manda 2026-11-18. Devolve null se nao for uma data
-    private static LocalDate dataDaConferencia(String texto) {
-        try {
-            return LocalDate.parse(texto.strip());
-        } catch (DateTimeParseException erro) {
-            return null;
-        }
     }
 }

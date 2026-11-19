@@ -26,9 +26,12 @@ import jakarta.persistence.OrderColumn;
 @Entity
 public class Notificacao {
 
+    //O fuso do Atalaia: o "hoje" e as horas da tela sao os de Teresina, mesmo com o servidor em outro fuso
+    public static final ZoneId TERESINA = ZoneId.of("America/Fortaleza");
+
     //Data e hora como se escreve aqui, no horario de Teresina. Serve a todas as telas
     public static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
-            .withZone(ZoneId.of("America/Fortaleza"));
+            .withZone(TERESINA);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -74,6 +77,17 @@ public class Notificacao {
 
     private String observacao;
 
+    //A conta do prazo: os quatro ficam vazios ate alguem calcular, e sao preenchidos juntos em registrarPrazo()
+    private LocalDate ciencia;
+
+    //Um passo por linha. É uma copia: se a regra mudar ou for excluida depois, o que a pessoa viu continua igual
+    private String contaDoPrazo;
+
+    private Instant prazoCalculadoEm;
+
+    //O e-mail de quem pediu a conta
+    private String prazoCalculadoPor;
+
     protected Notificacao() {
     }
 
@@ -101,6 +115,36 @@ public class Notificacao {
         this.desfecho = desfecho;
         this.observacao = observacao;
         this.resolvidaEm = Instant.now();
+    }
+
+    //Guarda a conta do prazo. dataLimite vem vazia quando a Calculadora mandou o caso para revisão.
+    //Da para refazer enquanto o caso esta aberto; depois de resolvido, a conta que valeu nao muda
+    public void registrarPrazo(LocalDate ciencia, LocalDate dataLimite, List<String> passos, String quem) {
+        if (isResolvida()) {
+            throw new IllegalStateException("A notificação " + id + " já foi resolvida");
+        }
+        this.ciencia = ciencia;
+        this.dataLimite = dataLimite;
+        this.contaDoPrazo = String.join("\n", passos);
+        this.prazoCalculadoEm = Instant.now();
+        this.prazoCalculadoPor = quem;
+    }
+
+    public LocalDate getCiencia() {
+        return ciencia;
+    }
+
+    //Os passos separados de novo, um por item. Vazio se ninguem calculou
+    public List<String> getPassosDoPrazo() {
+        return contaDoPrazo == null ? List.of() : contaDoPrazo.lines().toList();
+    }
+
+    public Instant getPrazoCalculadoEm() {
+        return prazoCalculadoEm;
+    }
+
+    public String getPrazoCalculadoPor() {
+        return prazoCalculadoPor;
     }
 
     public boolean isResolvida() {

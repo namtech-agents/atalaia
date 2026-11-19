@@ -23,6 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 import br.com.namtech.atalaia.NavegadorDeTeste;
 import br.com.namtech.atalaia.conta.Escritorio;
 import br.com.namtech.atalaia.conta.EscritorioRepository;
+import br.com.namtech.atalaia.notificacao.Notificacao;
 
 //Só regra inventada: "Prazo de teste" e "Norma de Teste, art. 1" nao existem em lei nenhuma
 @SpringBootTest
@@ -47,7 +48,7 @@ class RegraControllerTest {
         navegador = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
     }
 
-    private static final String HOJE = LocalDate.now(RegraController.TERESINA).toString();
+    private static final String HOJE = LocalDate.now(Notificacao.TERESINA).toString();
 
     //O formulario da tela. Cada teste diz só os campos que quer ver falhar; os outros vao preenchidos certo
     private MockHttpServletRequestBuilder cadastro(String nome, String dias, String artigo, String conferidaEm) {
@@ -61,7 +62,7 @@ class RegraControllerTest {
 
     private RegraCadastrada guardada(Escritorio dono, String nome) {
         return regras.save(new RegraCadastrada(dono, new RegraDePrazo(nome, 30, TipoDeContagem.DIAS_UTEIS, false,
-                "Norma de Teste, art. 1", LocalDate.now(RegraController.TERESINA))));
+                "Norma de Teste, art. 1", LocalDate.now(Notificacao.TERESINA))));
     }
 
     @Test
@@ -78,7 +79,7 @@ class RegraControllerTest {
                 .singleElement()
                 .satisfies(regra -> assertThat(regra.paraAConta()).isEqualTo(new RegraDePrazo("Prazo de teste", 30,
                         TipoDeContagem.DIAS_UTEIS, true, "Norma de Teste, art. 1",
-                        LocalDate.now(RegraController.TERESINA))));
+                        LocalDate.now(Notificacao.TERESINA))));
         navegador.perform(get("/regras").param("cadastrada", ""))
                 .andExpect(content().string(containsString("Regra cadastrada.")))
                 .andExpect(content().string(containsString("30 dias úteis")))
@@ -95,7 +96,7 @@ class RegraControllerTest {
         navegador.perform(cadastro("Sem conferência", "30", "Norma de Teste, art. 1", ""))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Informe o dia em que a regra foi conferida")));
-        String amanha = LocalDate.now(RegraController.TERESINA).plusDays(1).toString();
+        String amanha = LocalDate.now(Notificacao.TERESINA).plusDays(1).toString();
         navegador.perform(cadastro("Conferida amanhã", "30", "Norma de Teste, art. 1", amanha))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Não pode ser uma data no futuro")));
@@ -130,9 +131,9 @@ class RegraControllerTest {
     void conferenciaDeMaisDeSeisMesesApareceComoVencida() throws Exception {
         //Arrumar: uma regra conferida ha sete meses, e uma de um dia só, para o singular
         regras.save(new RegraCadastrada(escritorio, new RegraDePrazo("Prazo curto", 1, TipoDeContagem.DIAS_UTEIS,
-                false, "Norma de Teste, art. 3", LocalDate.now(RegraController.TERESINA))));
+                false, "Norma de Teste, art. 3", LocalDate.now(Notificacao.TERESINA))));
         regras.save(new RegraCadastrada(escritorio, new RegraDePrazo("Prazo antigo", 15, TipoDeContagem.DIAS_CORRIDOS,
-                false, "Norma de Teste, art. 2", LocalDate.now(RegraController.TERESINA).minusMonths(7))));
+                false, "Norma de Teste, art. 2", LocalDate.now(Notificacao.TERESINA).minusMonths(7))));
 
         //Agir e conferir
         navegador.perform(get("/regras"))
