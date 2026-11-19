@@ -1,7 +1,5 @@
 package br.com.namtech.atalaia;
 
-import java.util.List;
-
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +22,6 @@ public class BancoDeTeste {
     //Quantas linhas há da classe dada, de todos os escritórios
     public long contar(Class<?> tipo) {
         return mesa.createQuery("select count(x) from " + tipo.getSimpleName() + " x", Long.class).getSingleResult();
-    }
-
-    //Todas as linhas da classe dada, de todos os escritórios
-    public <T> List<T> todos(Class<T> tipo) {
-        return mesa.createQuery("select x from " + tipo.getSimpleName() + " x", tipo).getResultList();
     }
 
     //A última gravada (o maior id)

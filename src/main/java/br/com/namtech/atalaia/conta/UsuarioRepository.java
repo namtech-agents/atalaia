@@ -10,7 +10,6 @@ public interface UsuarioRepository extends Repository<Usuario, Long> {
 
     Usuario save(Usuario usuario);
 
-
     Optional<Usuario> findByEmail(String email);
 
     boolean existsByEmail(String email);

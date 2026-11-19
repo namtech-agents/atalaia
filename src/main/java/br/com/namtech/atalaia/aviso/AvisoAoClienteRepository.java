@@ -9,13 +9,12 @@ import org.springframework.data.jpa.repository.Query;
 
 import jakarta.persistence.LockModeType;
 
-//Repository (e nao JpaRepository): só existem os metodos escritos aqui, todos com o escritório, mais o save.
-//O compilador barra quem tentar um findAll ou findById sem filtro (ver EventoDoCasoRepository e o
-//IsolamentoEntreEscritoriosTest, que confere todos os repositórios)
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
+//As duas buscas por token sao da pagina do cliente, que nao tem login: o token sorteado é a chave
+//Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
 public interface AvisoAoClienteRepository extends Repository<AvisoAoCliente, Long> {
 
     AvisoAoCliente save(AvisoAoCliente avisoAoCliente);
-
 
     //Os avisos de uma notificação, o mais novo primeiro. Leva o escritório de quem entrou:
     //um escritório nao ve o aviso de outro

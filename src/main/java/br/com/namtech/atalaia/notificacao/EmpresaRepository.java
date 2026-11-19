@@ -5,14 +5,12 @@ import java.util.Optional;
 
 import org.springframework.data.repository.Repository;
 
-//Repository (e nao JpaRepository): só existem os metodos escritos aqui, todos com o escritório, mais o save.
-//O compilador barra quem tentar um findAll ou findById sem filtro (ver EventoDoCasoRepository e o
-//IsolamentoEntreEscritoriosTest, que confere todos os repositórios)
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
+//Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
 //O Spring escreve o SQL sozinho a partir do nome do metodo
 public interface EmpresaRepository extends Repository<Empresa, Long> {
 
     Empresa save(Empresa empresa);
-
 
     //Toda busca leva o escritório de quem entrou: é isso que impede um escritório de ver a empresa de outro
 

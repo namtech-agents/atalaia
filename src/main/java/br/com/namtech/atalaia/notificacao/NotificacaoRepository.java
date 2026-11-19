@@ -10,13 +10,11 @@ import org.springframework.data.jpa.repository.Query;
 import jakarta.persistence.LockModeType;
 
 //Toda busca leva o escritório de quem entrou: é isso que impede um escritório de ver a notificação de outro
-//Repository (e nao JpaRepository): só existem os metodos escritos aqui, todos com o escritório, mais o save.
-//O compilador barra quem tentar um findAll ou findById sem filtro (ver EventoDoCasoRepository e o
-//IsolamentoEntreEscritoriosTest, que confere todos os repositórios)
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
+//Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
 public interface NotificacaoRepository extends Repository<Notificacao, Long> {
 
     Notificacao save(Notificacao notificacao);
-
 
     //A lista da tela inicial, da mais nova para a mais antiga. O "select new" monta cada linha só com as
     //colunas pedidas: o PDF e o texto ficam no banco

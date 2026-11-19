@@ -8,13 +8,11 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 //Toda busca leva o escritório de quem entrou: um escritório nao ve nem usa a regra de outro
-//Repository (e nao JpaRepository): só existem os metodos escritos aqui, todos com o escritório, mais o save.
-//O compilador barra quem tentar um findAll ou findById sem filtro (ver EventoDoCasoRepository e o
-//IsolamentoEntreEscritoriosTest, que confere todos os repositórios)
+//Repository (e nao JpaRepository): só existem os metodos escritos aqui, sem findAll nem findById prontos.
+//Busca nova tem de ser escrita aqui, e o IsolamentoEntreEscritoriosTest confere se ela leva o escritório
 public interface RegraCadastradaRepository extends Repository<RegraCadastrada, Long> {
 
     RegraCadastrada save(RegraCadastrada regraCadastrada);
-
 
     List<RegraCadastrada> findAllByEscritorioIdOrderByNome(Long escritorioId);
 

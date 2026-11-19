@@ -9,14 +9,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.ListCrudRepository;
+import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -131,19 +133,34 @@ class IsolamentoEntreEscritoriosTest {
         assertThat(banco.contar(Notificacao.class)).isEqualTo(antes);
     }
 
+    //Os únicos métodos de repositório que podem existir sem o escritório, cada um com o seu motivo:
+    //gravar; entrar e criar conta pelo e-mail; a página pública do cliente (o token sorteado é a chave);
+    //e a referência ao escritório de quem entrou (sempre com o id da sessão)
+    private static final Set<String> SEM_ESCRITORIO = Set.of("save", "UsuarioRepository.findByEmail",
+            "UsuarioRepository.existsByEmail", "AvisoAoClienteRepository.findByToken",
+            "AvisoAoClienteRepository.buscarParaConfirmar", "EscritorioRepository.getReferenceById");
+
     @Test
     void nenhumRepositorioTemBuscaSemOEscritorio() {
-        //Arrumar: todos os repositórios que o Spring Data montou para o sistema
+        //Arrumar: todos os repositórios que o Spring Data montou para o sistema (sete hoje: um a mais ou a menos
+        //quer dizer que a lista mudou e este teste precisa ser olhado)
         Repositories repositorios = new Repositories(aplicacao);
+        assertThat(repositorios).hasSize(7);
 
-        //Conferir: nenhum herda o pacote pronto do Spring (CrudRepository, JpaRepository...), que traz findAll,
-        //findById, count e delete sem o escritório. Cada repositório estende Repository e declara só o que usa;
-        //se alguém trocar de volta, este teste avisa antes de o código esquecer o filtro
-        assertThat(repositorios).isNotEmpty();
         for (Class<?> entidade : repositorios) {
             Class<?> repositorio = repositorios.getRequiredRepositoryInformation(entidade).getRepositoryInterface();
-            assertThat(CrudRepository.class.isAssignableFrom(repositorio)).as(repositorio.getSimpleName()).isFalse();
-            assertThat(ListCrudRepository.class.isAssignableFrom(repositorio)).as(repositorio.getSimpleName()).isFalse();
+            //Conferir, porta 1: herda só o Repository vazio. Nada de JpaRepository, paginação, Specification
+            //ou Example, que trazem buscas prontas sem o escritório
+            assertThat(repositorio.getInterfaces()).as(repositorio.getSimpleName()).containsExactly(Repository.class);
+            //Conferir, porta 2: todo método escrito no repositório recebe o escritorioId, ou está na lista acima.
+            //Um findAll() escrito à mão compila, mas cai aqui (o nome do parâmetro vem da compilação com -parameters)
+            for (Method metodo : repositorio.getDeclaredMethods()) {
+                String nome = repositorio.getSimpleName() + "." + metodo.getName();
+                boolean levaOEscritorio = Arrays.stream(metodo.getParameters())
+                        .anyMatch(parametro -> parametro.getName().equals("escritorioId"));
+                assertThat(levaOEscritorio || SEM_ESCRITORIO.contains(metodo.getName()) || SEM_ESCRITORIO.contains(nome))
+                        .as(nome).isTrue();
+            }
         }
     }
 }
