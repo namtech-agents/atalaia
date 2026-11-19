@@ -37,7 +37,7 @@
 
     <!-- O conteúdo só aparece no aviso que vale. Link substituído ou vencido não mostra nada:
          a data dele pode estar velha, e o leigo leria a data errada -->
-    <th:block th:if="${situacao.name() == 'AGUARDANDO' or situacao.name() == 'CONFIRMADO'}">
+    <th:block th:if="${not simulado and (situacao.name() == 'AGUARDANDO' or situacao.name() == 'CONFIRMADO')}">
     <section class="vidro cartao" aria-labelledby="titulo-resumo">
       <h2 class="rotulo" id="titulo-resumo">O que é</h2>
       <p class="observacao" th:text="${aviso.resumo}"></p>
@@ -60,7 +60,7 @@
 
     <!-- A confirmação: uma pergunta montada pelo código, com a data limite entre três datas.
          Responder mostra que a pessoa leu; errar não impede confirmar -->
-    <form class="vidro cartao confirmar" id="confirmar" method="post" th:if="${situacao.name() == 'AGUARDANDO'}" th:action="@{/c/{token}(token=${aviso.token})}">
+    <form class="vidro cartao confirmar" id="confirmar" method="post" th:if="${not simulado and situacao.name() == 'AGUARDANDO'}" th:action="@{/c/{token}(token=${aviso.token})}">
       <p class="erro" id="erro-resposta" role="alert" th:if="${erro}" th:text="${erro}"></p>
       <fieldset th:attr="aria-describedby=${erro} ? 'erro-resposta'">
         <legend class="rotulo">Para confirmar, marque: qual é a data limite?</legend>

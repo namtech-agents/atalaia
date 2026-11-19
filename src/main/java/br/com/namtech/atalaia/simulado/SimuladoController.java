@@ -32,7 +32,7 @@ public class SimuladoController {
     //mas a última linha diz que é exercício: se o PDF sair do escritório, ninguém confunde com um documento real
     static final String TITULO = "Notificação para apresentação de documentos";
     static final List<String> LINHAS = List.of(
-            "Órgão: Secretaria da Fazenda (exercício)",
+            "Órgão: Secretaria da Fazenda",
             "",
             "Fica a empresa notificada a apresentar, no prazo de 10 (dez) dias contados da ciência,",
             "os livros fiscais e os comprovantes de recolhimento do último trimestre.",
@@ -59,9 +59,13 @@ public class SimuladoController {
     @Transactional(readOnly = true)
     public String tela(@AuthenticationPrincipal UsuarioLogado usuario, Model model) {
         model.addAttribute("empresas", empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
-        model.addAttribute("simulados", notificacoes.simulados(usuario.escritorioId()).stream()
+        List<TemposDoSimulado> todos = notificacoes.simulados(usuario.escritorioId()).stream()
                 .map(teste -> TemposDoSimulado.de(teste, avisos.doCaso(teste.getId(), usuario.escritorioId())))
-                .toList());
+                .toList();
+        //O simulado em andamento entra só na contagem, sem empresa e sem link: quem abre esta tela não descobre
+        //qual caso da lista é o teste. Os terminados mostram tudo
+        model.addAttribute("terminados", todos.stream().filter(TemposDoSimulado::terminou).toList());
+        model.addAttribute("emAndamento", todos.stream().filter(tempos -> !tempos.terminou()).count());
         return "simulado";
     }
 
@@ -74,10 +78,11 @@ public class SimuladoController {
         Empresa empresa = empresas.findByIdAndEscritorioId(empresaId, usuario.escritorioId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST));
         byte[] pdf = PdfDeTexto.montar(TITULO, LINHAS);
-        Notificacao teste = notificacoes.save(Notificacao.simulado(empresa, pdf, TITULO + "\n" + String.join("\n", LINHAS)));
+        Notificacao teste = notificacoes.save(Notificacao.simulado(empresa, pdf, TITULO + "\n" + String.join("\n", LINHAS),
+                usuario.email()));
         historico.registrar(teste, usuario.email(), "Soltou um simulado");
         recado.addFlashAttribute("solto", "Simulado solto para " + empresa.getNome()
-                + ". Ele já está na lista de notificações. Os tempos aparecem aqui quando a equipe avisar o cliente ou fechar o caso.");
+                + ". Ele já está na lista de notificações. Os tempos aparecem aqui quando a equipe gerar o aviso ao cliente ou fechar o caso.");
         //Redireciona: recarregar a tela não solta outro
         return "redirect:/simulado";
     }

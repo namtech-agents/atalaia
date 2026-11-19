@@ -7,7 +7,8 @@ import java.util.List;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.notificacao.Notificacao;
 
-//Os tempos de um simulado (US30), contados da chegada: até alguém abrir, até o cliente ser avisado e até fechar.
+//Os tempos de um simulado (US30), contados da chegada: até alguém abrir, até gerar o primeiro aviso ao cliente e até
+//fechar. "Fechar" é o fechamento que vale agora: reabrir apaga a data, e o tempo passa a contar o próximo fechamento.
 //"Responsável" ainda não existe no Atalaia (US02, fora do MVP): a tela diz isso em vez de inventar um tempo
 public record TemposDoSimulado(Long id, String empresa, Instant chegou, Instant abriu, Instant avisou, Instant fechou) {
 
@@ -46,6 +47,8 @@ public record TemposDoSimulado(Long id, String empresa, Instant chegou, Instant 
 
     //"menos de 1 min", "12 min", "2 h 5 min", "3 dias e 4 h": o tamanho de tempo que importa para quem lê
     static String duracao(Duration tempo) {
+        //Negativo não acontece (todo marco vem depois da chegada); o max só evita "-1 min" se o relógio do servidor
+        //for acertado para trás no meio de um simulado
         long minutos = Math.max(tempo.toMinutes(), 0);
         if (minutos < 1) {
             return "menos de 1 min";

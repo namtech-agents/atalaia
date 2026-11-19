@@ -38,16 +38,17 @@ public interface NotificacaoRepository extends Repository<Notificacao, Long> {
     List<Notificacao> simulados(Long escritorioId);
 
     //Marca a primeira abertura do simulado, numa operação só no banco: dois que abrem juntos não marcam duas vezes,
-    //porque só um encontra aberta_em vazio. Devolve 1 se marcou, 0 se não era simulado, já estava marcado ou é de
-    //outro escritório. Caso comum não é tocado (nem trancado) ao ser aberto.
+    //porque só um encontra aberta_em vazio. Quem soltou o simulado não conta (já sabe que é teste).
+    //Devolve 1 se marcou; 0 se não é simulado, já foi aberto, quem abre é quem soltou ou o caso é de outro escritório.
+    //Caso comum: nenhuma linha atende ao where, nada é gravado nem trancado.
     //A empresa vai por subconsulta: o update do JPA não aceita "n.empresa.escritorio" direto
     @Modifying
     @Query("""
-            update Notificacao n set n.abertaEm = ?3
-            where n.id = ?1 and n.simulado = true and n.abertaEm is null
+            update Notificacao n set n.abertaEm = ?4
+            where n.id = ?1 and n.simulado = true and n.abertaEm is null and n.soltoPor <> ?3
               and n.empresa.id in (select e.id from Empresa e where e.escritorio.id = ?2)
             """)
-    int marcarAbertura(Long id, Long escritorioId, Instant quando);
+    int marcarAbertura(Long id, Long escritorioId, String quemAbre, Instant quando);
 
     //Quantos casos cada empresa do escritório recebeu desde a data dada (tela de empresas, para rever a cobrança).
     //Empresa sem nenhum caso no periodo nao vem na lista: a tela mostra zero para ela

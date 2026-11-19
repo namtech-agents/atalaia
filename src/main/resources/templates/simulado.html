@@ -10,7 +10,9 @@
     <div class="titulo">
       <a class="volta" th:href="@{/}">Notificações</a>
       <h1>Simulado</h1>
-      <p>Solte uma notificação de teste e veja quanto tempo a equipe leva para abrir o caso e avisar o cliente. Ela entra na lista como qualquer outra; o caso só mostra que era um simulado quando o cliente é avisado ou o caso é fechado.</p>
+      <p>Solte uma notificação de teste e veja quanto tempo a equipe leva para abrir o caso e avisar o cliente. Ela entra na lista como qualquer outra; o caso só mostra que era um simulado quando o aviso ao cliente é gerado ou o caso é fechado. A sua própria abertura não conta.</p>
+      <!-- Sem papéis no Atalaia, qualquer pessoa da conta vê esta tela: o segredo do exercício depende da equipe -->
+      <p class="dica">Qualquer pessoa da conta pode abrir esta tela. Para o teste valer, combine com a equipe que só quem solta o simulado entra aqui. O simulado conta como caso da empresa escolhida: depois dele, essa empresa não pode ser excluída.</p>
     </div>
 
     <p class="recado" role="status" th:if="${solto}" th:text="${solto}"></p>
@@ -28,15 +30,18 @@
       <button class="botao cheio" type="submit">Soltar simulado</button>
     </form>
 
-    <section class="grupo" th:unless="${simulados.isEmpty()}" aria-labelledby="titulo-simulados">
-      <h2 id="titulo-simulados">Simulados anteriores</h2>
+    <p class="recado" role="status" th:if="${emAndamento > 0}"
+       th:text="${emAndamento == 1} ? '1 simulado em andamento.' : ${emAndamento} + ' simulados em andamento.'"></p>
+
+    <section class="grupo" th:unless="${terminados.isEmpty()}" aria-labelledby="titulo-simulados">
+      <h2 id="titulo-simulados">Simulados terminados</h2>
       <ul class="vidro lista">
-        <li th:each="teste : ${simulados}">
+        <li th:each="teste : ${terminados}">
           <a th:href="@{/notificacoes/{id}(id=${teste.id})}">
             <strong th:text="${teste.empresa}"></strong>
             <span class="quando" th:text="'Solto em ' + ${teste.chegouPorExtenso}"></span>
             <span class="etq num" th:text="'Abriu: ' + ${teste.ateAbrir}"></span>
-            <span class="etq num" th:text="'Avisou o cliente: ' + ${teste.ateAvisar}"></span>
+            <span class="etq num" th:text="'Gerou o aviso: ' + ${teste.ateAvisar}"></span>
             <span class="etq num" th:text="'Fechou: ' + ${teste.ateFechar}"></span>
           </a>
         </li>

@@ -108,6 +108,9 @@ public class Notificacao {
     //A primeira vez que alguém do escritório abriu o caso. Só é marcada no simulado (NotificacaoRepository.marcarAbertura)
     private Instant abertaEm;
 
+    //Quem soltou o simulado: a abertura dessa pessoa não conta, porque ela já sabe que é teste
+    private String soltoPor;
+
     protected Notificacao() {
     }
 
@@ -129,10 +132,12 @@ public class Notificacao {
 
     //Um simulado: o documento de teste, já classificado, sem passar pela IA (não gasta chamada) e sem motivo de revisão,
     //para seguir o caminho de um caso comum: calcular o prazo, avisar o cliente, fechar
-    public static Notificacao simulado(Empresa empresa, byte[] pdf, String texto) {
+    public static Notificacao simulado(Empresa empresa, byte[] pdf, String texto, String quem) {
         Notificacao teste = new Notificacao(empresa, pdf, texto, TipoDeDocumento.INTIMACAO, List.of(), List.of());
         teste.simulado = true;
-        teste.degrau = Degrau.PEDIDO_DE_DOCUMENTO;
+        teste.soltoPor = quem;
+        //O documento ameaça auto de infração se não for atendido: é exigência sob pena
+        teste.degrau = Degrau.EXIGENCIA_SOB_PENA;
         return teste;
     }
 

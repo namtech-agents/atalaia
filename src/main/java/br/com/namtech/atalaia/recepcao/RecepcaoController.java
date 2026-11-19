@@ -82,6 +82,8 @@ public class RecepcaoController {
     private final Analista analista;
     private final Historico historico;
     private final TransactionTemplate transacao;
+    //A mesma, só leitura: a tela do caso (abrir)
+    private final TransactionTemplate transacaoDeLeitura;
     private final LimiteDeTentativas limiteDeEnvios;
 
     //O Spring entrega os repositorios e a IA (ConfiguracaoDaIA) prontos quando cria o controller
@@ -100,6 +102,8 @@ public class RecepcaoController {
         this.analista = new Analista(ia);
         this.historico = historico;
         this.transacao = transacao;
+        this.transacaoDeLeitura = new TransactionTemplate(transacao.getTransactionManager());
+        this.transacaoDeLeitura.setReadOnly(true);
         this.limiteDeEnvios = limiteDeEnvios;
     }
 
@@ -170,19 +174,27 @@ public class RecepcaoController {
         return "redirect:/notificacoes/" + notificacao.getId();
     }
 
-    //Transactional: mantem a conversa com o banco aberta durante este metodo, para ler aqui o nome da empresa (LAZY).
-    //A tela recebe só o texto pronto; se ela mesma fosse buscar a empresa, a conversa ja estaria fechada.
-    //Sem readOnly: a primeira abertura de um simulado grava a hora e um evento (US30). Caso comum só é lido
+    //A tela do caso. Duas conversas com o banco, uma depois da outra:
+    //1. o cronômetro do simulado (US30): um update só, que marca a primeira abertura quando o caso é um simulado ainda
+    //   não aberto e quem abre não é quem o soltou. Em caso comum ele não acha linha nenhuma e não grava nada.
+    //   Um link de outro site também "abre" o caso (GET não leva CSRF), mas só com a sessão de alguém do escritório
+    //   e sabendo o número do simulado; o estrago seria um tempo falso num exercício
+    //2. a leitura, só leitura de verdade (transacaoDeLeitura): o Hibernate não guarda cópia dos campos para comparar
+    //   (o PDF vem junto, até 15 MB), e lê a aberta_em já gravada pela conversa 1
     @GetMapping("/notificacoes/{id}")
-    @Transactional
-    public String notificacao(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id, Model model) {
+    public String abrir(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id, Model model) {
+        transacao.executeWithoutResult(conversa -> {
+            if (notificacoes.marcarAbertura(id, usuario.escritorioId(), usuario.email(), Instant.now(relogio)) == 1) {
+                historico.registrar(buscar(id, usuario), usuario.email(), "Abriu o caso");
+            }
+        });
+        return transacaoDeLeitura.execute(conversa -> notificacao(usuario, id, model));
+    }
+
+    //Monta a tela do caso. Quem chama abre a conversa com o banco (abrir, ou o resolver quando o formulário volta
+    //com erro): o nome da empresa (LAZY) é lido aqui, com a conversa aberta
+    private String notificacao(UsuarioLogado usuario, Long id, Model model) {
         Notificacao notificacao = buscar(id, usuario);
-        //O cronômetro do simulado: a primeira pessoa que abre marca a hora. marcarAbertura é uma operação só no banco,
-        //e só uma de duas aberturas ao mesmo tempo encontra a hora vazia: o evento não sai duplicado
-        if (notificacao.isSimulado() && notificacao.getAbertaEm() == null
-                && notificacoes.marcarAbertura(id, usuario.escritorioId(), Instant.now(relogio)) == 1) {
-            historico.registrar(notificacao, usuario.email(), "Abriu o caso");
-        }
         model.addAttribute("notificacao", notificacao);
         model.addAttribute("empresa", notificacao.getEmpresa().getNome());
         model.addAttribute("recebidaEm", Notificacao.DIA_E_HORA.format(notificacao.getRecebidaEm()));
