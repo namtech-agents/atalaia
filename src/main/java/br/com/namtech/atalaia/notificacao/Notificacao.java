@@ -62,6 +62,9 @@ public class Notificacao {
     @Enumerated(EnumType.STRING)
     private Degrau degrau;
 
+    //Quem corrigiu o degrau por último (e-mail). Vazio enquanto o degrau é o que a IA sugeriu
+    private String degrauPor;
+
     //Os dados que o Analista tirou do documento. Ficam numa tabela propria (dado_extraido), ligada por notificacao_id
     @ElementCollection
     @CollectionTable(name = "dado_extraido", joinColumns = @JoinColumn(name = "notificacao_id"))
@@ -124,9 +127,21 @@ public class Notificacao {
         this.resumoSugerido = precisaDeRevisao ? null : resumo;
     }
 
-    //Muda o degrau. Quem chama grava no histórico quando a mudança é de uma pessoa (DegrauController)
-    public void definirDegrau(Degrau degrau) {
+    //O degrau sugerido pela IA. Documento que foi para revisão não guarda, pela mesma regra do resumo:
+    //a leitura em que ninguém confia não decide a gravidade. A tela pede para a pessoa escolher
+    public void sugerirDegrau(Degrau degrau) {
+        this.degrau = precisaDeRevisao ? null : degrau;
+        this.degrauPor = null;
+    }
+
+    //A correção de uma pessoa. Quem chama grava no histórico (DegrauController)
+    public void corrigirDegrau(Degrau degrau, String quem) {
         this.degrau = degrau;
+        this.degrauPor = quem;
+    }
+
+    public String getDegrauPor() {
+        return degrauPor;
     }
 
     public Degrau getDegrau() {

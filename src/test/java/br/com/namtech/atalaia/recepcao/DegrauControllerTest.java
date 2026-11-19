@@ -60,7 +60,7 @@ class DegrauControllerTest {
     void criaUmCasoComODegrauDaIaEEntra() {
         escritorio = escritorios.save(new Escritorio("Escritório de Teste"));
         caso = casoDo(escritorio, "99999009000115");
-        caso.definirDegrau(Degrau.PEDIDO_DE_DOCUMENTO);
+        caso.sugerirDegrau(Degrau.PEDIDO_DE_DOCUMENTO);
         navegador = NavegadorDeTeste.logado(aplicacao, NavegadorDeTeste.pessoaDo(escritorio.getId()));
     }
 
@@ -78,27 +78,29 @@ class DegrauControllerTest {
     void telaMostraODegrauEOQueCostumaVirEmSeguida() throws Exception {
         String pagina = navegador.perform(get("/notificacoes/" + caso.getId()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Se ninguém agir, costuma vir em seguida: Intimação.")))
+                .andExpect(content().string(containsString("Se ninguém agir, o próximo degrau na escala do Atalaia é: Exigência sob pena.")))
+                .andExpect(content().string(containsString("Sugerido por inteligência artificial.")))
                 .andReturn().getResponse().getContentAsString();
 
         //Um botão só marcado como o atual, e é o do degrau do caso (a ordem dos atributos no HTML não importa)
-        List<String> marcados = Pattern.compile("<button[^>]*aria-pressed=\"true\"[^>]*>").matcher(pagina).results()
+        List<String> marcados = Pattern.compile("<button[^>]*aria-current=\"true\"[^>]*>").matcher(pagina).results()
                 .map(achado -> achado.group()).toList();
         assertThat(marcados).hasSize(1);
-        assertThat(marcados.get(0)).contains("value=\"PEDIDO_DE_DOCUMENTO\"");
+        assertThat(marcados.get(0)).contains("value=\"PEDIDO_DE_DOCUMENTO\"", "disabled");
+        assertThat(pagina).contains("✓ Pedido de documento");
     }
 
     @Test
     void oDegrauMaisAltoDizQueEOUltimo() throws Exception {
-        caso.definirDegrau(Degrau.COBRANCA);
+        caso.sugerirDegrau(Degrau.DEBITO_COBRADO);
 
         navegador.perform(get("/notificacoes/" + caso.getId()))
-                .andExpect(content().string(containsString("É o degrau mais alto da escada.")));
+                .andExpect(content().string(containsString("É o último degrau da escala do Atalaia.")));
     }
 
     @Test
     void casoSemDegrauPedeParaEscolher() throws Exception {
-        caso.definirDegrau(null);
+        caso.sugerirDegrau(null);
 
         navegador.perform(get("/notificacoes/" + caso.getId()))
                 .andExpect(content().string(containsString("Sem degrau")))
@@ -115,6 +117,11 @@ class DegrauControllerTest {
         assertThat(notificacoes.buscar(caso.getId(), escritorio.getId()).orElseThrow().getDegrau())
                 .isEqualTo(Degrau.AUTO_DE_INFRACAO);
         assertThat(acoesDoHistorico()).containsExactly("Corrigiu o degrau: de Pedido de documento para Auto de infração");
+        //A tela diz quem corrigiu, em vez de continuar dizendo que foi a IA; a lista mostra o degrau com o rótulo
+        navegador.perform(get("/notificacoes/" + caso.getId()))
+                .andExpect(content().string(containsString("Corrigido por ")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Sugerido por inteligência artificial."))));
+        navegador.perform(get("/")).andExpect(content().string(containsString("Degrau: Auto de infração")));
     }
 
     @Test
@@ -129,11 +136,33 @@ class DegrauControllerTest {
     void casoResolvidoNaoMudaDeDegrau() throws Exception {
         caso.resolver(Desfecho.ARQUIVADO, "Arquivado pelo órgão.");
 
-        navegador.perform(post("/notificacoes/" + caso.getId() + "/degrau").param("degrau", "COBRANCA"))
+        navegador.perform(post("/notificacoes/" + caso.getId() + "/degrau").param("degrau", "DEBITO_COBRADO"))
                 .andExpect(status().is3xxRedirection());
 
         assertThat(caso.getDegrau()).isEqualTo(Degrau.PEDIDO_DE_DOCUMENTO);
         assertThat(acoesDoHistorico()).isEmpty();
+    }
+
+    //Citação e exclusão seguem caminhos próprios (processo, regime): a escala não diz o que vem depois delas
+    @Test
+    void citacaoNaoMostraOProximoDegrau() throws Exception {
+        Notificacao citacao = notificacoes.save(new Notificacao(caso.getEmpresa(), "%PDF-teste".getBytes(), "Texto.",
+                TipoDeDocumento.CITACAO, List.of(), List.of()));
+        citacao.sugerirDegrau(Degrau.EXIGENCIA_SOB_PENA);
+
+        navegador.perform(get("/notificacoes/" + citacao.getId()))
+                .andExpect(content().string(containsString("Exigência sob pena")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("próximo degrau"))));
+    }
+
+    //Pela mesma regra do resumo: a leitura que foi para revisão não decide a gravidade
+    @Test
+    void casoEmRevisaoNaoGuardaODegrauDaIa() {
+        Notificacao emRevisao = new Notificacao(caso.getEmpresa(), "%PDF-teste".getBytes(), "Texto.",
+                TipoDeDocumento.INTIMACAO, List.of(), List.of("A IA ficou em dúvida sobre o tipo do documento."));
+        emRevisao.sugerirDegrau(Degrau.AVISO);
+
+        assertThat(emRevisao.getDegrau()).isNull();
     }
 
     @Test
@@ -146,7 +175,7 @@ class DegrauControllerTest {
     void casoDeOutroEscritorioRespondeComoSeNaoExistisse() throws Exception {
         Notificacao alheio = casoDo(escritorios.save(new Escritorio("Outro Escritório")), "99999009004999");
 
-        navegador.perform(post("/notificacoes/" + alheio.getId() + "/degrau").param("degrau", "COBRANCA"))
+        navegador.perform(post("/notificacoes/" + alheio.getId() + "/degrau").param("degrau", "DEBITO_COBRADO"))
                 .andExpect(status().isNotFound());
         assertThat(alheio.getDegrau()).isNull();
     }

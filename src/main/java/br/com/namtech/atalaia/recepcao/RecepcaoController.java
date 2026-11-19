@@ -320,7 +320,7 @@ public class RecepcaoController {
         List<String> motivos = analista.motivosDaRevisao(analise, leitura.texto());
         Notificacao notificacao = new Notificacao(empresa, pdf, leitura.texto(), analise.tipo(), analise.dados(), motivos);
         notificacao.sugerirResumo(analise.resumoSugerido());
-        notificacao.definirDegrau(analise.degrau());
+        notificacao.sugerirDegrau(analise.degrau());
         return notificacao;
     }
 

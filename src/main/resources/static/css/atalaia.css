@@ -252,13 +252,13 @@ html { scroll-padding-top: 92px; }
 /* filtro abertas/resolvidas: dois links simples; o escolhido fica em negrito e sublinhado (não só pela cor) */
 /* Uma escolha numa linha só (o cliente na tela inicial, o período em Empresas): rótulo, lista e botão.
    No celular a lista ocupa o que sobra; o resto do estilo da lista vem da regra comum dos campos */
-/* Degrau: os cinco botões quebram linha no celular; o atual fica com o azul da marca */
-.degraus { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.degraus .dica { flex-basis: 100%; margin: 0; }
-.degraus .botao[aria-pressed="true"] { background: var(--azul); color: #fff; }
 .escolha-linha { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .escolha-linha select { flex: 1 1 220px; max-width: 420px; }
 .escolha-linha .rotulo { margin-bottom: 0; }
+/* Degrau: os cinco botões quebram linha no celular; o atual fica com o azul da marca (e o ✓ no texto) */
+.degraus { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.degraus .dica { flex-basis: 100%; margin: 0; }
+.degraus .botao[aria-current="true"] { background: var(--azul); color: #fff; cursor: default; }
 .filtro { display: flex; gap: 4px; margin-bottom: 4px; }
 .filtro a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: var(--raio-m); color: var(--apagado-fora); text-decoration: none; font-weight: 500; }
 .filtro a[aria-current="page"] { color: var(--texto); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }

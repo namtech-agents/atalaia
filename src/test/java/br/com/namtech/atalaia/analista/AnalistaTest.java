@@ -457,11 +457,18 @@ class AnalistaTest {
         assertThat(analise.precisaDeRevisao()).isFalse();
     }
 
+    //A IA às vezes escreve em minúscula ou com espaço: o degrau vale do mesmo jeito
+    @ParameterizedTest
+    @ValueSource(strings = { "aviso", " AVISO ", "Aviso" })
+    void degrauEmMinusculaOuComEspacoVale(String escrito) {
+        assertThat(Degrau.doNome(escrito)).isEqualTo(Degrau.AVISO);
+    }
+
     @Test
     void cadaDegrauTemOSeguinteMenosOUltimo() {
         assertThat(Degrau.AVISO.seguinte()).isEqualTo(Degrau.PEDIDO_DE_DOCUMENTO);
-        assertThat(Degrau.AUTO_DE_INFRACAO.seguinte()).isEqualTo(Degrau.COBRANCA);
-        assertThat(Degrau.COBRANCA.seguinte()).isNull();
+        assertThat(Degrau.AUTO_DE_INFRACAO.seguinte()).isEqualTo(Degrau.DEBITO_COBRADO);
+        assertThat(Degrau.DEBITO_COBRADO.seguinte()).isNull();
     }
 
     @Test

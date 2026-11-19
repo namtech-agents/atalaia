@@ -71,14 +71,23 @@
         <section class="vidro cartao" aria-labelledby="titulo-degrau">
           <h2 class="rotulo" id="titulo-degrau">Degrau</h2>
           <strong class="grande" th:text="${notificacao.degrau != null} ? ${notificacao.degrau.nome} : 'Sem degrau'"></strong>
-          <p th:if="${notificacao.degrau != null}"
-             th:text="${notificacao.degrau.seguinte() != null} ? 'Se ninguém agir, costuma vir em seguida: ' + ${notificacao.degrau.seguinte().nome} + '.' : 'É o degrau mais alto da escada.'"></p>
-          <form class="degraus" method="post" th:unless="${notificacao.resolvida}"
+          <!-- O degrau seguinte é a escala do Atalaia, não a regra do órgão: a frase diz isso. Citação e exclusão seguem
+               caminhos próprios (processo, regime), que a escala não descreve: nesses tipos o seguinte não aparece -->
+          <th:block th:if="${notificacao.degrau != null and notificacao.tipo?.name() != 'CITACAO' and notificacao.tipo?.name() != 'EXCLUSAO'}">
+            <p th:if="${notificacao.degrau.seguinte() != null}"
+               th:text="'Se ninguém agir, o próximo degrau na escala do Atalaia é: ' + ${notificacao.degrau.seguinte().nome} + '. É uma escala geral de gravidade, não a regra do órgão.'"></p>
+            <p th:unless="${notificacao.degrau.seguinte() != null}">É o último degrau da escala do Atalaia.</p>
+          </th:block>
+          <form class="degraus" method="post" th:unless="${notificacao.resolvida}" role="group" aria-labelledby="titulo-degrau"
                 th:action="@{/notificacoes/{id}/degrau(id=${notificacao.id})}">
-            <p class="dica" th:text="${notificacao.degrau != null} ? 'Sugerido por inteligência artificial. Para corrigir, toque no degrau certo:' : 'Escolha o degrau:'"></p>
-            <!-- Cada botão envia o próprio degrau; aria-pressed diz ao leitor de tela qual é o atual -->
+            <p class="dica" th:text="${notificacao.degrau == null} ? 'Escolha o degrau:'
+                : (${notificacao.degrauPor == null} ? 'Sugerido por inteligência artificial. Para corrigir, toque no degrau certo:'
+                : 'Corrigido por ' + ${notificacao.degrauPor} + '. Para mudar, toque no degrau certo:')"></p>
+            <!-- Cada botão envia o próprio degrau. O atual fica desligado (não há o que enviar), com aria-current para o
+                 leitor de tela e o ✓ para quem não distingue a cor -->
             <button class="botao" type="submit" name="degrau" th:each="opcao : ${degraus}" th:value="${opcao}"
-                    th:text="${opcao.nome}" th:attr="aria-pressed=${opcao == notificacao.degrau}"></button>
+                    th:with="atual=${opcao == notificacao.degrau}" th:disabled="${atual}"
+                    th:attr="aria-current=${atual} ? 'true'" th:text="${atual} ? '✓ ' + ${opcao.nome} : ${opcao.nome}"></button>
           </form>
         </section>
 
