@@ -35,7 +35,7 @@ public class PrazoController {
     public PrazoController(NotificacaoRepository notificacoes, RegraCadastradaRepository regras) {
         this.notificacoes = notificacoes;
         this.regras = regras;
-        this.relogio = Clock.system(RegraController.TERESINA);
+        this.relogio = Clock.system(Notificacao.TERESINA);
     }
 
     //Transactional: a tranca do buscarParaAlterar dura ate a conta ser gravada, e a gravação é feita no fim do metodo.

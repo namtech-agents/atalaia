@@ -26,9 +26,12 @@ import jakarta.persistence.OrderColumn;
 @Entity
 public class Notificacao {
 
+    //O fuso do Atalaia: o "hoje" e as horas da tela sao os de Teresina, mesmo com o servidor em outro fuso
+    public static final ZoneId TERESINA = ZoneId.of("America/Fortaleza");
+
     //Data e hora como se escreve aqui, no horario de Teresina. Serve a todas as telas
     public static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
-            .withZone(ZoneId.of("America/Fortaleza"));
+            .withZone(TERESINA);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -47,8 +47,7 @@ public class CalculadoraDePrazo {
     }
 
     private PrazoCalculado calcular(RegraDePrazo regra, LocalDate ciencia, List<String> passos) {
-        String contagem = regra.contagem() == TipoDeContagem.DIAS_UTEIS ? "dias úteis" : "dias corridos";
-        passos.add("Regra: " + regra.nome() + ", " + regra.dias() + " " + contagem + " (" + regra.artigo() + ").");
+        passos.add("Regra: " + regra.nome() + ", " + regra.prazoPorExtenso() + " (" + regra.artigo() + ").");
 
         //Regra que ninguem conferiu na norma nao pode dar prazo: para aqui, antes de qualquer data aparecer
         if (regra.conferidaEm() == null) {

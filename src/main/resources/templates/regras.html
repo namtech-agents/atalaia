@@ -23,11 +23,11 @@
         <li th:each="regra : ${regras}" th:with="conta=${regra.paraAConta()}">
           <div class="linha">
             <strong th:text="${conta.nome}"></strong>
-            <span class="num" th:text="${conta.dias} + (${conta.contagem.name() == 'DIAS_UTEIS'} ? ' dias úteis' : ' dias corridos')"></span>
+            <span class="num" th:text="${conta.prazoPorExtenso()}"></span>
             <span th:if="${conta.suspendeNoRecesso}">· para no recesso</span>
             <!-- Seis meses depois da conferência, alguém precisa ler a regra na norma de novo -->
             <span class="etq atencao" th:if="${conta.conferenciaVencida(hoje)}">Conferência vencida</span>
-            <span class="quando" th:text="${conta.artigo}"></span>
+            <span class="fonte" th:text="${conta.artigo}"></span>
             <span class="quando">Conferida em <span class="num" th:text="${#temporals.format(conta.conferidaEm, 'dd/MM/yyyy')}"></span></span>
             <!-- Excluir é um formulário (POST): um link poderia ser acionado por outro site -->
             <form method="post" th:action="@{/regras/{id}/excluir(id=${regra.id})}">
@@ -81,7 +81,7 @@
       </div>
       <div>
         <label class="rotulo" for="conferidaEm">Conferida na norma em</label>
-        <input id="conferidaEm" name="conferidaEm" type="date" required th:value="${conferidaEm}" th:max="${hoje}"
+        <input id="conferidaEm" name="conferidaEm" type="date" required th:value="${conferidaEm}" min="2000-01-01" th:max="${hoje}"
                aria-describedby="dica-conferida" th:autofocus="${campoComErro == 'conferidaEm'}"
                th:attr="aria-invalid=${campoComErro == 'conferidaEm'} ? 'true', aria-describedby=${campoComErro == 'conferidaEm'} ? 'erro-regra dica-conferida' : 'dica-conferida'">
         <p class="dica" id="dica-conferida">O dia em que alguém do escritório leu a regra na norma. Depois de seis meses o Atalaia pede uma nova conferência.</p>

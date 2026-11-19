@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 
 //Toda busca leva o escritório de quem entrou: um escritório nao ve nem usa a regra de outro
 public interface RegraCadastradaRepository extends JpaRepository<RegraCadastrada, Long> {
@@ -14,4 +16,10 @@ public interface RegraCadastradaRepository extends JpaRepository<RegraCadastrada
     Optional<RegraCadastrada> findByIdAndEscritorioId(Long id, Long escritorioId);
 
     boolean existsByEscritorioIdAndNome(Long escritorioId, String nome);
+
+    //Apaga direto no banco e devolve quantas linhas saíram: 0 se a regra nao existe, é de outro escritório
+    //ou ja foi apagada por um clique anterior. Modifying: avisa que esta consulta muda o banco
+    @Modifying
+    @Query("delete from RegraCadastrada r where r.id = ?1 and r.escritorio.id = ?2")
+    int excluirDoEscritorio(Long id, Long escritorioId);
 }

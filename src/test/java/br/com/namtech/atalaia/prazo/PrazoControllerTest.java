@@ -70,7 +70,7 @@ class PrazoControllerTest {
 
     private RegraCadastrada regraDo(Escritorio dono, int dias) {
         return regras.save(new RegraCadastrada(dono, new RegraDePrazo("Prazo de teste", dias, TipoDeContagem.DIAS_UTEIS,
-                false, "Norma de Teste, art. 1", LocalDate.now(RegraController.TERESINA))));
+                false, "Norma de Teste, art. 1", LocalDate.now(Notificacao.TERESINA))));
     }
 
     private String endereco(Notificacao qual) {
