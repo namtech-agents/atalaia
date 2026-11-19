@@ -54,6 +54,8 @@ public class EmpresaController {
         //12 letras ou numeros e 2 numeros no fim (os digitos de conferencia): o formato do CNPJ, inclusive o novo, com letras
         } else if (!cnpjArrumado.matches("[A-Z0-9]{12}[0-9]{2}")) {
             erro = "Escreva o CNPJ completo, com os 14 dígitos.";
+        } else if (!Empresa.cnpjValido(cnpjArrumado)) {
+            erro = "Este CNPJ não existe: confira os números digitados.";
         } else if (empresas.existsByEscritorioIdAndCnpj(usuario.escritorioId(), cnpjArrumado)) {
             erro = CNPJ_REPETIDO;
         } else {
