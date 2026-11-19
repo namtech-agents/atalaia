@@ -56,7 +56,10 @@
   --borda: 16px;       /* a distância entre a borda da janela e o conteúdo (10px no celular) */
   --raio: 28px;        /* painel de vidro */
   --raio-m: 12px;      /* botão e campo: nem pílula nem quadrado */
+  /* as duas curvas de movimento: as duas largam rápido e pousam devagar (quem espera vê a resposta na hora).
+     --sair é a do dia a dia; --gaveta é a da gaveta do celular, mais longa no pouso, como as folhas do iPhone */
   --sair: cubic-bezier(.23, 1, .32, 1);
+  --gaveta: cubic-bezier(.32, .72, 0, 1);
   /* Só o tema claro: os campos e a barra de rolagem do navegador também ficam claros */
   color-scheme: light;
 }
@@ -135,9 +138,12 @@ html { scroll-padding-top: 92px; }
 .volta { display: inline-flex; align-items: center; min-height: 44px; color: var(--marca-fora); font-weight: 600; text-decoration: none; }
 
 /* botão */
-.botao { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--texto); cursor: pointer; transition: transform .13s var(--sair); }
+.botao { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--texto); cursor: pointer; }
 .botao.cheio { background: var(--azul); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 2px rgba(20,25,34,.25); }
-.botao:active { transform: scale(.97); }
+/* Resposta ao aperto: o botão e a linha do menu afundam um pouco enquanto o dedo (ou o mouse) está em cima.
+   É a prova de que o toque foi ouvido antes de a tela seguinte chegar. Curto (0,13s), para não atrasar ninguém */
+.botao, .m-item { transition: transform .13s var(--sair); }
+:is(.botao, .m-item):active { transform: scale(.97); }
 @media (hover: hover) { .botao.cheio:hover { filter: brightness(1.08); } }
 
 /* etiqueta: cápsula com tinta fraca (o vermelho só mora no que pede atenção) */
@@ -260,11 +266,16 @@ html { scroll-padding-top: 92px; }
    É o menu de vidro curvo aprovado no protótipo, sem as partes que eram só de demonstração.
    COMO ABRE E FECHA, SEM JAVASCRIPT: tudo depende de UMA medida, a largura do menu.
      - Cada linha (.m-item) ocupa a largura que houver e corta o que não cabe. Com o menu em 72px sobra só
-       o quadrado do desenho (44px); com 284px aparece o nome ao lado. Nenhuma outra regra muda.
+       o quadrado do desenho (44px); com 284px aparece o nome ao lado. O movimento também só olha para ela.
      - Quem muda a largura: o mouse em cima, o foco do teclado dentro, ou a chave marcada (.m-chave:checked).
      - No celular o menu é uma gaveta, e a mesma chave abre e fecha.
    O static/js/menu.js só lembra a escolha de uma tela para a outra.
    ===================================================================== */
+
+/* O tom do vidro do menu muda quando ele abre por cima do conteúdo (fica mais leitoso). Uma variável comum troca
+   de valor de uma vez; registrada como cor, o navegador sabe passar de um tom ao outro aos poucos.
+   Navegador que não conhece @property só ignora este bloco: o tom troca de uma vez, como antes */
+@property --menu-vidro { syntax: "<color>"; inherits: true; initial-value: rgba(255, 255, 255, .54); }
 
 /* A chave: a caixa de marcar existe e recebe o foco do teclado, mas não é desenhada (quem aparece são os rótulos dela) */
 .m-chave { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
@@ -329,22 +340,38 @@ html { scroll-padding-top: 92px; }
      --m-coluna é o espaço que o menu ocupa ao lado do conteúdo: 72px, ou 284px quando fixado.
      A largura máxima soma a coluna, para o conteúdo continuar com a largura que já tinha */
   .pagina:has(> .menu) { --m-coluna: 72px; display: grid; grid-template-columns: var(--m-coluna) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 14px 16px; align-items: start; max-width: calc(1180px + 16px + var(--m-coluna)); }
+  /* FIXAR NÃO ANIMA, de propósito: a coluna cresce de uma vez. Animar a coluna refaria a arrumação do conteúdo
+     inteiro a cada quadro (o texto requebra, a moldura do PDF muda de tamanho, os painéis de vidro desfocam de novo),
+     e isso engasga. É um gesto raro, e a escolha fica lembrada de uma tela para a outra */
   .pagina:has(> .m-chave:checked) { --m-coluna: 284px; }
   .pagina:has(> .menu) > :is(.topo, main) { grid-column: 2; }
 
   /* Preso no alto, da altura da janela. A coluna da grade tem 72px; aberto, o menu passa por cima do conteúdo.
-     ZÉFIRO ENTRA AQUI: hoje a largura troca de uma vez. O "0s" é a duração (sem animação) e o segundo tempo é só a
-     espera antes de fechar, para o menu perdoar quem tira o mouse um instante. Animar = dar duração a esta transição
-     (e à do grid-template-columns da .pagina, quando o menu é fixado) */
-  .menu { grid-column: 1; grid-row: 1 / 3; position: sticky; top: var(--borda); width: 72px; height: calc(100vh - 2 * var(--borda)); height: calc(100dvh - 2 * var(--borda)); transition: width 0s .28s; }
-  /* aberto por cima do conteúdo: chegou pelo teclado (abre na hora) ou pelo mouse (espera um instante: quem só
-     atravessa o menu com o mouse não abre nada). O vidro fica mais leitoso porque há texto atrás dele */
-  .menu:has(:focus-visible) { width: 284px; --menu-vidro: rgba(246, 248, 251, .86); transition-delay: 0s; }
+     O MOVIMENTO: a largura e o tom do vidro mudam juntos. Cada estado escolhe dois números, --m-tempo (quanto dura)
+     e --m-espera (quanto espera antes de começar), e vale sempre o par do estado de CHEGADA.
+     Aqui está o par de recolher: espera 0,15s (perdoa quem tira o mouse um instante) e fecha em 0,18s, mais rápido
+     do que abre, para devolver logo o conteúdo que estava coberto.
+     Largura é arrumação (o navegador refaz as contas a cada quadro), mas aqui só as do próprio menu: ele passa por
+     cima do conteúdo, que não sai do lugar. container-type: as linhas de dentro ficam sabendo a largura do menu */
+  .menu { grid-column: 1; grid-row: 1 / 3; position: sticky; top: var(--borda); width: 72px; height: calc(100vh - 2 * var(--borda)); height: calc(100dvh - 2 * var(--borda)); container-type: inline-size;
+    --m-tempo: .18s; --m-espera: .15s; transition: var(--m-tempo) var(--sair) var(--m-espera); transition-property: width, --menu-vidro; }
+  /* aberto por cima do conteúdo, pelo teclado ou pelo mouse. O vidro fica mais leitoso porque há texto atrás dele */
+  .menu:has(:focus-visible) { width: 284px; --menu-vidro: rgba(246, 248, 251, .86); }
   @media (hover: hover) and (pointer: fine) {
-    .menu:hover { width: 284px; --menu-vidro: rgba(246, 248, 251, .86); transition-delay: .1s; }
+    /* espera 0,1s antes de abrir: quem só atravessa o menu com o mouse não abre nada, nem vê o vidro piscar */
+    .menu:hover { width: 284px; --menu-vidro: rgba(246, 248, 251, .86); --m-tempo: .22s; --m-espera: .1s; }
   }
   /* fixado: fica aberto e o conteúdo vai para o lado (a coluna da grade cresce), então o vidro volta ao normal */
   .m-chave:checked ~ .menu { width: 284px; --menu-vidro: rgba(255, 255, 255, .54); }
+  /* SEM MOVIMENTO em três casos. Teclado dentro do menu e teclado na chave: quem usa o teclado anda rápido, e
+     animação ali só atrasa. Fixado: a tela seguinte já nasce com o menu aberto, sem abrir de novo a cada página */
+  .menu:has(:focus-visible), .m-chave:is(:checked, :focus-visible) ~ .menu { transition: none; }
+  /* Os nomes só aparecem quando há lugar para eles. Sem isso, enquanto o menu abre, cada nome surgiria cortado
+     com reticências ("Not…"). Quem decide é a largura do menu naquele quadro (consulta de contêiner), então a
+     espera do mouse já vem junto. Somem mais rápido (0,08s) do que aparecem (0,16s).
+     Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
+  .m-nome, .m-quem { transition: opacity .16s; }
+  @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
   .m-chave:checked ~ .menu .m-vira .m-ic i { background: var(--placa-azul); color: #fff; }
 
   /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */
@@ -357,12 +384,15 @@ html { scroll-padding-top: 92px; }
 
 /* ---------- celular: o menu vira gaveta, com um véu escuro atrás ---------- */
 @media (max-width: 860px) {
-  /* ZÉFIRO ENTRA AQUI: a gaveta e o véu aparecem de uma vez. A gaveta já está posta para entrar pela esquerda
-     (só transform) e o véu para clarear (opacity) */
+  /* O MOVIMENTO: a gaveta entra pela esquerda (só transform) em 0,4s e o véu escurece (só opacity) em 0,24s;
+     para sair, os dois levam 0,24s: quem fecha quer a tela de volta logo.
+     visibility tira a peça fechada do toque, do teclado e do leitor de tela. Ao fechar, ela só troca DEPOIS do
+     movimento (é o "0s .24s": dura nada, espera 0,24s); ao abrir, troca na hora */
   .menu { position: fixed; z-index: 40; top: max(var(--borda), env(safe-area-inset-top)); bottom: max(var(--borda), env(safe-area-inset-bottom)); left: max(var(--borda), env(safe-area-inset-left)); width: min(308px, 100vw - 56px);
-    --menu-vidro: rgba(246, 248, 251, .86); visibility: hidden; transform: translateX(calc(-100% - 30px)); }
-  .m-chave:checked ~ .menu { visibility: visible; transform: none; }
-  .m-chave:checked ~ .m-veu { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(10, 14, 30, .4); }
+    --menu-vidro: rgba(246, 248, 251, .86); visibility: hidden; transform: translateX(calc(-100% - 30px)); transition: transform .24s var(--gaveta), visibility 0s .24s; }
+  .m-chave:checked ~ .menu { visibility: visible; transform: none; transition: transform .4s var(--gaveta); }
+  .m-veu { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(10, 14, 30, .4); visibility: hidden; opacity: 0; transition: opacity .24s, visibility 0s .24s; }
+  .m-chave:checked ~ .m-veu { visibility: visible; opacity: 1; transition: opacity .24s; }
   /* com a gaveta aberta, a página de trás não rola */
   html:has(.m-chave:checked) { overflow: hidden; }
   /* o último botão do menu troca de papel: no computador fixa, aqui fecha a gaveta */
