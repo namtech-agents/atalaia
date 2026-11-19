@@ -34,6 +34,15 @@ class AnalistaTest {
     }
 
     @Test
+    void pedidoListaCadaCampoQueOVerificadorConhece() {
+        //Agir e conferir: a lista do Verificador e a do pedido sao a mesma. Quem acrescentar um campo num lugar
+        //e esquecer o outro ve este teste falhar, em vez de todo documento com o campo novo ir para revisao
+        for (String campo : DadoExtraido.CAMPOS_PEDIDOS.keySet()) {
+            assertThat(Analista.PEDIDO).as(campo).contains("\"" + campo + "\"");
+        }
+    }
+
+    @Test
     void mandaOTextoDoDocumentoParaAIaEntreAsMarcas() {
         //Arrumar: uma IA que só guarda a pergunta que recebeu
         String[] perguntaRecebida = new String[1];

@@ -151,7 +151,7 @@ Decisões:
 - **O banco é criado pelo Flyway**, por arquivos SQL numerados. O Hibernate só confere se as classes batem com as tabelas.
 - **A Recepção rege o caminho.** Ela chama o Leitor, o Analista e o Verificador, um depois do outro, e junta os motivos de revisão. Com um motivo que seja, a notificação vai para uma pessoa.
 - **A IA fica atrás de uma interface** (`ModeloDeIA`). Hoje quem responde é o Gemini; os testes usam uma IA de mentira, sem internet. Sem a chave `GEMINI_API_KEY`, o sistema sobe igual e manda tudo para revisão.
-- **O que a IA diz é conferido por código.** Cada dado precisa aparecer no texto do PDF (Verificador), e um "informativo" que fala em prazo, intimação, citação ou multa vai para revisão.
+- **O que a IA diz é conferido por código.** Cada dado precisa aparecer no texto do PDF (Verificador), e um "informativo" que fala em prazo, intimação, citação ou multa vai para revisão. O nome do dado também é conferido: só valem os seis campos do pedido (`DadoExtraido.CAMPOS_PEDIDOS`; um teste garante que o pedido à IA lista os mesmos). Um valor certo com nome inventado iria para a tela como conferido, então vai para revisão.
 - **Peças conversando por eventos** (uma publica "documento lido", a outra escuta): fica para quando a análise sair do pedido da tela. Hoje a pessoa espera a resposta da IA com a tela aberta.
 
 ## 3. Classes
@@ -191,6 +191,9 @@ classDiagram
             String campo
             String valor
             String trecho
+            Map CAMPOS_PEDIDOS$
+            +rotulo() String
+            +conhecido() boolean
         }
         class ResultadoVerificacao {
             <<record>>

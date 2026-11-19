@@ -1,6 +1,7 @@
 package br.com.namtech.atalaia.verificador;
 
 import java.util.Locale;
+import java.util.Map;
 
 import jakarta.persistence.Embeddable;
 
@@ -10,23 +11,39 @@ import jakarta.persistence.Embeddable;
 @Embeddable
 public record DadoExtraido(String campo, String valor, String trecho) {
 
-    //O nome do campo como aparece na tela e nos motivos de revisao.
-    //A IA escreve como o pedido manda: sem acento e com sublinhado (numero_do_processo)
+    //Os campos que o pedido à IA lista (Analista.PEDIDO), com o nome que a tela mostra.
+    //A IA escreve como o pedido manda: sem acento e com sublinhado (numero_do_processo).
+    //Map.ofEntries: lista fixa, que ninguem consegue alterar depois
+    public static final Map<String, String> CAMPOS_PEDIDOS = Map.ofEntries(
+            Map.entry("valor", "Valor"),
+            Map.entry("tributo", "Tributo"),
+            Map.entry("numero_do_processo", "Número do processo"),
+            Map.entry("remetente", "Remetente"),
+            Map.entry("destinatario", "Destinatário"),
+            Map.entry("prazo", "Prazo"));
+
+    //O nome do campo como aparece na tela e nos motivos de revisao
     public String rotulo() {
-        //A comparação ignora maiuscula e espaço nas pontas: " Prazo " e "prazo" sao o mesmo campo
-        String nome = campo == null ? "" : campo.strip();
-        return switch (nome.toLowerCase(Locale.ROOT)) {
-            case "" -> "sem nome";
-            case "valor" -> "Valor";
-            case "tributo" -> "Tributo";
-            case "numero_do_processo" -> "Número do processo";
-            case "remetente" -> "Remetente";
-            case "destinatario" -> "Destinatário";
-            case "prazo" -> "Prazo";
-            //"parte": notificação guardada antes de o pedido separar quem enviou de quem recebe
-            case "parte" -> "Parte";
-            //Fora da lista (a IA inventou um nome): aparece como veio, só sem o sublinhado
-            default -> nome.replace('_', ' ');
-        };
+        String nome = nome();
+        if (nome.isEmpty()) {
+            return "sem nome";
+        }
+        //"parte": notificação guardada antes de o pedido separar quem enviou de quem recebe
+        if (nome.equals("parte")) {
+            return "Parte";
+        }
+        //Fora da lista (a IA inventou um nome): aparece como veio, só sem o sublinhado
+        return CAMPOS_PEDIDOS.getOrDefault(nome, campo.strip().replace('_', ' '));
+    }
+
+    //Se o campo é um dos que o pedido lista. O Verificador confere o valor e o trecho, mas um valor certo com nome
+    //inventado apareceria na tela como dado conferido; por isso campo fora da lista vai para revisao
+    public boolean conhecido() {
+        return CAMPOS_PEDIDOS.containsKey(nome());
+    }
+
+    //A comparação ignora maiuscula e espaço nas pontas: " Prazo " e "prazo" sao o mesmo campo
+    private String nome() {
+        return campo == null ? "" : campo.strip().toLowerCase(Locale.ROOT);
     }
 }

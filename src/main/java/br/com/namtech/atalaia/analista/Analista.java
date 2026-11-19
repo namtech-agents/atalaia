@@ -29,8 +29,9 @@ public class Analista {
     private static final String NAO_RESPONDEU = "A IA não respondeu. O documento não foi analisado.";
 
     //O pedido para a IA. O texto do documento entra no fim, entre as marcas, e é tratado como dado:
-    //se o documento trouxer uma frase mandando a IA fazer outra coisa, ela nao deve obedecer
-    private static final String PEDIDO = """
+    //se o documento trouxer uma frase mandando a IA fazer outra coisa, ela nao deve obedecer.
+    //Sem private: o teste confere que os campos daqui sao os mesmos de DadoExtraido.CAMPOS_PEDIDOS
+    static final String PEDIDO = """
             Você analisa notificações de órgãos públicos brasileiros enviadas a empresas.
             Responda só com um JSON neste formato, sem nada antes nem depois:
             {"tipo": "...", "confianca": "...", "dados": [{"campo": "...", "valor": "...", "trecho": "..."}], "resumo": "..."}

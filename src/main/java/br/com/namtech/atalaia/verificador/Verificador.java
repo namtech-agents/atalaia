@@ -44,6 +44,10 @@ public class Verificador {
                 motivos.add("O trecho do dado \"" + dado.rotulo() + "\" não está no texto do PDF.");
             } else if (!contemInteiro(trecho, valor)) {
                 motivos.add("O valor do dado \"" + dado.rotulo() + "\" não aparece no trecho de onde ele diz ter saído.");
+            } else if (!dado.conhecido()) {
+                //Valor e trecho conferem, mas o nome nao é um dos que o pedido lista: quem garante que o dado é o que
+                //o nome diz? (a IA poderia chamar o valor da multa de "desconto") Uma pessoa confere
+                motivos.add("O dado \"" + dado.rotulo() + "\" não é um dos campos que o Atalaia confere.");
             }
         }
         return new ResultadoVerificacao(!motivos.isEmpty(), motivos);

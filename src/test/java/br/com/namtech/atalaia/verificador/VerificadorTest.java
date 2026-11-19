@@ -35,6 +35,20 @@ class VerificadorTest {
     }
 
     @Test
+    void campoComNomeInventadoMandaParaRevisao() {
+        //Arrumar: valor e trecho certos, mas com um nome de campo que o pedido nao tem.
+        //Sem esta conferencia, a tela mostraria "orgao emissor" como dado conferido
+        DadoExtraido inventado = new DadoExtraido("orgao_emissor", "30 dias", "Prazo: 30 dias a contar da ciência.");
+
+        //Agir: pede a conferencia
+        ResultadoVerificacao resultado = new Verificador().conferir(TEXTO, List.of(inventado));
+
+        //Conferir: vai para revisao, com o motivo dizendo qual dado
+        assertThat(resultado.precisaDeRevisao()).isTrue();
+        assertThat(resultado.motivos()).containsExactly("O dado \"orgao emissor\" não é um dos campos que o Atalaia confere.");
+    }
+
+    @Test
     void trechoQueNaoEstaNoTextoMandaParaRevisaoComOMotivo() {
         //Arrumar: um dado com um trecho que nao existe no documento (a IA inventou)
         DadoExtraido prazo = new DadoExtraido("prazo", "15 dias", "Prazo: 15 dias a contar da ciência.");
