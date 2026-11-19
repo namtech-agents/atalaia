@@ -3,6 +3,7 @@
   "short_name": "Atalaia",
   "description": "As notificações do governo dos clientes do escritório, com prazo conferido.",
   "lang": "pt-BR",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

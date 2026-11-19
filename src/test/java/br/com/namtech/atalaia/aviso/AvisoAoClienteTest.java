@@ -109,6 +109,8 @@ class AvisoAoClienteTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Padaria de Teste")))
                 .andExpect(content().string(containsString("Escritório de Teste")))
+                //A página do cliente não oferece o app do celular: ele não tem conta (#199)
+                .andExpect(content().string(not(containsString("rel=\"manifest\""))))
                 .andExpect(content().string(containsString("Chegou uma intimação.\nSepare os documentos.")))
                 .andExpect(content().string(containsString("10/12/2026")))
                 .andExpect(content().string(containsString("Contrato social")))

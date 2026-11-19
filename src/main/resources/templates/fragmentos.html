@@ -7,8 +7,7 @@
 <!-- O que vai dentro do <head>; cada tela passa o seu título -->
 <head th:fragment="cabeca(titulo)">
   <meta charset="utf-8">
-  <!--/* interactive-widget: no Android, o teclado encolhe a tela, como no iPhone (campo do fim não fica escondido) */-->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title th:text="${titulo} + ' · Atalaia'">Atalaia</title>
   <!--/* Prévia: não é para aparecer em buscador */-->
   <meta name="robots" content="noindex">
@@ -16,15 +15,17 @@
   <link rel="stylesheet" th:href="@{/css/atalaia.css}">
   <!--/* O app no celular (PWA): o manifesto diz nome, ícone e que abre em tela cheia; theme-color pinta a barra de status
          com a cor do fundo (o balcão). O iPhone ainda lê o ícone e o título pelas tags da Apple */-->
+  <!--/* Fora da página do cliente (/c/...): o dono da empresa não tem conta, e o app abriria o login do escritório */-->
+  <th:block th:unless="${paginaDoCliente}">
   <link rel="manifest" th:href="@{/manifest.json}">
   <meta name="theme-color" content="#e3e7eb">
   <link rel="apple-touch-icon" th:href="@{/icones/apple-touch-icon.png}">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Atalaia">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <!--/* Liga a tela "Sem conexão" do app instalado (static/js/app.js e static/sw.js) */-->
   <script th:src="@{/js/app.js}" defer></script>
+  </th:block>
   <!--/* O menu funciona sem este arquivo; ele só lembra se o menu ficou aberto (static/js/menu.js).
          Só entra com a sessão aberta: é quando existe menu.
          defer: roda depois de a página ser lida. blocking="render": o navegador espera por ele antes de desenhar,

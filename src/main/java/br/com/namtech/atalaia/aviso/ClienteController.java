@@ -47,6 +47,8 @@ public class ClienteController {
         model.addAttribute("empresa", empresa.getNome());
         model.addAttribute("simulado", aviso.getNotificacao().isSimulado());
         model.addAttribute("escritorio", empresa.getEscritorio().getNome());
+        //Esta página não oferece o app do celular (fragmentos.html): quem abre é o dono da empresa, que não tem conta
+        model.addAttribute("paginaDoCliente", true);
         return "cliente";
     }
 
