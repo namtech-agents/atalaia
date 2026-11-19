@@ -174,7 +174,20 @@ class RecepcaoControllerTest {
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(content().string(containsString(
                         ">A Receita pediu os livros da empresa. Separe os livros e avise o escritório.</textarea>")))
-                .andExpect(content().string(containsString("Rascunho escrito por inteligência artificial")));
+                .andExpect(content().string(containsString("Rascunho escrito por inteligência artificial")))
+                //o leitor de tela anuncia a nota junto com o campo
+                .andExpect(content().string(containsString("aria-describedby=\"rascunho-ia dica-resumo\"")));
+
+        //O envio falhou e a tela voltou com o que a pessoa digitou: o rascunho nao passa por cima
+        navegador.perform(get("/notificacoes/" + guardada.getId()).flashAttr("resumoDigitado", "Texto da pessoa."))
+                .andExpect(content().string(containsString(">Texto da pessoa.</textarea>")))
+                .andExpect(content().string(not(containsString("Rascunho escrito por inteligência artificial"))));
+
+        //Depois que ja existe um aviso, o campo do aviso novo abre vazio: o rascunho era para o primeiro
+        navegador.perform(post("/notificacoes/" + guardada.getId() + "/aviso").param("resumo", "Resumo aprovado."));
+        navegador.perform(get("/notificacoes/" + guardada.getId()))
+                .andExpect(content().string(containsString("Fazer um aviso novo")))
+                .andExpect(content().string(not(containsString("Rascunho escrito por inteligência artificial"))));
     }
 
     @Test

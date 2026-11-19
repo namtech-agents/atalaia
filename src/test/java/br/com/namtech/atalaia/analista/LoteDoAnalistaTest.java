@@ -41,6 +41,8 @@ class LoteDoAnalistaTest {
         //Agir: analisa e confere um por um, contando os acertos
         int tiposCertos = 0;
         int semRevisao = 0;
+        //Quantos ficaram com rascunho do aviso depois do filtro (só para acompanhar, nao tem minimo)
+        int comRascunho = 0;
         for (Path documento : documentos) {
             String texto = Files.readString(documento, StandardCharsets.UTF_8);
             Analise analise = analista.analisar(texto);
@@ -56,6 +58,9 @@ class LoteDoAnalistaTest {
             if (passou) {
                 semRevisao++;
             }
+            if (analise.resumoSugerido() != null) {
+                comRascunho++;
+            }
             //Uma linha por documento, para ler o resultado no terminal
             System.out.println(documento.getFileName() + " | tipo: " + analise.tipo() + (tipoCerto ? " (certo)" : " (ERRADO)")
                     + " | " + (passou ? "sem revisão" : "REVISÃO: " + analise.motivo() + " " + verificacao.motivos())
@@ -64,7 +69,8 @@ class LoteDoAnalistaTest {
             Thread.sleep(PAUSA_EM_MILISSEGUNDOS);
         }
         System.out.println("Tipos certos: " + tiposCertos + " de " + documentos.size()
-                + " | Sem revisão: " + semRevisao + " de " + documentos.size());
+                + " | Sem revisão: " + semRevisao + " de " + documentos.size()
+                + " | Com rascunho do aviso: " + comRascunho + " de " + documentos.size());
 
         //Conferir: US10 pede 9 em cada 10 no tipo (18 de 20); US11 pede 80% sem revisao (16 de 20)
         assertThat(tiposCertos).isGreaterThanOrEqualTo(18);

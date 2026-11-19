@@ -3,6 +3,8 @@ package br.com.namtech.atalaia.analista;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import br.com.namtech.atalaia.verificador.DadoExtraido;
 
@@ -245,24 +247,40 @@ class AnalistaTest {
                 .isEqualTo("A Receita pediu os livros da empresa. Separe os livros e avise o escritório.");
     }
 
-    @Test
-    void resumoQueCitaPrazoDataOuLinkEJogadoFora() {
-        //Quem escreve prazo é o codigo, nunca a IA: sugestão que cita data, dias, horas ou link nao serve
-        assertThat(Analista.resumoQueServe("Você tem 30 dias para responder.")).isNull();
-        assertThat(Analista.resumoQueServe("Responda em 48 horas.")).isNull();
-        assertThat(Analista.resumoQueServe("Responda até 10/12.")).isNull();
-        assertThat(Analista.resumoQueServe("Responda até 10/12/2026.")).isNull();
-        assertThat(Analista.resumoQueServe("Responda até 1º de Dezembro.")).isNull();
-        assertThat(Analista.resumoQueServe("Pague em https://exemplo.test/boleto")).isNull();
-        assertThat(Analista.resumoQueServe("Acesse www.exemplo.test")).isNull();
-        //Tambem nao serve: vazio, sem letra nenhuma e maior que o campo do aviso
-        assertThat(Analista.resumoQueServe(null)).isNull();
-        assertThat(Analista.resumoQueServe(" ... ")).isNull();
-        assertThat(Analista.resumoQueServe("a".repeat(Analista.RESUMO_MAXIMO + 1))).isNull();
+    //ParameterizedTest: o mesmo teste roda uma vez para cada frase da lista
+    @ParameterizedTest
+    @ValueSource(strings = {
+            //prazo: com numero, por extenso, com os dois, abreviado e em outras unidades
+            "Você tem 30 dias para responder.", "Responda em 30 (trinta) dias.", "Responda em trinta dias.",
+            "Responda em 48 horas.", "Responda em 48h.", "Responda em 48 hs.", "Responda em 2 semanas.",
+            "Responda em 1 mês.", "Responda em 30\u200B dias.",
+            //data: com barra, ponto, traço, espaço, mes por extenso (com e sem acento) e abreviado
+            "Responda até 10/12.", "Responda até 10/12/2026.", "Responda até 10.12.2026.", "Responda até 10-12-2026.",
+            "Responda até 2026-12-10.", "Responda até 10 / 12.", "Responda até 1º de Dezembro.",
+            "Responda até 1° de dezembro.", "Responda até dezembro.", "Responda até 10 de marco.", "Responda até 10 dez.",
+            //link e e-mail
+            "Pague em https://exemplo.test/boleto", "Acesse www.exemplo.test", "Pague em exemplo.com.br/boleto",
+            "Pague em bit.ly/abc", "Fale no wa.me/5586999999999", "Mande para golpe@exemplo.test",
+            //vazio de sentido
+            " ... " })
+    void resumoQueCitaPrazoDataOuLinkEJogadoFora(String resumo) {
+        //Quem escreve prazo é o codigo, nunca a IA; e link no resumo pode ter sido plantado pelo documento
+        assertThat(Analista.resumoQueServe(resumo, TEXTO)).isNull();
+    }
 
-        //Valor em dinheiro e numero de lei ou de processo passam: nao sao prazo
-        assertThat(Analista.resumoQueServe("Cobrança de R$ 1.250,00, pela Lei 8.212/91, processo 123/2024."))
-                .isEqualTo("Cobrança de R$ 1.250,00, pela Lei 8.212/91, processo 123/2024.");
+    @Test
+    void resumoSoCitaNumeroQueEstaEscritoNoDocumento() {
+        String documento = "Cobrança de R$ 11.250,00, pela Lei 8.212/91, processo 123/2024.";
+
+        //Valor em dinheiro e numero de lei ou de processo passam quando estao iguais no documento: nao sao prazo
+        assertThat(Analista.resumoQueServe("Cobrança de R$ 11.250,00, pela Lei 8.212/91, processo 123/2024.", documento))
+                .isEqualTo("Cobrança de R$ 11.250,00, pela Lei 8.212/91, processo 123/2024.");
+        //Numero trocado, ou só um pedaço do numero do documento, nao serve: o cliente leria um valor errado
+        assertThat(Analista.resumoQueServe("Cobrança de R$ 12.500,00.", documento)).isNull();
+        assertThat(Analista.resumoQueServe("Cobrança de R$ 1.250,00.", documento)).isNull();
+        //Tambem nao serve: resumo que nao veio e resumo maior que o campo do aviso
+        assertThat(Analista.resumoQueServe(null, documento)).isNull();
+        assertThat(Analista.resumoQueServe("a".repeat(Analista.RESUMO_MAXIMO + 1), documento)).isNull();
     }
 
     @Test

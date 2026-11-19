@@ -68,13 +68,24 @@ public class Analista {
     //O tamanho da coluna resumo_sugerido (V10), igual ao limite do resumo do aviso ao cliente
     static final int RESUMO_MAXIMO = 600;
 
-    //O que um resumo sugerido nao pode trazer: data (10/12, 10 de dezembro), quantidade de dias ou horas (30 dias)
-    //e link. O começo da primeira regra deixa passar numero de lei e de processo (8.212/91, 123/2024).
-    //Nao pega prazo escrito por extenso ("trinta dias"): por isso a tela pede para a pessoa ler antes de enviar
+    //O que um resumo sugerido nao pode trazer. A regra proibe a PALAVRA da unidade e do mes, nao só o numero
+    //junto dela: assim "30 (trinta) dias", "trinta dias" e "até dezembro" tambem caem. Linha por linha:
+    //- data com barra, ponto ou traço (10/12, 10.12.2026). O começo deixa passar numero de lei e de processo
+    //- dias, horas, semanas, meses, e hora abreviada (48h)
+    //- nome de mes, inteiro ou abreviado depois de um numero (10 dez)
+    //- link e e-mail: o documento pode ter tentado plantar um endereço para o cliente
+    //- caractere invisivel (\p{Cf}), que esconderia qualquer uma das formas acima
+    //Telefone e chave Pix nao dao para barrar sem derrubar numero de processo: ficam para quem le o rascunho
     private static final Pattern CITA_PRAZO_OU_LINK = Pattern.compile(
-            "(?<![\\d.])\\d{1,2}/\\d{1,2}(?!\\d)|\\d+\\s*(dias?|horas?)\\b|\\d{1,2}º?\\s+de\\s+(janeiro|fevereiro|março|abril|maio|junho|julho"
-                    + "|agosto|setembro|outubro|novembro|dezembro)|://|www\\.",
+            "(?<![\\d.])\\d{1,2}\\s*[/.\\-]\\s*\\d{1,2}(?!\\d)"
+                    + "|\\b(dias?|horas?|semanas?|m[eê]s|meses)\\b|\\d\\s*hs?\\b"
+                    + "|\\b(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\\b"
+                    + "|\\d{1,2}\\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\\b"
+                    + "|://|www\\.|@|\\.(com|br|net|org|ly|me|app|io)\\b|\\p{Cf}",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
+
+    //Um numero dentro do resumo: digitos com a pontuação do meio (1.250,00 ou 123/2024)
+    private static final Pattern NUMERO = Pattern.compile("\\d[\\d.,/\\-]*\\d|\\d");
 
     private final ModeloDeIA modelo;
 
@@ -142,24 +153,29 @@ public class Analista {
         if (!"alta".equals(lida.confianca())) {
             return new Analise(lida.tipo(), dados, true, "A IA ficou em dúvida sobre o tipo do documento.", null);
         }
-        return new Analise(lida.tipo(), dados, false, null, resumoQueServe(lida.resumo()));
+        return new Analise(lida.tipo(), dados, false, null, resumoQueServe(lida.resumo(), textoDoDocumento));
     }
 
     //O resumo é só um rascunho para a pessoa do escritório, mas mesmo o rascunho tem regra: a IA nao escreve
-    //prazo (quem calcula é o codigo) e nao manda link (o documento pode ter tentado plantar um).
-    //Sugestão que quebra a regra é jogada fora, e a pessoa escreve o resumo do zero. Devolve null se nao serve
-    static String resumoQueServe(String resumo) {
+    //prazo (quem calcula é o codigo), nao manda link, e todo numero que ela citar (o valor cobrado, o numero do
+    //processo) tem que estar escrito igual no documento. Sugestão que quebra a regra é jogada fora, e a pessoa
+    //escreve o resumo do zero. Devolve null se nao serve
+    static String resumoQueServe(String resumo, String textoDoDocumento) {
         if (resumo == null) {
             return null;
         }
-        //Tudo numa linha só, sem espaços repetidos
-        String limpo = resumo.replaceAll("\\s+", " ").strip();
+        //Tudo numa linha só, sem espaços repetidos. O NFKC troca as letras "parecidas" pelas comuns,
+        //para a regra de baixo enxergar a palavra
+        String limpo = Normalizer.normalize(resumo, Normalizer.Form.NFKC).replaceAll("\\s+", " ").strip();
         boolean semLetra = limpo.codePoints().noneMatch(Character::isLetter);
         boolean temControle = limpo.codePoints().anyMatch(Character::isISOControl);
         if (semLetra || temControle || limpo.length() > RESUMO_MAXIMO || CITA_PRAZO_OU_LINK.matcher(limpo).find()) {
             return null;
         }
-        return limpo;
+        //Cada numero do resumo precisa aparecer inteiro no documento: "1.250,00" nao vale se la esta "11.250,00"
+        boolean numeroInventado = NUMERO.matcher(limpo).results().anyMatch(numero -> !Pattern
+                .compile("(?<![\\d.,])" + Pattern.quote(numero.group()) + "(?!\\d)").matcher(textoDoDocumento).find());
+        return numeroInventado ? null : limpo;
     }
 
     //Vazio: o item nao veio, ou veio sem nenhum dos tres campos
