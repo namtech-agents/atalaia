@@ -6,7 +6,7 @@
 
 > Multa é coisa de quem não tem Atalaia.
 
-Atalaia é a torre de vigia, o posto de onde alguém avisa antes do perigo chegar. Aqui, é um agente de IA para escritórios de contabilidade que cuida do que vem depois de uma notificação oficial chegar. É o primeiro produto da [Galad](https://github.com/somosgalad).
+Outras ferramentas avisam que chegou uma notificação do governo. O Atalaia cuida do depois: lê o documento, calcula o prazo certo por código e leva o caso até o cliente confirmar que foi avisado, com registro. É o primeiro produto da [Galad](https://github.com/somosgalad).
 
 ## O problema
 
