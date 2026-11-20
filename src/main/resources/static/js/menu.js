@@ -40,7 +40,7 @@ if (chave) {
     if (quando && Date.now() - quando < 5000) {
       pagina.classList.add('m-segue');
       // Solta quando o mouse se mexer de verdade e estiver fora do menu. Não dá para usar "mouseleave": durante a
-      // troca de tela a fusão cobre a página por um instante e o navegador acha que o mouse saiu
+      // troca de tela a transição cobre a página por um instante e o navegador acha que o mouse saiu
       const soltar = () => {
         if (menu.matches(':hover')) return;
         pagina.classList.remove('m-segue');
