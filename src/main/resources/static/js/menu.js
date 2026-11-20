@@ -27,13 +27,17 @@ if (chave) {
   const pagina = chave.closest('.pagina');
   const menu = chave.closest('.menu');
   menu.addEventListener('click', clique => {
-    if (computador.matches && !chave.checked && clique.target.closest('a.m-item') && menu.matches(':hover')) {
-      try { sessionStorage.setItem(PASSAGEM, '1'); } catch (e) { /* só não segura o menu aberto */ }
+    // Clique com Cmd, Ctrl, Shift ou Alt abre o link em outra aba ou janela: esta aba não troca de tela
+    const outraAba = clique.button !== 0 || clique.metaKey || clique.ctrlKey || clique.shiftKey || clique.altKey;
+    if (computador.matches && !chave.checked && !outraAba && clique.target.closest('a.m-item') && menu.matches(':hover')) {
+      // Guarda a hora, e não só "sim": se a tela nova não chegar (rede caiu, Esc), o aviso vence sozinho
+      try { sessionStorage.setItem(PASSAGEM, String(Date.now())); } catch (e) { /* só não segura o menu aberto */ }
     }
   });
   try {
-    if (sessionStorage.getItem(PASSAGEM) === '1') {
-      sessionStorage.removeItem(PASSAGEM);
+    const quando = Number(sessionStorage.getItem(PASSAGEM));
+    sessionStorage.removeItem(PASSAGEM);
+    if (quando && Date.now() - quando < 5000) {
       pagina.classList.add('m-segue');
       // Solta quando o mouse se mexer de verdade e estiver fora do menu. Não dá para usar "mouseleave": durante a
       // troca de tela a fusão cobre a página por um instante e o navegador acha que o mouse saiu
