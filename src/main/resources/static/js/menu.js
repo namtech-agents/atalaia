@@ -3,7 +3,8 @@
 // (fragmentos.html). Aqui fica só o que o CSS não consegue:
 //   1. lembrar, de uma tela para a outra, se a pessoa deixou o menu fixado (só no computador);
 //   2. no celular, fechar a gaveta com a tecla Esc e deixar o resto da tela parado enquanto ela está aberta;
-//   3. manter o menu aberto na tela seguinte quando a pessoa clica num item com ele aberto pelo mouse.
+//   3. manter o menu aberto na tela seguinte quando a pessoa clica num item com ele aberto pelo mouse;
+//   4. passar os cartões da vitrine no pé do menu.
 // Não é chamado dentro da página (a CSP proíbe script embutido): entra pelo <head>, com defer.
 
 const chave = document.getElementById('menu-aberto');
@@ -49,6 +50,66 @@ if (chave) {
       document.addEventListener('mousemove', soltar);
     }
   } catch (e) { /* sem sessionStorage, o menu só nasce fechado */ }
+
+  // 4. A vitrine (#204): passa sozinha a cada 5 s, mas para com o mouse em cima, com o foco dentro, com a aba
+  //    escondida, com o menu recolhido (aí ela nem aparece) e quando a pessoa aperta pausar. Quem pediu menos
+  //    movimento já começa com ela parada, e a troca não desliza. Ela não volta para a logo a cada tela: retoma
+  //    o cartão em que estava (sessionStorage)
+  const vitrine = menu.querySelector('.vitrine');
+  if (vitrine) {
+    const cartoes = [...vitrine.querySelectorAll('.v-cartao')];
+    const pontos = [...vitrine.querySelectorAll('.v-pontos i')];
+    const pausa = vitrine.querySelector('.v-pausa');
+    const calmo = matchMedia('(prefers-reduced-motion: reduce)');
+    const LUGAR = 'atalaia-vitrine';
+    let atual = 0;
+    let parada = calmo.matches;
+    let olhando = false;
+
+    // mostra o cartão "para"; lado = 1 desliza para a esquerda (próximo), -1 para a direita (anterior)
+    const ir = (para, lado, animar) => {
+      para = (para + cartoes.length) % cartoes.length;
+      if (para === atual) return;
+      const sai = cartoes[atual];
+      const entra = cartoes[para];
+      sai.classList.remove('atual');
+      entra.classList.add('atual');
+      pontos[atual].classList.remove('atual');
+      pontos[para].classList.add('atual');
+      if (animar && !calmo.matches) {
+        // os dois deslizam juntos (só transform); quem sai continua à vista até terminar
+        const como = { duration: 520, easing: 'cubic-bezier(.32, .72, 0, 1)' };
+        sai.classList.add('saindo');
+        sai.animate([{ transform: 'none' }, { transform: `translateX(${-100 * lado}%)` }], como)
+          .onfinish = () => sai.classList.remove('saindo');
+        entra.animate([{ transform: `translateX(${100 * lado}%)` }, { transform: 'none' }], como);
+      }
+      atual = para;
+      try { sessionStorage.setItem(LUGAR, String(atual)); } catch (e) { /* só não lembra o cartão */ }
+    };
+
+    try { ir(Number(sessionStorage.getItem(LUGAR)) || 0, 1, false); } catch (e) { /* começa na logo */ }
+
+    const pausar = sim => {
+      parada = sim;
+      pausa.setAttribute('aria-pressed', String(sim));
+      pausa.setAttribute('aria-label', sim ? 'Continuar a vitrine' : 'Pausar a vitrine');
+    };
+    pausar(parada);
+
+    // offsetParent é null quando a vitrine está escondida (menu recolhido ou janela baixa)
+    setInterval(() => {
+      if (!parada && !olhando && !document.hidden && vitrine.offsetParent) ir(atual + 1, 1, true);
+    }, 5000);
+
+    pausa.addEventListener('click', () => pausar(!parada));
+    vitrine.querySelector('.v-ant').addEventListener('click', () => ir(atual - 1, -1, true));
+    vitrine.querySelector('.v-prox').addEventListener('click', () => ir(atual + 1, 1, true));
+    vitrine.addEventListener('mouseenter', () => { olhando = true; });
+    vitrine.addEventListener('mouseleave', () => { olhando = vitrine.contains(document.activeElement); });
+    vitrine.addEventListener('focusin', () => { olhando = true; });
+    vitrine.addEventListener('focusout', saida => { olhando = vitrine.contains(saida.relatedTarget) || vitrine.matches(':hover'); });
+  }
 
   // inert: com a gaveta aberta, o teclado e o leitor de tela não entram no que está atrás dela
   const parar = () => { atras.forEach(peca => { peca.inert = !computador.matches && chave.checked; }); };

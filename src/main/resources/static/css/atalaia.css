@@ -51,7 +51,7 @@
   --menu-vidro: rgba(255, 255, 255, .54);
   --menu-placa: rgba(255, 255, 255, .86);
   --menu-luz: rgba(255, 255, 255, .9);
-  --menu-sombra: rgba(24, 36, 110, .32);
+  --menu-sombra: rgba(24, 36, 110, .2);
 
   --borda: 16px;       /* a distância entre a borda da janela e o conteúdo (10px no celular) */
   --raio: 28px;        /* painel de vidro */
@@ -238,8 +238,14 @@ html { scroll-padding-top: 92px; }
   @view-transition { navigation: auto; }
   ::view-transition-old(root) { display: none; }
   ::view-transition-new(root) { animation: none; }
-  .m-item[aria-current] { view-transition-name: marcador; }
+  /* A plaquinha só viaja no computador. Na gaveta do celular, a tela nova nasce com a gaveta fechada e ela
+     atravessaria o conteúdo sozinha até o lugar escondido */
+  @media (min-width: 861px) and (hover: hover) and (pointer: fine) {
+    .m-item[aria-current] { view-transition-name: marcador; }
+  }
   ::view-transition-group(marcador) { animation-duration: .5s; animation-timing-function: cubic-bezier(.3, .9, .3, 1); }
+  /* Se o menu mudar de largura entre as telas, a plaquinha estica sem achatar o texto (a foto não é esticada) */
+  ::view-transition-old(marcador), ::view-transition-new(marcador) { height: 100%; object-fit: none; object-position: left center; }
   .pagina:has(> .menu) > main { animation: chega .5s cubic-bezier(.22, 1, .36, 1) backwards; }
   @keyframes chega { from { opacity: 0; transform: translateY(12px); } }
 }
@@ -367,8 +373,10 @@ html { scroll-padding-top: 92px; }
 }
 /* A SOMBRA segue a curva (#204). Sombra de caixa é sempre retangular: ficava reta do lado de fora enquanto o vidro
    entrava para dentro, e aparecia como um fantasma no vão. Aqui ela é um borrão escuro MENOR que o menu, por baixo
-   do vidro (z-index -1): o borrão sai pelas bordas e por baixo, e nunca desenha uma linha reta */
-.menu::after { content: ""; position: absolute; inset: 24px 10px -4px; z-index: -1; border-radius: 30px; pointer-events: none;
+   do vidro (z-index -1): o borrão sai pelas bordas e por baixo, e nunca desenha uma linha reta.
+   Só na metade de baixo e fraca: o vidro deixa ver 46% do que está atrás, e um borrão no menu inteiro deixaria
+   o vidro acinzentado (o protótipo furava a sombra com a forma, o que aqui pediria JavaScript) */
+.menu::after { content: ""; position: absolute; inset: 50% 12px -6px; z-index: -1; border-radius: 30px; pointer-events: none;
   background: var(--menu-sombra); filter: blur(22px); transform: translateY(14px); }
 
 /* O conteúdo: uma coluna. A folga da direita acompanha a mordida (7% da largura + 9px): 14px recolhido, 29px aberto */
@@ -400,6 +408,44 @@ html { scroll-padding-top: 92px; }
 
 /* quem entrou: o recuo de 50px põe o e-mail na coluna dos nomes, fora do que o menu recolhido mostra */
 .m-quem { padding: 0 12px 8px 50px; font-size: 12.5px; color: var(--apagado-fora); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- A VITRINE (#204): o cartão grande do pé do menu. Começa pela logo e passa para o lado ----------
+   Os cartões ficam empilhados no mesmo lugar e só o atual aparece; o menu.js troca e faz os dois deslizarem juntos
+   (só transform). Cartão escondido: visibility hidden, então não recebe foco nem é lido */
+.vitrine { margin-top: 10px; }
+.v-janela { position: relative; height: 130px; margin: 0; padding: 0; list-style: none; border-radius: 18px; overflow: hidden; background: var(--solido); box-shadow: var(--relevo), 0 0 0 .5px var(--vidro-fora), 0 12px 20px -14px rgba(20,25,34,.5); }
+.v-cartao { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) 108px; visibility: hidden; background: var(--solido); }
+.v-cartao.atual, .v-cartao.saindo { visibility: visible; }
+.v-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 14px 6px 10px 14px; white-space: normal; }
+.v-txt strong { font-size: 14.5px; line-height: 1.15; letter-spacing: -.015em; font-weight: 700; text-wrap: balance; }
+.v-txt > span:not(.etq) { font-size: 12px; line-height: 1.3; color: var(--apagado); text-wrap: pretty; }
+.v-txt .etq { margin-top: auto; min-height: 20px; padding: 1px 8px; font-size: 11px; color: var(--marca); }
+/* o desenho de cada função: a borda esquerda é curva, conversando com a curva do menu */
+.v-des { display: grid; place-items: center; border-radius: 20px 0 0 20px / 65px 0 0 65px; background: var(--campo-fundo); box-shadow: inset 1px 0 0 var(--vidro-fora); }
+.v-des svg { width: 100%; height: 100%; }
+/* as peças dos desenhos: papel, linha de texto, azul da marca, alerta, e .d-t para traço sem preenchimento */
+.d-p { fill: var(--solido); stroke: var(--fio); stroke-width: 1; }
+.d-l { fill: var(--fio); } .d-m { fill: var(--marca); } .d-a { fill: var(--vermelho); }
+.d-t { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.d-t.d-l { stroke: var(--fio); } .d-t.d-m { stroke: var(--marca); } .d-t.d-a { stroke: var(--vermelho); }
+/* o primeiro cartão: a logo sobre o azul do Atalaia */
+.v-logo { display: flex; align-items: flex-end; color: #fff; background: radial-gradient(120% 90% at 10% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), linear-gradient(160deg, #314bcb, var(--azul) 46%, var(--azul-fundo)); --simbolo-face: #fff; --simbolo-sombra: #0d1750; }
+.v-logo .v-agua { position: absolute; right: 12px; top: 12px; width: 92px; }
+.v-logo .v-agua .simbolo { width: 100%; filter: drop-shadow(0 6px 10px rgba(13,23,80,.35)); }
+.v-logo .v-txt { position: relative; padding: 14px; gap: 2px; }
+.v-logo .v-txt strong { font-size: 24px; line-height: 1; font-weight: 800; letter-spacing: -.02em; }
+.v-logo .v-txt > span { color: rgba(255,255,255,.86); font-weight: 500; }
+/* os controles: setas, pontinhos que mostram onde está e o botão de pausar */
+.v-controles { display: flex; align-items: center; height: 30px; margin-top: 3px; }
+.v-controles button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--apagado); display: grid; place-items: center; cursor: pointer; }
+.v-controles button svg { width: 14px; height: 14px; }
+@media (hover: hover) { .v-controles button:hover { background: var(--campo-fundo); color: var(--marca); } }
+.v-pausa[aria-pressed="true"] .v-ic-pausa, .v-pausa[aria-pressed="false"] .v-ic-tocar { display: none; }
+.v-pontos { flex: 1; display: flex; justify-content: center; gap: 9px; }
+.v-pontos i { width: 5px; height: 5px; border-radius: 3px; background: var(--fio); transition: transform .3s var(--sair), background .2s; }
+.v-pontos i.atual { background: var(--marca); transform: scaleX(2.2); }
+/* janela baixa: a vitrine sai para a lista caber */
+@media (max-height: 760px) { .vitrine { display: none; } }
 
 /* ---------- computador: o menu fica ao lado do conteúdo ----------
    Computador = janela larga E mouse. O menu recolhido só mostra os nomes com o mouse em cima; em tela de toque
@@ -448,6 +494,8 @@ html { scroll-padding-top: 92px; }
      Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
   .m-nome, .m-quem { transition: opacity .16s; }
   @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
+  /* a vitrine só existe com o menu aberto: recolhido, não cabe (o menu.js também para de passar os cartões) */
+  @container (max-width: 239px) { .vitrine { display: none; } }
   .m-vira:has(:checked) .m-ic i { background: var(--placa-azul); color: #fff; }
 
   /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */
