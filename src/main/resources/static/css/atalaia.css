@@ -47,10 +47,11 @@
 
   /* a placa cheia de azul: o selo da marca no menu e o desenho do item da tela aberta */
   --placa-azul: linear-gradient(165deg, #3550d0, var(--azul) 55%, var(--azul-fundo));
-  /* o menu lateral: o vidro dele, a placa clara do item da tela aberta e a sombra */
+  /* o menu lateral: o vidro dele, a placa clara do item da tela aberta, o fio de luz da borda curva e a cor da sombra */
   --menu-vidro: rgba(255, 255, 255, .54);
   --menu-placa: rgba(255, 255, 255, .86);
-  --menu-sombra: 0 18px 44px -14px rgba(24, 36, 110, .38), 0 2px 10px -4px rgba(20, 25, 34, .1);
+  --menu-luz: rgba(255, 255, 255, .9);
+  --menu-sombra: rgba(24, 36, 110, .2);
 
   --borda: 16px;       /* a distância entre a borda da janela e o conteúdo (10px no celular) */
   --raio: 28px;        /* painel de vidro */
@@ -225,12 +226,29 @@ html { scroll-padding-top: 92px; }
 .lido { margin-top: 10px; max-height: 320px; overflow: auto; background: var(--solido); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
-/* Troca de tela sem piscar (#202): cada clique carrega uma página nova do servidor, e sem isto a tela pisca em branco
-   e o menu é redesenhado do zero. Com a transição entre páginas, o navegador funde a tela velha na nova; o menu tem
-   nome próprio, então fica parado no lugar enquanto só o conteúdo troca. Quem pediu menos movimento não ganha a
-   fusão (a troca é seca, como antes). Navegador que não conhece a regra só a ignora */
-@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }
-.menu { view-transition-name: menu; }
+/* TROCA DE TELA SUAVE (#202, #204, o jeito do protótipo aprovado). Cada clique carrega uma página nova do servidor;
+   sem isto a tela pisca em branco. Com a transição entre páginas:
+   - a tela velha some na hora e a nova aparece na hora (as duas "raízes" sem animação). O menu e o fundo são
+     idênticos nas duas, então nenhum pixel deles muda: parecem parados;
+   - a plaquinha clara do item aberto é a única peça que viaja, do item antigo ao novo, em 0,5s;
+   - o conteúdo novo acende (opacidade + 12px de subida), embaixo do menu.
+   O menu em si NÃO ganha nome de transição: isso apagaria o desfoque do vidro (veja o .menu::before).
+   Quem pediu menos movimento não ganha nada disso (a troca é seca). Navegador que não conhece a regra a ignora */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root) { display: none; }
+  ::view-transition-new(root) { animation: none; }
+  /* A plaquinha só viaja no computador. Na gaveta do celular, a tela nova nasce com a gaveta fechada e ela
+     atravessaria o conteúdo sozinha até o lugar escondido */
+  @media (min-width: 861px) and (hover: hover) and (pointer: fine) {
+    .m-item[aria-current] { view-transition-name: marcador; }
+  }
+  ::view-transition-group(marcador) { animation-duration: .5s; animation-timing-function: cubic-bezier(.3, .9, .3, 1); }
+  /* Se o menu mudar de largura entre as telas, a plaquinha estica sem achatar o texto (a foto não é esticada) */
+  ::view-transition-old(marcador), ::view-transition-new(marcador) { height: 100%; object-fit: none; object-position: left center; }
+  .pagina:has(> .menu) > main { animation: chega .5s cubic-bezier(.22, 1, .36, 1) backwards; }
+  @keyframes chega { from { opacity: 0; transform: translateY(12px); } }
+}
 @media (max-width: 860px) {
   :root { --borda: 10px; }
   .titulo h1 { font-size: 28px; }
@@ -306,7 +324,7 @@ html { scroll-padding-top: 92px; }
 
 /* =====================================================================
    O MENU LATERAL (telas de dentro; o HTML está no pedaço "topo" de fragmentos.html)
-   Veio do menu de vidro do protótipo; desde a #202 tem lados retos e, aberto, empurra o conteúdo.
+   É o menu de vidro curvo aprovado no protótipo. Desde a #202, aberto, empurra o conteúdo quando sobra lugar.
    COMO ABRE E FECHA, SEM JAVASCRIPT: tudo depende de UMA medida, a largura do menu.
      - Cada linha (.m-item) ocupa a largura que houver e corta o que não cabe. Com o menu em 72px sobra só
        o quadrado do desenho (44px); com 284px aparece o nome ao lado. O movimento também só olha para ela.
@@ -326,18 +344,43 @@ html { scroll-padding-top: 92px; }
 
 /* Lados retos (#202). A curva que entrava nos dois lados recortava só o vidro: a sombra continuava retangular e
    aparecia no vão do recorte, como um fantasma ao lado do menu */
-/* O vidro fica no próprio menu, e não numa camada filha: o menu tem nome de transição (view-transition-name), e
-   isso faz um filho só enxergar o que está dentro dele, então o desfoque de uma camada filha não borraria nada.
-   O desfoque do próprio elemento lê o que está atrás dele e não borra os nomes e desenhos de dentro */
-.menu { z-index: 10; border-radius: 26px; background: var(--brilho), var(--vidro-solido);
-  box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--relevo), var(--menu-sombra); }
-/* navegador sem desfoque fica com a folha sólida de cima */
+.menu { z-index: 10; border-radius: 26px;
+  /* A CURVA (a do protótipo aprovado, #204): os dois lados do vidro entram para dentro no meio. Cada lado é uma
+     "mordida" em forma de elipse com o centro fora do menu. A da direita é medida em % da largura do menu, então
+     cresce sozinha quando ele abre (5px recolhido, 20px aberto). A altura do raio faz a elipse cruzar a borda reta
+     bem onde o canto redondo começa (57,7% da altura menos 30px).
+     A altura entra como medida (--m-altura), e não como %: o Chrome e o Edge recusam raio de elipse que mistura
+     % com px, e uma declaração recusada derruba o vidro inteiro (máscara e fundo) */
+  --m-altura: calc(100dvh - 2 * var(--borda));
+  --m-raio-curva: calc(var(--m-altura) * .577 - 30px);
+  --m-curva-direita: ellipse 14% var(--m-raio-curva) at 107% 50%;
+  --m-curva-esquerda: ellipse 12px var(--m-raio-curva) at -6px 50%;
+  /* o fio de luz: um risco de 1,2px logo depois da borda da elipse, do lado do vidro */
+  --m-fio: transparent 100%, var(--menu-luz) 100%, var(--menu-luz) calc(100% + 1.2px), transparent calc(100% + 1.2px);
+  --m-fundo: var(--vidro-solido); }
+/* O vidro é uma camada atrás do conteúdo, recortada pela máscara (só fica o que as duas mordidas deixam:
+   intersect); os dois primeiros fundos riscam o fio de luz em cima do corte.
+   IMPORTANTE: o .menu não pode ter view-transition-name, filtro, opacidade nem máscara. Qualquer um deles faz esta
+   camada só enxergar o que está dentro do menu, e o desfoque deixa de borrar o fundo */
+.menu::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(var(--m-curva-direita), var(--m-fio)), radial-gradient(var(--m-curva-esquerda), var(--m-fio)), var(--brilho), var(--m-fundo);
+  box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--relevo);
+  mask-image: radial-gradient(var(--m-curva-direita), transparent calc(100% - 1px), #000 100%), radial-gradient(var(--m-curva-esquerda), transparent calc(100% - 1px), #000 100%);
+  mask-composite: intersect; }
+/* navegador sem desfoque fica com a folha sólida (o --m-fundo de cima), na mesma forma */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .menu { background: var(--brilho), var(--menu-vidro); -webkit-backdrop-filter: blur(28px) saturate(1.7); backdrop-filter: blur(28px) saturate(1.7); }
+  .menu::before { --m-fundo: var(--menu-vidro); -webkit-backdrop-filter: blur(28px) saturate(1.7); backdrop-filter: blur(28px) saturate(1.7); }
 }
+/* A SOMBRA segue a curva (#204). Sombra de caixa é sempre retangular: ficava reta do lado de fora enquanto o vidro
+   entrava para dentro, e aparecia como um fantasma no vão. Aqui ela é um borrão escuro MENOR que o menu, por baixo
+   do vidro (z-index -1): o borrão sai pelas bordas e por baixo, e nunca desenha uma linha reta.
+   Só na metade de baixo e fraca: o vidro deixa ver 46% do que está atrás, e um borrão no menu inteiro deixaria
+   o vidro acinzentado (o protótipo furava a sombra com a forma, o que aqui pediria JavaScript) */
+.menu::after { content: ""; position: absolute; inset: 50% 12px -6px; z-index: -1; border-radius: 30px; pointer-events: none;
+  background: var(--menu-sombra); filter: blur(22px); transform: translateY(14px); }
 
-/* O conteúdo: uma coluna, com a mesma folga dos dois lados */
-.m-dentro { position: relative; height: 100%; display: flex; flex-direction: column; padding: 12px 14px; overflow: hidden auto; }
+/* O conteúdo: uma coluna. A folga da direita acompanha a mordida (7% da largura + 9px): 14px recolhido, 29px aberto */
+.m-dentro { position: relative; height: 100%; display: flex; flex-direction: column; padding: 12px calc(7% + 9px) 12px 14px; overflow: hidden auto; }
 .m-lista, .m-pe { list-style: none; margin: 0; padding: 0; }
 .m-lista { flex: 1; display: flex; flex-direction: column; gap: 2px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--fio); }
 .m-pe { padding-top: 6px; border-top: 1px solid var(--fio); }
@@ -365,6 +408,51 @@ html { scroll-padding-top: 92px; }
 
 /* quem entrou: o recuo de 50px põe o e-mail na coluna dos nomes, fora do que o menu recolhido mostra */
 .m-quem { padding: 0 12px 8px 50px; font-size: 12.5px; color: var(--apagado-fora); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- A VITRINE (#204): o cartão grande do pé do menu. Começa pela logo e passa para o lado ----------
+   Os cartões ficam empilhados no mesmo lugar e só o atual aparece; o menu.js troca e faz os dois deslizarem juntos
+   (só transform). Cartão escondido: visibility hidden, então não é lido */
+.vitrine { position: relative; margin-top: 10px; }
+/* o cartãozinho do menu recolhido: o mesmo azul do cartão da logo, com o símbolo no meio. Só aparece recolhido */
+.v-mini { position: absolute; left: 0; top: calc(50% - 43px); width: 44px; height: 86px; display: grid; place-items: center; border-radius: 14px; opacity: 0; visibility: hidden;
+  background: radial-gradient(120% 90% at 10% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), linear-gradient(160deg, #314bcb, var(--azul) 46%, var(--azul-fundo));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.34), 0 10px 16px -10px rgba(28,44,134,.8); --simbolo-face: #fff; --simbolo-sombra: #0d1750; }
+.v-mini .simbolo { width: 26px; }
+.v-janela { position: relative; height: 130px; margin: 0; padding: 0; list-style: none; border-radius: 18px; overflow: hidden; background: var(--solido); box-shadow: var(--relevo), 0 0 0 .5px var(--vidro-fora), 0 12px 20px -14px rgba(20,25,34,.5); }
+.v-cartao { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) 108px; background: var(--solido); }
+/* Só os de fora se escondem. O atual HERDA a visibilidade do menu: se ele dissesse "visible", apareceria para o
+   leitor de tela mesmo com a gaveta fechada (filho visible vale mais que pai hidden) */
+.v-cartao:not(.atual, .saindo) { visibility: hidden; }
+.v-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 14px 6px 10px 14px; white-space: normal; }
+.v-txt strong { font-size: 14.5px; line-height: 1.15; letter-spacing: -.015em; font-weight: 700; text-wrap: balance; }
+.v-txt > span:not(.etq) { font-size: 12px; line-height: 1.3; color: var(--apagado); text-wrap: pretty; }
+.v-txt .etq { margin-top: auto; min-height: 20px; padding: 1px 8px; font-size: 11px; color: var(--marca); }
+/* o desenho de cada função: a borda esquerda é curva, conversando com a curva do menu */
+.v-des { display: grid; place-items: center; border-radius: 20px 0 0 20px / 65px 0 0 65px; background: var(--campo-fundo); box-shadow: inset 1px 0 0 var(--vidro-fora); }
+.v-des svg { width: 100%; height: 100%; }
+/* as peças dos desenhos: papel, linha de texto, azul da marca, alerta, e .d-t para traço sem preenchimento */
+.d-p { fill: var(--solido); stroke: var(--fio); stroke-width: 1; }
+.d-l { fill: var(--fio); } .d-m { fill: var(--marca); } .d-a { fill: var(--vermelho); }
+.d-t { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.d-t.d-l { stroke: var(--fio); } .d-t.d-m { stroke: var(--marca); } .d-t.d-a { stroke: var(--vermelho); }
+/* o primeiro cartão: a logo sobre o azul do Atalaia */
+.v-logo { display: flex; align-items: flex-end; color: #fff; background: radial-gradient(120% 90% at 10% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), linear-gradient(160deg, #314bcb, var(--azul) 46%, var(--azul-fundo)); --simbolo-face: #fff; --simbolo-sombra: #0d1750; }
+.v-logo .v-agua { position: absolute; right: 12px; top: 12px; width: 92px; }
+.v-logo .v-agua .simbolo { width: 100%; filter: drop-shadow(0 6px 10px rgba(13,23,80,.35)); }
+.v-logo .v-txt { position: relative; padding: 14px; gap: 2px; }
+.v-logo .v-txt strong { font-size: 24px; line-height: 1; font-weight: 800; letter-spacing: -.02em; }
+.v-logo .v-txt > span { color: rgba(255,255,255,.86); font-weight: 500; }
+/* os controles: setas, pontinhos que mostram onde está e o botão de pausar */
+.v-controles { display: flex; align-items: center; height: 30px; margin-top: 3px; }
+.v-controles button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--apagado); display: grid; place-items: center; cursor: pointer; }
+.v-controles button svg { width: 14px; height: 14px; }
+@media (hover: hover) { .v-controles button:hover { background: var(--campo-fundo); color: var(--marca); } }
+.v-pausa[data-parada="true"] .v-ic-pausa, .v-pausa[data-parada="false"] .v-ic-tocar { display: none; }
+.v-pontos { flex: 1; display: flex; justify-content: center; gap: 9px; }
+.v-pontos i { width: 5px; height: 5px; border-radius: 3px; background: var(--fio); transition: transform .3s var(--sair), background .2s; }
+.v-pontos i.atual { background: var(--marca); transform: scaleX(2.2); }
+/* janela baixa: a vitrine sai para a lista caber */
+@media (max-height: 760px) { .vitrine { display: none; } }
 
 /* ---------- computador: o menu fica ao lado do conteúdo ----------
    Computador = janela larga E mouse. O menu recolhido só mostra os nomes com o mouse em cima; em tela de toque
@@ -413,6 +501,14 @@ html { scroll-padding-top: 92px; }
      Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
   .m-nome, .m-quem { transition: opacity .16s; }
   @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
+  /* a vitrine só existe com o menu aberto: recolhido, não cabe. Some e volta como os nomes (opacidade, e
+     visibility tira do teclado e do leitor), e o menu.js para de passar os cartões enquanto ela não está à vista */
+  .vitrine > :not(.v-mini), .v-mini { transition: opacity .16s, visibility .16s; }
+  /* recolhido: a vitrine some e o cartãozinho da logo aparece no lugar dela (e o contrário ao abrir) */
+  @container (max-width: 239px) {
+    .vitrine > :not(.v-mini) { opacity: 0; visibility: hidden; transition-duration: .08s; }
+    .v-mini { opacity: 1; visibility: visible; }
+  }
   .m-vira:has(:checked) .m-ic i { background: var(--placa-azul); color: #fff; }
 
   /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */
