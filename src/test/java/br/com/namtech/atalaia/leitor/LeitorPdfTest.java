@@ -178,8 +178,11 @@ public class LeitorPdfTest {
             documento.save(saida);
         }
 
-        //Agir e conferir: o leitor para de contar no teto e recusa
-        LeitorPdf leitor = new LeitorPdf();
+        //Agir e conferir: o leitor para de contar no teto e recusa.
+        //Tempo folgado (2 min) de propósito: aqui o assunto é o teto de letras, não o relógio. Com o tempo normal
+        //(20 s), numa máquina ocupada a contagem das 300 mil letras passava do tempo e quem respondia era o limite
+        //de tempo, com outra mensagem (#206). O limite de tempo tem teste próprio, logo abaixo
+        LeitorPdf leitor = new LeitorPdf(Duration.ofMinutes(2));
         assertThatThrownBy(() -> leitor.ler(saida.toByteArray()))
                 .isInstanceOf(PdfRecusado.class).hasMessageContaining("pesado demais");
     }
