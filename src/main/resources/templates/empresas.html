@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro · Empresas' : 'Empresas')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo('empresas')}"></header>
+
+  <main id="conteudo">
+    <div class="titulo">
+      <a class="volta" th:href="@{/}">Notificações</a>
+      <h1>Empresas</h1>
+      <p>As empresas que o escritório atende. Cada notificação enviada fica ligada a uma delas.</p>
+    </div>
+
+    <!-- Logo depois de cadastrar: confirma e mostra o próximo passo -->
+    <p class="recado" role="status" th:if="${cadastrada}">Empresa cadastrada. <a th:href="@{/enviar}">Enviar notificação</a></p>
+    <p class="recado" role="status" th:if="${alterada}">Empresa alterada.</p>
+    <p class="recado" role="status" th:if="${excluida}">Empresa excluída.</p>
+
+    <section class="grupo" th:unless="${empresas.isEmpty()}" aria-labelledby="titulo-empresas">
+      <h2 id="titulo-empresas" th:text="${empresas.size() == 1} ? '1 empresa' : ${empresas.size() + ' empresas'}"></h2>
+      <!-- O periodo da contagem de casos: formulário GET, o endereço guarda a escolha. O número aparece em cada empresa -->
+      <form class="escolha-linha" method="get" th:action="@{/empresas}">
+        <label class="rotulo" for="periodo">Casos recebidos</label>
+        <select id="periodo" name="periodo">
+          <option th:each="dias : ${periodos}" th:value="${dias}" th:selected="${dias == periodo}"
+                  th:text="${dias == 365} ? 'nos últimos 12 meses' : 'nos últimos ' + ${dias} + ' dias'"></option>
+        </select>
+        <button class="botao" type="submit">Contar</button>
+      </form>
+      <ul class="vidro lista">
+        <!-- Cada empresa abre a tela dela (empresa.html), onde dá para corrigir o nome e o CNPJ -->
+        <li th:each="empresa : ${empresas}">
+          <a th:href="@{/empresas/{id}(id=${empresa.id})}">
+            <strong th:text="${empresa.nome}"></strong>
+            <span class="etq num" th:with="casos=${casosNoPeriodo.getOrDefault(empresa.id, 0L)}"
+                  th:text="${casos == 0} ? 'nenhum caso' : (${casos == 1} ? '1 caso' : ${casos} + ' casos')"></span>
+            <span class="quando">CNPJ <span class="num" th:text="${empresa.cnpjFormatado}"></span></span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <form class="vidro formulario" method="post" th:action="@{/empresas}" aria-labelledby="titulo-nova">
+      <h2 id="titulo-nova" th:text="${empresas.isEmpty()} ? 'Cadastre a primeira empresa' : 'Cadastrar outra empresa'"></h2>
+      <p class="erro" id="erro-empresa" role="alert" th:if="${erro}" th:text="${erro}"></p>
+
+      <th:block th:replace="~{fragmentos :: camposDaEmpresa}"></th:block>
+
+      <button class="botao cheio" type="submit">Cadastrar empresa</button>
+    </form>
+  </main>
+</div>
+</body>
+</html>

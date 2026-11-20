@@ -1,0 +1,11 @@
+DOCUMENTO DE TESTE (INVENTADO) - sem valor legal
+
+VARA CÍVEL DA COMARCA DE VILA EXEMPLO
+Processo nº 0001234-56.2026.9.99.0001
+Autor: Fornecedora Mar Azul Ltda. (exemplo)
+Réu: Padaria Pão da Praça (exemplo), CNPJ 99.999.002/0001-00
+
+MANDADO DE CITAÇÃO
+
+Fica a ré CITADA para, querendo, apresentar contestação no prazo de 15 dias úteis, sob pena de revelia.
+Valor da causa: R$ 18.450,00.

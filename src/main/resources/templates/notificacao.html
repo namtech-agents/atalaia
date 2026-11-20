@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca((${erro != null} ? 'Erro · ' : '') + 'Notificação · ' + ${empresa} + ' · ' + ${recebidaEm})}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo('notificacoes')}"></header>
+
+  <main id="conteudo">
+    <div class="titulo">
+      <a class="volta" th:href="@{/}">Notificações</a>
+      <h1>
+        <span th:text="${empresa}"></span>
+        <span class="etq" th:if="${notificacao.resolvida}">Resolvida</span>
+        <span class="etq atencao" th:if="${notificacao.precisaDeRevisao and not notificacao.resolvida}">Precisa de gente</span>
+        <span class="etq" th:if="${not notificacao.precisaDeRevisao and not notificacao.resolvida}">Lido e conferido</span>
+      </h1>
+      <p>Recebida em <span class="num" th:text="${recebidaEm}"></span></p>
+    </div>
+
+    <div class="dois">
+      <!-- No HTML o cartão do prazo vem primeiro: quem usa teclado ou leitor de tela recebe a situação antes do PDF.
+           Na tela larga o CSS põe o documento à esquerda -->
+      <aside class="lado">
+        <!-- Simulado (US30): só aparece quando terminou (cliente avisado ou caso fechado). Antes disso a equipe trata o
+             caso como um de verdade, que é o que o simulado quer medir -->
+        <section class="vidro cartao" th:if="${tempos != null}" aria-labelledby="titulo-simulado">
+          <h2 class="rotulo" id="titulo-simulado">Era um simulado</h2>
+          <strong class="grande">Notificação de teste do escritório</strong>
+          <p>Não mande o link do aviso ao cliente: o documento é de exercício. Tempos contados da chegada:</p>
+          <dl class="dados">
+            <div><dt>Até alguém abrir</dt><dd class="num" th:text="${tempos.ateAbrir}"></dd></div>
+            <div><dt>Até ter responsável</dt><dd>o Atalaia ainda não tem responsável por caso</dd></div>
+            <div><dt>Até gerar o aviso ao cliente</dt><dd class="num" th:text="${tempos.ateAvisar}"></dd></div>
+            <div><dt>Até fechar</dt><dd class="num" th:text="${tempos.ateFechar}"></dd></div>
+          </dl>
+        </section>
+
+        <!-- Caso fechado: o que ficou registrado, sem formulário -->
+        <section class="vidro cartao" th:if="${notificacao.resolvida}" aria-labelledby="titulo-desfecho">
+          <h2 class="rotulo" id="titulo-desfecho">Resolvida em <span class="num" th:text="${resolvidaEm}"></span></h2>
+          <strong class="grande" th:text="${notificacao.desfecho.nome}"></strong>
+          <p class="observacao" th:text="${notificacao.observacao}"></p>
+          <!-- Para corrigir um desfecho marcado errado. O que está acima não se perde: vai para o histórico -->
+          <form class="reabrir" method="post" th:action="@{/notificacoes/{id}/reabrir(id=${notificacao.id})}">
+            <p class="erro" role="alert" th:if="${erroDoReabrir}" th:text="${erroDoReabrir}"></p>
+            <!-- O fechamento que esta tela mostra: se outra pessoa fechar de novo nesse meio tempo, o reabrir é recusado -->
+            <input type="hidden" name="fechadoEm" th:value="${notificacao.resolvidaEm.toEpochMilli()}">
+            <button class="botao" type="submit">Reabrir o caso</button>
+            <p class="dica">O desfecho e a observação ficam guardados no histórico.</p>
+          </form>
+        </section>
+
+        <!-- Só aparece quando alguma peça desconfiou: diz por que uma pessoa precisa olhar -->
+        <section class="vidro cartao" th:if="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-revisao">
+          <!-- Caso fechado: o cartão vira registro do que aconteceu, sem pedir ação -->
+          <h2 class="rotulo" id="titulo-revisao" th:text="${notificacao.resolvida} ? 'Por que precisou de gente' : 'Por que precisa de gente'"></h2>
+          <strong class="grande" th:unless="${notificacao.resolvida}">Confira no documento original</strong>
+          <ul class="motivos">
+            <li th:each="motivo : ${notificacao.motivosDaRevisao}" th:text="${motivo}"></li>
+          </ul>
+        </section>
+
+        <section class="vidro cartao" th:if="${notificacao.tipo != null}" aria-labelledby="titulo-tipo">
+          <h2 class="rotulo" id="titulo-tipo">Tipo do documento</h2>
+          <strong class="grande" th:text="${notificacao.tipo.nome}"></strong>
+          <!-- Cada dado vem com o trecho de onde saiu, para a pessoa conferir sem procurar -->
+          <!-- Só com tudo conferido: dado que o Verificador reprovou não aparece na tela -->
+          <dl class="dados" th:unless="${notificacao.precisaDeRevisao or dados.isEmpty()}">
+            <div th:each="dado : ${dados}">
+              <!-- rotulo(): o nome do campo como a tela mostra ("Número do processo"), não como a IA escreve -->
+              <dt th:text="${dado.rotulo()}"></dt>
+              <dd>
+                <span th:text="${dado.valor}"></span>
+                <q th:text="${dado.trecho}"></q>
+              </dd>
+            </div>
+          </dl>
+          <p class="aviso-ia" th:unless="${notificacao.precisaDeRevisao}">Lido por inteligência artificial e conferido com o texto do PDF.</p>
+          <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Tipo sugerido por inteligência artificial, ainda sem conferência. Os dados não aparecem porque o documento foi para revisão.</p>
+        </section>
+
+        <!-- O degrau (US28): a gravidade e o que costuma vir se ninguém agir. A IA sugere, o contador corrige com um clique
+             (DegrauController), e a correção vai para o histórico -->
+        <section class="vidro cartao" aria-labelledby="titulo-degrau">
+          <h2 class="rotulo" id="titulo-degrau">Degrau</h2>
+          <strong class="grande" th:text="${notificacao.degrau != null} ? ${notificacao.degrau.nome} : 'Sem degrau'"></strong>
+          <!-- O degrau seguinte é a escala do Atalaia, não a regra do órgão: a frase diz isso. Citação e exclusão seguem
+               caminhos próprios (processo, regime), que a escala não descreve: nesses tipos o seguinte não aparece -->
+          <th:block th:if="${notificacao.degrau != null and notificacao.tipo?.name() != 'CITACAO' and notificacao.tipo?.name() != 'EXCLUSAO'}">
+            <p th:if="${notificacao.degrau.seguinte() != null}"
+               th:text="'Se ninguém agir, o próximo degrau na escala do Atalaia é: ' + ${notificacao.degrau.seguinte().nome} + '. É uma escala geral de gravidade, não a regra do órgão.'"></p>
+            <p th:unless="${notificacao.degrau.seguinte() != null}">É o último degrau da escala do Atalaia.</p>
+          </th:block>
+          <form class="degraus" method="post" th:unless="${notificacao.resolvida}" role="group" aria-labelledby="titulo-degrau"
+                th:action="@{/notificacoes/{id}/degrau(id=${notificacao.id})}">
+            <p class="dica" th:text="${notificacao.degrau == null} ? 'Escolha o degrau:'
+                : (${notificacao.degrauPor == null} ? 'Sugerido por inteligência artificial. Para corrigir, toque no degrau certo:'
+                : 'Corrigido por ' + ${notificacao.degrauPor} + '. Para mudar, toque no degrau certo:')"></p>
+            <!-- Cada botão envia o próprio degrau. O atual fica desligado (não há o que enviar), com aria-current para o
+                 leitor de tela e o ✓ para quem não distingue a cor -->
+            <button class="botao" type="submit" name="degrau" th:each="opcao : ${degraus}" th:value="${opcao}"
+                    th:with="atual=${opcao == notificacao.degrau}" th:disabled="${atual}"
+                    th:attr="aria-current=${atual} ? 'true'" th:text="${atual} ? '✓ ' + ${opcao.nome} : ${opcao.nome}"></button>
+          </form>
+        </section>
+
+        <!-- O prazo: a pessoa informa a ciência e escolhe a regra; a conta é feita por código (PrazoController), nunca pela IA -->
+        <section class="vidro cartao" aria-labelledby="titulo-prazo">
+          <h2 class="rotulo" id="titulo-prazo">Data limite</h2>
+          <strong class="grande num" th:if="${notificacao.dataLimite != null}" th:text="${#temporals.format(notificacao.dataLimite, 'dd/MM/yyyy')}"></strong>
+          <!-- A conta foi feita, mas a Calculadora não fechou uma data: o motivo está nos passos -->
+          <strong class="grande" th:if="${notificacao.dataLimite == null and notificacao.ciencia != null}">Sem data: confira a conta</strong>
+          <strong class="grande" th:if="${notificacao.ciencia == null}">Ainda sem prazo</strong>
+
+          <!-- A conta passo a passo, com a regra e o artigo, para conferir ao lado do documento -->
+          <th:block th:if="${notificacao.ciencia != null}">
+            <!-- A única ressalva da data fica colada nela, e não no meio da conta -->
+            <p th:text="${avisoDosFeriados}"></p>
+            <ol class="motivos" aria-label="Conta passo a passo">
+              <li th:each="passo : ${notificacao.passosDoPrazo}" th:text="${passo}"></li>
+            </ol>
+            <p class="aviso-ia">Calculado por código em <span class="num" th:text="${prazoCalculadoEm}"></span>, a pedido de <span th:text="${notificacao.prazoCalculadoPor}"></span>.</p>
+          </th:block>
+
+          <p th:if="${notificacao.ciencia == null and regras.isEmpty() and not notificacao.resolvida}">O Atalaia só calcula com uma regra que o escritório conferiu na norma. <a th:href="@{/regras}">Cadastrar a primeira regra de prazo</a></p>
+          <p th:if="${notificacao.ciencia == null and notificacao.resolvida}">O caso foi fechado sem prazo calculado.</p>
+
+          <!-- Enquanto o caso está aberto dá para calcular, e refazer se a ciência ou a regra estavam erradas -->
+          <form class="resolver" method="post" th:unless="${notificacao.resolvida or regras.isEmpty()}"
+                th:action="@{/notificacoes/{id}/prazo(id=${notificacao.id})}">
+            <p class="erro" id="erro-prazo" role="alert" th:if="${erroDoPrazo}" th:text="${erroDoPrazo}"></p>
+            <div>
+              <label class="rotulo" for="ciencia">Dia da ciência</label>
+              <!-- Só o campo que falhou recebe o aviso de erro (campoDoPrazoComErro vem do PrazoController) -->
+              <input id="ciencia" name="ciencia" type="date" required th:max="${hoje}"
+                     th:value="${cienciaDigitada != null} ? ${cienciaDigitada} : ${notificacao.ciencia}"
+                     th:attr="aria-invalid=${campoDoPrazoComErro == 'ciencia'} ? 'true', aria-describedby=${campoDoPrazoComErro == 'ciencia'} ? 'erro-prazo dica-ciencia' : 'dica-ciencia'">
+              <p class="dica" id="dica-ciencia">O dia em que a empresa tomou ciência do documento. O dia da ciência não entra na conta.</p>
+            </div>
+            <div>
+              <label class="rotulo" for="regraId">Regra de prazo</label>
+              <select id="regraId" name="regraId" required
+                      th:attr="aria-invalid=${campoDoPrazoComErro == 'regraId'} ? 'true', aria-describedby=${campoDoPrazoComErro == 'regraId'} ? 'erro-prazo'">
+                <option value="">Escolha a regra</option>
+                <option th:each="regra : ${regras}" th:value="${regra.id}" th:text="${regra.nome}"
+                        th:selected="${regra.id == regraEscolhida}"></option>
+              </select>
+            </div>
+            <button class="botao" th:classappend="${notificacao.ciencia == null} ? 'cheio'" type="submit"
+                    th:text="${notificacao.ciencia == null} ? 'Calcular o prazo' : 'Refazer a conta'"></button>
+          </form>
+        </section>
+
+        <!-- O aviso ao cliente: o escritório escreve o resumo e os documentos, o Atalaia gera o link (AvisoController).
+             O cliente abre, responde uma pergunta e confirma: é o registro de ciência -->
+        <section class="vidro cartao" aria-labelledby="titulo-aviso">
+          <h2 class="rotulo" id="titulo-aviso">Aviso ao cliente</h2>
+          <strong class="grande" th:if="${aviso == null}">Cliente ainda não avisado</strong>
+          <p th:if="${aviso == null and notificacao.dataLimite == null and not notificacao.resolvida}">Calcule a data limite primeiro: o aviso leva ela junto.</p>
+
+          <th:block th:if="${aviso != null}">
+            <strong class="grande" th:text="${situacaoDoAviso.nome}"></strong>
+            <!-- O registro de ciência, com o resultado da pergunta de conferência -->
+            <th:block th:if="${situacaoDoAviso.name() == 'CONFIRMADO'}">
+              <p>Registro de ciência em <span class="num" th:text="${aviso.confirmadoEmPorExtenso}"></span>.</p>
+              <p th:if="${aviso.acertouOPrazo()}">Na pergunta de conferência, o cliente marcou a data limite certa.</p>
+              <p class="erro" th:unless="${aviso.acertouOPrazo()}">Na pergunta de conferência, o cliente marcou <span class="num" th:text="${#temporals.format(aviso.resposta, 'dd/MM/yyyy')}"></span>, e a data limite mostrada era <span class="num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></span>. Vale uma ligação.</p>
+            </th:block>
+            <p class="erro" th:if="${prazoMudou}">A data limite mudou depois deste aviso: o cliente viu <span class="num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></span>. Faça um aviso novo.</p>
+            <!-- O link só aparece enquanto ainda confirma -->
+            <div class="resolver" th:if="${situacaoDoAviso.name() == 'AGUARDANDO'}">
+              <div>
+                <label class="rotulo" for="link">Link para mandar ao cliente</label>
+                <input id="link" type="text" readonly th:value="${linkDoAviso}" aria-describedby="dica-link">
+                <p class="dica" id="dica-link">Copie e mande pelo canal que o escritório já usa com o cliente. Vale até <span class="num" th:text="${aviso.valeAtePorExtenso}"></span>.</p>
+              </div>
+            </div>
+            <p class="aviso-ia">Aviso feito por <span th:text="${aviso.criadoPor}"></span> em <span class="num" th:text="${aviso.criadoEmPorExtenso}"></span>. O cliente viu: <q th:text="${aviso.resumo}"></q></p>
+            <!-- Avisos anteriores que o cliente confirmou: o registro de ciência não some quando há um aviso mais novo -->
+            <ul class="motivos" th:unless="${registrosAnteriores.isEmpty()}" aria-label="Registros de ciência de avisos anteriores">
+              <li th:each="antigo : ${registrosAnteriores}">Aviso anterior confirmado em <span class="num" th:text="${antigo.confirmadoEmPorExtenso}"></span>, com a data limite <span class="num" th:text="${#temporals.format(antigo.prazo, 'dd/MM/yyyy')}"></span>.</li>
+            </ul>
+          </th:block>
+
+          <!-- comSugestao: o campo do resumo abre com o rascunho da IA. Só vale enquanto a pessoa não digitou nada
+               (resumoDigitado volta do AvisoController quando o envio falha) e ainda não existe um aviso deste caso -->
+          <form class="resolver" method="post" th:if="${podeAvisar}" th:action="@{/notificacoes/{id}/aviso(id=${notificacao.id})}"
+                th:with="comSugestao=${resumoDigitado == null and aviso == null and notificacao.resumoSugerido != null}">
+            <p class="erro" id="erro-aviso" role="alert" th:if="${erroDoAviso}" th:text="${erroDoAviso}"></p>
+            <div>
+              <label class="rotulo" for="resumo">Resumo para o cliente</label>
+              <textarea id="resumo" name="resumo" rows="4" maxlength="600" required th:text="${comSugestao} ? ${notificacao.resumoSugerido} : ${resumoDigitado}"
+                        th:attr="aria-invalid=${campoDoAvisoComErro == 'resumo'} ? 'true', aria-describedby=(${campoDoAvisoComErro == 'resumo'} ? 'erro-aviso ' : '') + (${comSugestao} ? 'rascunho-ia ' : '') + 'dica-resumo'"></textarea>
+              <!-- O id entra no aria-describedby do campo: o leitor de tela também diz que o texto é rascunho de IA -->
+              <p class="aviso-ia" id="rascunho-ia" th:if="${comSugestao}">Rascunho escrito por inteligência artificial. Leia e corrija antes de gerar o link: é o escritório que responde pelo que o cliente lê.</p>
+              <p class="dica" id="dica-resumo">Em palavras simples: o que chegou e o que a empresa precisa fazer. Até 600 letras. A data limite vai junto, sozinha.</p>
+            </div>
+            <div>
+              <label class="rotulo" for="documentos">Documentos que o cliente precisa separar (opcional)</label>
+              <textarea id="documentos" name="documentos" rows="3" maxlength="1000" th:text="${documentosDigitados}"
+                        th:attr="aria-invalid=${campoDoAvisoComErro == 'documentos'} ? 'true', aria-describedby=${campoDoAvisoComErro == 'documentos'} ? 'erro-aviso dica-documentos' : 'dica-documentos'"></textarea>
+              <p class="dica" id="dica-documentos">Um por linha.</p>
+            </div>
+            <button class="botao" th:classappend="${aviso == null} ? 'cheio'" type="submit"
+                    th:text="${aviso == null} ? 'Gerar o link do cliente' : 'Fazer um aviso novo'"></button>
+            <p class="dica" th:if="${aviso != null}">O link anterior deixa de valer.</p>
+          </form>
+        </section>
+
+        <!-- Fechar o caso: o desfecho e uma observação curta, para todo mundo saber que já foi tratado -->
+        <section class="vidro cartao" th:unless="${notificacao.resolvida}" aria-labelledby="titulo-resolver">
+          <h2 class="rotulo" id="titulo-resolver">Fechar o caso</h2>
+          <!-- O #titulo-resolver no endereço: se o envio voltar com erro, o navegador já abre a página neste cartão.
+               O campo que falhou recebe o foco e o aviso (aria-invalid), para o erro não passar despercebido -->
+          <form class="resolver" method="post" th:action="@{/notificacoes/{id}/resolver#titulo-resolver(id=${notificacao.id})}">
+            <p class="erro" id="erro-resolver" role="alert" th:if="${erro}" th:text="${erro}"></p>
+            <div>
+              <label class="rotulo" for="desfecho">Desfecho</label>
+              <select id="desfecho" name="desfecho" required th:autofocus="${campoComErro == 'desfecho'}"
+                      th:attr="aria-invalid=${campoComErro == 'desfecho'} ? 'true', aria-describedby=${campoComErro == 'desfecho'} ? 'erro-resolver'">
+                <option value="">Escolha o desfecho</option>
+                <option th:each="opcao : ${desfechos}" th:value="${opcao.name()}" th:text="${opcao.nome}"
+                        th:selected="${opcao == desfechoEscolhido}"></option>
+              </select>
+            </div>
+            <div>
+              <label class="rotulo" for="observacao">Observação</label>
+              <textarea id="observacao" name="observacao" rows="3" maxlength="500" required
+                        aria-describedby="dica-observacao" th:text="${observacao}"
+                        th:autofocus="${campoComErro == 'observacao'}"
+                        th:attr="aria-invalid=${campoComErro == 'observacao'} ? 'true', aria-describedby=${campoComErro == 'observacao'} ? 'erro-resolver dica-observacao' : 'dica-observacao'"></textarea>
+              <p class="dica" id="dica-observacao">O que foi feito, em poucas palavras. Até 500 letras. Se marcar errado, dá para reabrir o caso.</p>
+            </div>
+            <button class="botao cheio" type="submit">Marcar como resolvida</button>
+          </form>
+        </section>
+
+        <!-- O histórico: quem fez o quê e quando, do mais antigo ao mais novo. Vem da tabela evento_do_caso,
+             que só recebe linhas novas (a conta do prazo refeita não apaga a anterior aqui) -->
+        <section class="vidro cartao" th:unless="${historico.isEmpty()}" aria-labelledby="titulo-historico">
+          <h2 class="rotulo" id="titulo-historico">Histórico</h2>
+          <ol class="historico">
+            <li th:each="evento : ${historico}">
+              <span class="quando num" th:text="${evento.quandoPorExtenso}"></span>
+              <span th:text="${evento.acao}"></span>
+              <!-- Casos de antes do histórico existir não sabem quem fez: a linha fica sem o nome -->
+              <span class="quem" th:if="${evento.quem != null}" th:text="${evento.quem}"></span>
+            </li>
+          </ol>
+          <!-- A trilha encadeada (Trilha): cada registro leva a assinatura do anterior. Se alguém mudar um registro
+               depois de gravado, a conta não fecha dali em diante, e a tela diz a partir de qual -->
+          <p class="trilha" th:if="${trilha.temAssinatura and trilha.integra}">Trilha conferida: nenhum registro foi alterado depois de gravado. <a th:href="@{/notificacoes/{id}/trilha(id=${notificacao.id})}">Baixar a trilha em PDF</a></p>
+          <!-- Nenhum registro assinado: caso de antes da trilha, ou alguém apagou todas as assinaturas. Não dá para afirmar nada -->
+          <p class="trilha" th:unless="${trilha.temAssinatura}">Este caso não tem registros assinados: a conferência da trilha não se aplica a ele.</p>
+          <p class="erro" role="alert" th:unless="${trilha.integra}">A trilha não confere a partir do registro de <span class="num" th:text="${trilha.quebra.quandoPorExtenso}"></span>: um registro foi alterado ou apagado depois de gravado. <a th:href="@{/notificacoes/{id}/trilha(id=${notificacao.id})}">Baixar a trilha em PDF</a></p>
+        </section>
+
+        <section class="vidro cartao" th:unless="${notificacao.texto.isBlank()}">
+          <h2 class="rotulo" id="titulo-lido">Texto lido do PDF</h2>
+          <!-- tabindex=0: quem usa só o teclado consegue rolar o texto -->
+          <div class="lido" tabindex="0" role="region" aria-labelledby="titulo-lido" th:text="${notificacao.texto}"></div>
+        </section>
+      </aside>
+
+      <!-- O documento original, do jeito que chegou -->
+      <section class="vidro mesa" aria-label="Documento original">
+        <iframe th:src="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" th:title="${notificacao.tinhaScripts} ? 'Cópia sem scripts do PDF da notificação' : 'PDF original da notificação'"></iframe>
+        <!-- Nem todo navegador mostra PDF dentro da página (no celular quase nenhum): o link sempre funciona -->
+        <a class="abrir" th:href="@{/notificacoes/{id}/pdf(id=${notificacao.id})}" target="_blank" rel="noopener">Abrir o PDF em outra aba</a>
+        <p class="dica" th:if="${notificacao.tinhaScripts}">Este PDF trazia scripts. Aqui aparece uma cópia sem eles; o original está guardado como chegou.</p>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>

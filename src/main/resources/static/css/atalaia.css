@@ -1,0 +1,534 @@
+/* ATALAIA · direção Vidro
+   As cores e as peças vieram do kit aprovado no protótipo (atalaia-prototipo/modelos/vidro.css).
+   Aqui entra só o que as telas de verdade já usam; peça nova entra junto com a tela que precisar dela.
+   Tema: sempre o claro, mesmo com o aparelho em modo escuro (decisão de 18/11/2026).
+   O tema escuro do kit continua lá, para o dia em que houver um botão de trocar. */
+
+/* A letra da marca, guardada na própria pasta (nada vem da internet). Licença SIL Open Font 1.1 */
+@font-face {
+  font-family: "Archivo";
+  src: url("../fontes/archivo-variavel.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+}
+
+:root {
+  /* cores do Atalaia */
+  --balcao: #e3e7eb;  --folha: #fbfcfc;  --nanquim: #141922;
+  --picote: #aab3bf;
+  --azul: #2438a6;    --azul-fundo: #1c2c86;    --azul-claro: #8c9cf2;
+  --vermelho: #a3271f; --lacre: #f6e1de;
+
+  /* papéis (mudam no tema escuro) */
+  --fundo: var(--balcao);
+  --texto: var(--nanquim);
+  --apagado: #535c69;
+  --fio: rgba(20, 25, 34, .09);
+  --vidro: rgba(255, 255, 255, .58);
+  --vidro-solido: #f4f6f8;                      /* reserva para navegador sem desfoque */
+  --vidro-borda: rgba(255, 255, 255, .85);
+  --vidro-fora: rgba(20, 25, 34, .07);
+  --solido: var(--folha);                       /* o que NÃO é vidro: a folha do documento */
+  --campo-fundo: rgba(36, 56, 166, .075);
+  --marca: var(--azul);
+  /* texto e link que ficam FORA do vidro, em cima das manchas azuis: mais escuros, senão o contraste reprova */
+  --apagado-fora: #353d48;
+  --marca-fora: var(--azul-fundo);
+  /* sombra em três camadas, tingida de azul: perto, média e longe (é o que dá a sensação de flutuar) */
+  --sombra: 0 1px 1px rgba(20,25,34,.04), 0 6px 14px -6px rgba(20,25,34,.08), 0 28px 56px -28px rgba(20,25,34,.20);
+  /* relevo: um fio de luz na borda de cima e um fio de sombra na de baixo, como vidro com espessura */
+  --relevo: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(28,44,134,.05);
+  /* brilho: a luz que escorre do alto do painel e some antes da metade */
+  --brilho: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,0) 44%);
+  --mancha-1: rgba(36, 56, 166, .34);
+  --mancha-2: rgba(36, 56, 166, .22);
+  --mancha-3: rgba(28, 44, 134, .18);
+
+  /* a placa cheia de azul: o selo da marca no menu e o desenho do item da tela aberta */
+  --placa-azul: linear-gradient(165deg, #3550d0, var(--azul) 55%, var(--azul-fundo));
+  /* o menu lateral: o vidro dele, a placa clara do item da tela aberta, o fio de luz da borda curva e a sombra */
+  --menu-vidro: rgba(255, 255, 255, .54);
+  --menu-placa: rgba(255, 255, 255, .86);
+  --menu-luz: rgba(255, 255, 255, .9);
+  --menu-sombra: 0 18px 44px -14px rgba(24, 36, 110, .38), 0 2px 10px -4px rgba(20, 25, 34, .1);
+
+  --borda: 16px;       /* a distância entre a borda da janela e o conteúdo (10px no celular) */
+  --raio: 28px;        /* painel de vidro */
+  --raio-m: 12px;      /* botão e campo: nem pílula nem quadrado */
+  /* as duas curvas de movimento: as duas largam rápido e pousam devagar (quem espera vê a resposta na hora).
+     --sair é a do dia a dia; --gaveta é a da gaveta do celular, mais longa no pouso, como as folhas do iPhone */
+  --sair: cubic-bezier(.23, 1, .32, 1);
+  --gaveta: cubic-bezier(.32, .72, 0, 1);
+  /* Só o tema claro: os campos e a barra de rolagem do navegador também ficam claros */
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+/* Celular: o iPhone deitado não aumenta a letra por conta própria, e o toque não pisca um quadro cinza por cima do botão */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+/* O navegador não espera um segundo toque (o do zoom) antes de aceitar o primeiro */
+a, button, label { touch-action: manipulation; }
+/* Segurar o dedo num botão não seleciona o texto dele (no app instalado isso denuncia o site). Só nos controles: texto de
+   conteúdo (prazo, trecho, CNPJ) continua selecionável. O menu do toque longo fica: num link ele abre em outra aba */
+button, .botao, .m-item { -webkit-user-select: none; user-select: none; }
+/* hidden vale sempre, mesmo em peça que tem display próprio */
+[hidden] { display: none !important; }
+body {
+  /* letra do sistema: no Mac e no iPhone é a San Francisco */
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
+  color: var(--texto); background: var(--fundo);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--marca); }
+:focus-visible { outline: 2.5px solid var(--marca); outline-offset: 2px; border-radius: 8px; }
+::selection { background: var(--azul); color: #fff; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* o campo de cor, atrás de tudo (parado: não anima, não pesa) */
+.campo { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.campo i { position: absolute; border-radius: 50%; filter: blur(80px); }
+.campo i:nth-child(1) { width: 46vw; height: 46vw; left: -8vw; top: -16vw; background: var(--mancha-1); }
+.campo i:nth-child(2) { width: 40vw; height: 40vw; right: -6vw; top: 22vh; background: var(--mancha-2); }
+.campo i:nth-child(3) { width: 36vw; height: 36vw; left: 30vw; bottom: -20vw; background: var(--mancha-3); }
+
+/* o vidro */
+.vidro { background: var(--brilho), var(--vidro-solido); border: 1px solid var(--vidro-borda); border-radius: var(--raio); box-shadow: var(--relevo), 0 0 0 .5px var(--vidro-fora), var(--sombra); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .vidro { background: var(--brilho), var(--vidro); -webkit-backdrop-filter: blur(30px) saturate(1.8); backdrop-filter: blur(30px) saturate(1.8); }
+}
+
+/* a barra de cima fica presa no topo: ao andar pelo teclado, a página rola deixando esse espaço livre,
+   senão o item em foco ficaria escondido atrás da barra (16 de respiro + 60 da barra + 16) */
+html { scroll-padding-top: 92px; }
+
+/* a página: barra em cima e o conteúdo embaixo */
+/* max(): em aparelho com recorte na tela (viewport-fit=cover no <head>), o conteúdo não entra embaixo do recorte */
+.pagina { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding: max(var(--borda), env(safe-area-inset-top)) max(var(--borda), env(safe-area-inset-right)) max(var(--borda), env(safe-area-inset-bottom)) max(var(--borda), env(safe-area-inset-left)); }
+/* O conteúdo sabe a própria largura: é por ela (e não pela largura da janela) que a tela da notificação decide
+   se cabem duas colunas, porque o menu fixado ao lado tira espaço sem a janela mudar */
+.pagina > main { container-type: inline-size; }
+.topo { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 12px 0 18px; border-radius: 30px; position: sticky; top: max(var(--borda), env(safe-area-inset-top)); z-index: 4; }
+.topo .marca { display: flex; align-items: center; gap: 10px; height: 44px; text-decoration: none; color: var(--texto); margin-right: auto; }
+.topo .marca img { width: 28px; height: 28px; display: block; }
+/* o nome "Atalaia" escrito na letra da marca (barra de cima, menu e tela de entrar; cada lugar dá o tamanho) */
+.palavra { font: 800 19px/1 "Archivo", system-ui, sans-serif; font-stretch: 84%; letter-spacing: -.02em; }
+/* o selo de prévia (barra de cima e tela de entrar) */
+.previa { white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--apagado); padding: 0 10px; height: 24px; display: inline-flex; align-items: center; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--picote); }
+/* o espaço no começo de um item de caixa flexível some: a distância vem por margem */
+.previa span { margin-left: .3em; }
+/* o botão que abre o menu: só existe no celular (ver "O MENU LATERAL") */
+.topo .m-abre { display: none; }
+
+/* o símbolo desenhado na página: cada lugar escolhe as duas cores; sem escolha, valem as da marca */
+.simbolo { display: block; width: 100%; }
+.s-face { fill: var(--simbolo-face, var(--azul)); }
+.s-sombra { fill: var(--simbolo-sombra, var(--nanquim)); }
+/* os desenhos do menu: só traço, na cor do texto de onde estão */
+.ic { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* título grande, à moda do iPhone */
+.titulo { padding: 10px 6px 6px; }
+.titulo p { color: var(--apagado-fora); font-weight: 500; font-size: 14px; max-width: 62ch; margin-top: 6px; }
+/* overflow-wrap: nome com uma palavra muito comprida quebra no meio em vez de empurrar a página para o lado
+   (vale para o nome solto, na página do cliente, e para o nome dentro de um span, na notificação) */
+.titulo h1 { font-size: 34px; line-height: 1.1; letter-spacing: -.025em; font-weight: 700; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; overflow-wrap: anywhere; }
+/* 44px de altura: o mínimo para acertar com o dedo */
+.volta { display: inline-flex; align-items: center; min-height: 44px; color: var(--marca-fora); font-weight: 600; text-decoration: none; }
+
+/* botão */
+.botao { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--texto); cursor: pointer; }
+.botao.cheio { background: var(--azul); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 2px rgba(20,25,34,.25); }
+/* Resposta ao aperto: o botão e a linha do menu afundam um pouco enquanto o dedo (ou o mouse) está em cima.
+   É a prova de que o toque foi ouvido antes de a tela seguinte chegar. Curto (0,13s), para não atrasar ninguém */
+.botao, .m-item { transition: transform .13s var(--sair); }
+:is(.botao, .m-item):active { transform: scale(.97); }
+@media (hover: hover) { .botao.cheio:hover { filter: brightness(1.08); } }
+
+/* etiqueta: cápsula com tinta fraca (o vermelho só mora no que pede atenção) */
+/* Numa linha que quebra, a etiqueta desce inteira para a linha de baixo; só parte o texto se, sozinha,
+   for mais larga que a tela (celular): assim nunca empurra a página para o lado */
+.etq { display: inline-flex; align-items: center; min-height: 24px; max-width: 100%; padding: 3px 10px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; font-weight: 600; letter-spacing: 0; background: var(--campo-fundo); overflow-wrap: anywhere; }
+.etq.atencao { background: var(--lacre); color: var(--vermelho); }
+/* prazo da semana que vem: o nível do meio, entre o vermelho e a folga (contraste do texto 7:1) */
+.etq.perto { background: #fbeccb; color: #6e4500; }
+/* o que falta fazer no caso: em azul, é uma tarefa do escritório, não um alarme */
+.etq.falta { color: var(--marca); }
+
+.rotulo { display: block; font-size: 13px; font-weight: 600; color: var(--apagado); margin-bottom: 6px; }
+
+/* formulário */
+.formulario { padding: 22px; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
+/* Título do formulário: o mesmo peso do título da lista ao lado (.grupo h2). Com o estilo de rótulo
+   ele ficava igual aos rótulos dos campos logo abaixo e não parecia título.
+   O mesmo vale para o título de cartão colado num formulário ("Fechar o caso"): :has(+ form) pega só esse caso;
+   os outros cartões seguem com o título pequeno em cima do valor grande. Navegador sem :has fica com o rótulo */
+.formulario h2, .cartao > h2.rotulo:has(+ form) { font-size: 15px; font-weight: 700; color: var(--texto); }
+/* 16px: com letra menor que isso o iPhone dá zoom na página ao tocar no campo */
+.formulario select, .formulario input, .escolha-linha select, .resolver select, .resolver input, .resolver textarea { width: 100%; min-height: 44px; font-size: 16px; border-radius: var(--raio-m); border: 0; background: var(--campo-fundo); /* o fio de 1px marca o limite do campo: sem ele o campo quase some no cartão (acessibilidade pede 3:1) */ box-shadow: inset 0 0 0 1px #76808f; padding: 0 12px; }
+.formulario input[type="file"] { padding: 6px; }
+.formulario input[type="file"]::file-selector-button { height: 32px; margin-right: 12px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--solido); color: var(--marca); font: inherit; font-weight: 600; cursor: pointer; }
+/* Texto de apoio pequeno: abaixo de um campo ou da moldura do PDF */
+.formulario .dica, .resolver .dica, .reabrir .dica, .mesa .dica { font-size: 13px; color: var(--apagado); margin-top: 6px; }
+.formulario .botao { align-self: flex-start; }
+.erro { border-radius: var(--raio-m); background: var(--lacre); color: var(--vermelho); padding: 12px 14px; font-weight: 600; }
+/* recado bom (conta criada, saiu): o mesmo formato do erro, na cor da marca */
+.recado a { color: inherit; }
+.recado { border-radius: var(--raio-m); background: var(--campo-fundo); color: var(--marca); padding: 12px 14px; font-weight: 600; }
+.formulario a { color: var(--marca); font-weight: 600; }
+/* Link no meio de uma frase: o enchimento aumenta a área de toque para 44px e a margem negativa devolve o espaço,
+   então a linha não fica mais alta */
+.aviso a, .recado a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+/* o formulário logo depois de uma lista (Empresas) */
+.grupo + .formulario { margin-top: 14px; }
+/* linha de lista que não é link (Empresas) */
+.lista .linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 10px 12px; }
+.aviso { font-size: 13px; color: var(--apagado); border-top: 1px solid var(--fio); padding-top: 14px; }
+
+/* a notificação: o documento à esquerda, o que o Atalaia leu à direita */
+.dois { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(330px, .8fr); gap: 14px; align-items: start; }
+/* No HTML o cartão do prazo vem antes do documento (é a ordem em que o teclado e o leitor de tela passam);
+   na tela larga, o order devolve o documento para a esquerda */
+.mesa { padding: 14px; order: -1; }
+/* a moldura ocupa o que sobra da janela (100dvh menos o que fica acima dela), para não haver duas rolagens.
+   O que fica acima são 304px com a barra de cima inteira; a página com o menu ao lado troca esse número */
+.mesa iframe { display: block; width: 100%; height: calc(100dvh - var(--acima-do-pdf, 304px)); min-height: 320px; border: 0; border-radius: 16px; background: var(--solido); }
+/* quem chega na moldura pelo teclado precisa ver onde está */
+.mesa iframe:focus { outline: 2.5px solid var(--marca); outline-offset: 2px; }
+.mesa .abrir { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; font-weight: 600; }
+.lado { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 92px; }
+/* conteúdo estreito (celular, ou janela média com o menu fixado): uma coluna só, na ordem do HTML */
+@container (max-width: 880px) {
+  .dois { grid-template-columns: 1fr; }
+  .lado { position: static; }
+  .mesa { order: 0; }
+  .mesa iframe { height: 70vh; }
+}
+.cartao { padding: 18px; }
+.cartao .grande { display: block; font-size: 24px; line-height: 1.15; letter-spacing: -.02em; font-weight: 700; margin-bottom: 6px; }
+.cartao p { color: var(--apagado); font-size: 14px; }
+/* motivos da revisão: lista simples, um por linha */
+.motivos { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.motivos li + li { margin-top: 4px; }
+/* nome de arquivo ou link comprido, sem espaço, quebra no meio em vez de alargar a página */
+.motivos li { overflow-wrap: anywhere; }
+/* dados extraídos: nome do campo apagado, valor forte e o trecho do documento embaixo, como citação */
+.dados { margin: 12px 0 0; display: grid; gap: 12px; }
+.dados dt { font-size: 13px; font-weight: 600; color: var(--apagado); overflow-wrap: anywhere; }
+.dados dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.dados q { display: block; margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--picote); font-weight: 400; font-size: 13.5px; color: var(--apagado); quotes: none; }
+.cartao .aviso-ia { margin-top: 12px; font-size: 13px; }
+/* o texto lido: folha sólida (documento não é vidro), respeitando as quebras de linha do PDF */
+.lido { margin-top: 10px; max-height: 320px; overflow: auto; background: var(--solido); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media (max-width: 860px) {
+  :root { --borda: 10px; }
+  .titulo h1 { font-size: 28px; }
+}
+/* em tela muito estreita o selo fica só com a primeira palavra */
+@media (max-width: 420px) { .previa span { display: none; } }
+
+/* fechar o caso: o mesmo campo do formulário de envio, dentro do cartão */
+.resolver { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.resolver textarea { padding: 10px 12px; font-family: inherit; line-height: 1.45; resize: vertical; }
+.resolver .botao { align-self: flex-start; }
+/* histórico do caso: uma linha por evento, a data em cima, quem fez embaixo em cinza */
+.historico { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+/* pre-wrap: a observação levada ao histórico ao reabrir guarda as quebras de linha que a pessoa digitou */
+.historico li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.historico + .trilha, .historico + .erro { margin: 16px 0 0; font-size: 13.5px; }
+.historico + .trilha { color: var(--apagado); }
+.historico .quando, .historico .quem { font-size: 13px; color: var(--apagado); }
+.cartao .observacao { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto); }
+.reabrir { margin-top: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+
+/* tela inicial: o título com o botão de enviar ao lado, e os grupos de notificações */
+.titulo.com-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.grupo h2 { font-size: 15px; font-weight: 700; padding: 8px 6px; display: flex; align-items: center; gap: 8px; }
+.grupo .conta { font-size: 13px; font-weight: 500; color: var(--texto); }
+.tudo-certo { padding: 8px 6px; color: var(--apagado-fora); font-weight: 500; }
+/* filtro abertas/resolvidas: dois links simples; o escolhido fica em negrito e sublinhado (não só pela cor) */
+/* Uma escolha numa linha só (o cliente na tela inicial, o período em Empresas): rótulo, lista e botão.
+   No celular a lista ocupa o que sobra; o resto do estilo da lista vem da regra comum dos campos */
+.escolha-linha { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.escolha-linha select { flex: 1 1 220px; max-width: 420px; }
+.escolha-linha .rotulo { margin-bottom: 0; }
+/* Degrau: os cinco botões quebram linha no celular; o atual fica com o azul da marca (e o ✓ no texto) */
+.degraus { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.degraus .dica { flex-basis: 100%; margin: 0; }
+.degraus .botao[aria-current="true"] { background: var(--azul); color: #fff; cursor: default; }
+.filtro { display: flex; gap: 4px; margin-bottom: 4px; }
+.filtro a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: var(--raio-m); color: var(--apagado-fora); text-decoration: none; font-weight: 500; }
+.filtro a[aria-current="page"] { color: var(--texto); font-weight: 700; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }
+@media (hover: hover) { .filtro a:hover { background: var(--campo-fundo); } }
+.lista { list-style: none; margin: 0; padding: 6px; }
+.lista li + li { border-top: 1px solid var(--fio); }
+/* a linha inteira é o link: alvo grande para o dedo e para o mouse */
+.lista a { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 52px; padding: 10px 12px; border-radius: 18px; text-decoration: none; color: var(--texto); }
+.lista a strong, .lista .linha strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+/* Regras de prazo: o artigo pode ser longo, então quebra de linha (o .quando não quebra) */
+.lista .fonte { font-size: 13.5px; color: var(--apagado); min-width: 0; overflow-wrap: anywhere; }
+.lista .linha form { margin: 0; }
+.lista .quando { margin-left: auto; font-size: 13.5px; color: var(--apagado); white-space: nowrap; }
+@media (hover: hover) { .lista a:hover { background: var(--campo-fundo); } }
+.vazio { padding: 22px; max-width: 560px; color: var(--apagado); }
+
+/* página de erro */
+.engano { padding: 26px; max-width: 560px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+
+/* Página do cliente (cliente.html): uma coluna estreita, para ler no celular */
+.pagina.estreita { max-width: 620px; }
+.estreita main { display: flex; flex-direction: column; gap: 14px; }
+/* Quem lê é um leigo no celular: letra de leitura, não de painel */
+.estreita .cartao p, .estreita .motivos, .estreita .confirmar label { font-size: 16px; }
+/* a pergunta é a instrução principal da página: do tamanho do resto e na cor do texto, não em rótulo pequeno e cinza */
+.estreita .confirmar legend { font-size: 16px; color: var(--texto); }
+.estreita .confirmar .dica { font-size: 14px; }
+.cartao .erro { color: var(--vermelho); margin-top: 10px; }
+.cartao .recado, .estreita .recado { margin: 0; }
+/* A pergunta de conferência: cada data é uma linha inteira que dá para tocar (44px) */
+.confirmar { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.confirmar fieldset { border: 0; margin: 0; padding: 0; width: 100%; }
+.confirmar legend { padding: 0; }
+.confirmar label { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.confirmar input[type="radio"] { width: 20px; height: 20px; margin: 0; accent-color: var(--azul); }
+.confirmar .dica { font-size: 13px; color: var(--apagado); }
+
+/* =====================================================================
+   O MENU LATERAL (telas de dentro; o HTML está no pedaço "topo" de fragmentos.html)
+   É o menu de vidro curvo aprovado no protótipo, sem as partes que eram só de demonstração.
+   COMO ABRE E FECHA, SEM JAVASCRIPT: tudo depende de UMA medida, a largura do menu.
+     - Cada linha (.m-item) ocupa a largura que houver e corta o que não cabe. Com o menu em 72px sobra só
+       o quadrado do desenho (44px); com 284px aparece o nome ao lado. O movimento também só olha para ela.
+     - Quem muda a largura: o mouse em cima, o foco do teclado dentro, ou a chave marcada (.m-chave:checked).
+     - No celular, e em qualquer tela de toque, o menu é uma gaveta, e a mesma chave abre e fecha.
+   O static/js/menu.js só lembra a escolha de uma tela para a outra.
+   ===================================================================== */
+
+/* O tom do vidro do menu muda quando ele abre por cima do conteúdo (fica mais leitoso). Uma variável comum troca
+   de valor de uma vez; registrada como cor, o navegador sabe passar de um tom ao outro aos poucos.
+   Navegador que não conhece @property só ignora este bloco: o tom troca de uma vez, como antes */
+@property --menu-vidro { syntax: "<color>"; inherits: true; initial-value: rgba(255, 255, 255, .54); }
+
+/* A chave: a caixa de marcar existe e recebe o foco do teclado, mas não é desenhada (quem aparece são os rótulos dela).
+   visibility: visible: com a gaveta fechada o menu inteiro fica invisível, e a chave continua alcançável pelo Tab */
+.m-chave { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; visibility: visible; }
+/* "Pular para o conteúdo": fica acima da janela e desce quando o teclado chega nele */
+.pular { position: absolute; z-index: 50; top: max(var(--borda), env(safe-area-inset-top)); left: max(var(--borda), env(safe-area-inset-left)); transform: translateY(-300%); }
+.pular:focus { transform: none; }
+.m-veu, .so-estreito { display: none; }
+
+.menu { z-index: 10; border-radius: 26px; box-shadow: var(--menu-sombra);
+  /* A CURVA: os dois lados do vidro entram para dentro no meio. Cada lado é uma "mordida" em forma de elipse com
+     o centro fora do menu: tamanho (largura e altura do raio) e posição do centro. A da direita é medida em % da
+     largura do menu, então cresce sozinha quando ele abre (5px recolhido, 20px aberto). A altura do raio faz a
+     elipse cruzar a borda reta bem onde o canto redondo começa (57,7% da altura menos 30px).
+     A altura entra como medida (--m-altura), e não como %: o Chrome e o Edge recusam raio de elipse que mistura
+     % com px, e uma declaração recusada derruba o vidro inteiro (máscara e fundo). O menu tem sempre a altura
+     da janela menos as duas bordas, no computador e na gaveta */
+  --m-altura: calc(100dvh - 2 * var(--borda));
+  --m-raio-curva: calc(var(--m-altura) * .577 - 30px);
+  --m-curva-direita: ellipse 14% var(--m-raio-curva) at 107% 50%;
+  --m-curva-esquerda: ellipse 12px var(--m-raio-curva) at -6px 50%;
+  /* o fio de luz: um risco de 1,2px logo depois da borda da elipse, do lado do vidro */
+  --m-fio: transparent 100%, var(--menu-luz) 100%, var(--menu-luz) calc(100% + 1.2px), transparent calc(100% + 1.2px);
+  --m-fundo: var(--vidro-solido); }
+/* O vidro é uma camada atrás do conteúdo. A máscara apaga as duas mordidas (só fica o que as duas camadas deixam:
+   intersect); os dois primeiros fundos riscam o fio de luz em cima do corte. A sombra fica no .menu, que não é
+   recortado: sombra de caixa só pinta do lado de fora, então não escurece o vidro por trás */
+.menu::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(var(--m-curva-direita), var(--m-fio)), radial-gradient(var(--m-curva-esquerda), var(--m-fio)), var(--brilho), var(--m-fundo);
+  box-shadow: inset 0 0 0 1px var(--vidro-borda), var(--relevo);
+  mask-image: radial-gradient(var(--m-curva-direita), transparent calc(100% - 1px), #000 100%), radial-gradient(var(--m-curva-esquerda), transparent calc(100% - 1px), #000 100%);
+  mask-composite: intersect; }
+/* navegador sem desfoque fica com a folha sólida (o --m-fundo de cima), na mesma forma */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .menu::before { --m-fundo: var(--menu-vidro); -webkit-backdrop-filter: blur(28px) saturate(1.7); backdrop-filter: blur(28px) saturate(1.7); }
+}
+
+/* O conteúdo: uma coluna. A folga da direita acompanha a mordida (7% da largura + 9px): 14px recolhido, 29px aberto */
+.m-dentro { position: relative; height: 100%; display: flex; flex-direction: column; padding: 12px calc(7% + 9px) 12px 14px; overflow: hidden auto; }
+.m-lista, .m-pe { list-style: none; margin: 0; padding: 0; }
+.m-lista { flex: 1; display: flex; flex-direction: column; gap: 2px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--fio); }
+.m-pe { padding-top: 6px; border-top: 1px solid var(--fio); }
+.m-pe form { margin: 0; }
+
+/* uma linha: o desenho numa plaquinha (44px, o alvo do toque) + o nome. Link, botão e rótulo têm a mesma cara */
+.m-item { display: flex; align-items: center; gap: 6px; width: 100%; height: 44px; padding: 0; border: 0; border-radius: 14px; background: none; color: var(--texto); font: inherit; font-weight: 500; text-decoration: none; text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer; }
+.m-ic { width: 44px; height: 44px; flex: none; display: grid; place-items: center; }
+.m-ic i { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; color: var(--marca); background: var(--campo-fundo); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 0 0 .5px var(--vidro-fora); }
+.m-nome { flex: 1; min-width: 0; padding-right: 12px; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) { .m-item:not([aria-current]):hover { background: var(--campo-fundo); } }
+/* o anel de foco fica por dentro da linha (por fora, a borda do menu o cortaria) e segue o canto dela */
+.menu :focus-visible { outline-offset: -2px; border-radius: 14px; }
+/* a chave está escondida: quando o foco do teclado está nela, o anel aparece no botão que a representa */
+.m-vira:has(:focus-visible), .pagina:has(.m-chave:focus-visible) .m-abre { outline: 2.5px solid var(--marca); outline-offset: -2px; }
+
+/* a marca no alto: o símbolo branco num selo azul (o azul da marca à vista mesmo com o menu recolhido) */
+.m-ic .m-selo { width: 36px; height: 36px; border-radius: 12px; background: var(--placa-azul); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 6px 12px -6px rgba(28,44,134,.7); --simbolo-face: #fff; --simbolo-sombra: #0d1750; }
+.m-selo .simbolo { width: 22px; }
+.m-marca .palavra { font-size: 21px; }
+
+/* a tela aberta: placa clara com relevo, nome em azul e a plaquinha do desenho cheia de azul */
+.m-item[aria-current] { background: var(--menu-placa); color: var(--marca); font-weight: 650; box-shadow: var(--relevo), 0 0 0 .5px var(--vidro-fora), 0 8px 14px -10px rgba(20,25,34,.45); }
+.m-item[aria-current] .m-ic i { background: var(--placa-azul); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px -2px rgba(28,44,134,.6); }
+
+/* quem entrou: o recuo de 50px põe o e-mail na coluna dos nomes, fora do que o menu recolhido mostra */
+.m-quem { padding: 0 12px 8px 50px; font-size: 12.5px; color: var(--apagado-fora); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- computador: o menu fica ao lado do conteúdo ----------
+   Computador = janela larga E mouse. O menu recolhido só mostra os nomes com o mouse em cima; em tela de toque
+   (tablet, celular deitado) não existe "em cima", então lá vale a gaveta do bloco seguinte, com os nomes à vista */
+@media (min-width: 861px) and (hover: hover) and (pointer: fine) {
+  /* :has(> .menu): só a página que tem menu (com a sessão aberta) vira grade de duas colunas.
+     --m-coluna é o espaço que o menu ocupa ao lado do conteúdo: 72px, ou 284px quando fixado.
+     A largura máxima soma a coluna, para o conteúdo continuar com a largura que já tinha */
+  .pagina:has(> .menu) { --m-coluna: 72px; display: grid; grid-template-columns: var(--m-coluna) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 14px 16px; align-items: start; max-width: calc(1180px + 16px + var(--m-coluna)); }
+  /* FIXAR NÃO ANIMA, de propósito: a coluna cresce de uma vez. Animar a coluna refaria a arrumação do conteúdo
+     inteiro a cada quadro (o texto requebra, a moldura do PDF muda de tamanho, os painéis de vidro desfocam de novo),
+     e isso engasga. É um gesto raro, e a escolha fica lembrada de uma tela para a outra */
+  .pagina:has(.m-chave:checked) { --m-coluna: 284px; }
+  .pagina:has(> .menu) > :is(.topo, main) { grid-column: 2; }
+
+  /* Preso no alto, da altura da janela. A coluna da grade tem 72px; aberto, o menu passa por cima do conteúdo.
+     O MOVIMENTO: a largura e o tom do vidro mudam juntos. Cada estado escolhe dois números, --m-tempo (quanto dura)
+     e --m-espera (quanto espera antes de começar), e vale sempre o par do estado de CHEGADA.
+     Aqui está o par de recolher: espera 0,15s (perdoa quem tira o mouse um instante) e fecha em 0,18s, mais rápido
+     do que abre, para devolver logo o conteúdo que estava coberto.
+     Largura é arrumação (o navegador refaz as contas a cada quadro), mas aqui só as do próprio menu: ele passa por
+     cima do conteúdo, que não sai do lugar. container-type: as linhas de dentro ficam sabendo a largura do menu */
+  .menu { grid-column: 1; grid-row: 1 / 3; position: sticky; top: var(--borda); width: 72px; height: calc(100vh - 2 * var(--borda)); height: calc(100dvh - 2 * var(--borda)); container-type: inline-size;
+    --m-tempo: .18s; --m-espera: .15s; transition: var(--m-tempo) var(--sair) var(--m-espera); transition-property: width, --menu-vidro; }
+  /* aberto por cima do conteúdo, pelo teclado ou pelo mouse. O vidro fica mais leitoso porque há texto atrás dele */
+  .menu:has(:focus-visible) { width: 284px; --menu-vidro: rgba(246, 248, 251, .86); }
+  /* espera 0,1s antes de abrir: quem só atravessa o menu com o mouse não abre nada, nem vê o vidro piscar */
+  .menu:hover { width: 284px; --menu-vidro: rgba(246, 248, 251, .86); --m-tempo: .22s; --m-espera: .1s; }
+  /* fixado: fica aberto e o conteúdo vai para o lado (a coluna da grade cresce), então o vidro volta ao normal.
+     (:has(.m-chave:checked) pesa mais que :hover e que :has(:focus-visible): o tom do fixado vence os dois) */
+  .menu:has(.m-chave:checked) { width: 284px; --menu-vidro: rgba(255, 255, 255, .54); }
+  /* SEM MOVIMENTO em dois casos. Teclado dentro do menu (a chave mora nele): quem usa o teclado anda rápido, e
+     animação ali só atrasa. Fixado: a tela seguinte já nasce com o menu aberto, sem abrir de novo a cada página */
+  .menu:has(:focus-visible, .m-chave:checked) { transition: none; }
+  /* Os nomes só aparecem quando há lugar para eles. Sem isso, enquanto o menu abre, cada nome surgiria cortado
+     com reticências ("Not…"). Quem decide é a largura do menu naquele quadro (consulta de contêiner), então a
+     espera do mouse já vem junto. Somem mais rápido (0,08s) do que aparecem (0,16s).
+     Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
+  .m-nome, .m-quem { transition: opacity .16s; }
+  @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
+  .m-vira:has(:checked) .m-ic i { background: var(--placa-azul); color: #fff; }
+
+  /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */
+  .pagina:has(> .menu) > .topo { position: static; height: auto; padding: 0 6px; justify-content: flex-end; background: none; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .pagina:has(> .menu) > .topo .marca { display: none; }
+  /* sem a barra presa no alto, o cartão do prazo gruda mais em cima e a moldura do PDF ganha os 36px que sobraram */
+  .pagina:has(> .menu) { --acima-do-pdf: 268px; }
+  .pagina:has(> .menu) .lado { top: var(--borda); }
+}
+
+/* ---------- celular e tela de toque: o menu vira gaveta, com um véu escuro atrás ----------
+   É o contrário exato da condição do bloco de cima: janela estreita, OU sem mouse, OU dedo no lugar do mouse */
+@media (max-width: 860px), (hover: none), (pointer: coarse) {
+  /* O MOVIMENTO: a gaveta entra pela esquerda (só transform) em 0,4s e o véu escurece (só opacity) em 0,24s;
+     para sair, os dois levam 0,24s: quem fecha quer a tela de volta logo.
+     visibility tira a peça fechada do toque, do teclado e do leitor de tela. Ao fechar, ela só troca DEPOIS do
+     movimento (é o "0s .24s": dura nada, espera 0,24s); ao abrir, troca na hora */
+  .menu { position: fixed; z-index: 40; top: max(var(--borda), env(safe-area-inset-top)); bottom: max(var(--borda), env(safe-area-inset-bottom)); left: max(var(--borda), env(safe-area-inset-left)); width: min(308px, 100vw - 56px);
+    --menu-vidro: rgba(246, 248, 251, .86); visibility: hidden; transform: translateX(calc(-100% - 30px)); transition: transform .24s var(--gaveta), visibility 0s .24s; }
+  .menu:has(.m-chave:checked) { visibility: visible; transform: none; transition: transform .4s var(--gaveta); }
+  .m-veu { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(10, 14, 30, .4); visibility: hidden; opacity: 0; transition: opacity .24s, visibility 0s .24s; }
+  .menu:has(.m-chave:checked) ~ .m-veu { visibility: visible; opacity: 1; transition: opacity .24s; }
+  /* com a gaveta aberta, a página de trás não rola */
+  html:has(.m-chave:checked) { overflow: hidden; }
+  /* o botão da chave troca de papel: no computador fixa, aqui abre e fecha a gaveta. Dos dois nomes daqui fica
+     um só, o do que o toque vai fazer (é esse o nome que o leitor de tela diz) */
+  .so-largo { display: none; }
+  .so-estreito { display: block; }
+  .menu:has(.m-chave:checked) .so-fechada, .menu:not(:has(.m-chave:checked)) .so-aberta { display: none; }
+  /* gaveta fechada: o rótulo da chave fica fora da tela junto com ela, mas continua existindo para o leitor de
+     tela. Tem que ser o rótulo inteiro: rótulo com visibility: hidden não dá nome ao campo, mesmo com o texto visível */
+  .m-vira { visibility: visible; }
+  /* o botão de abrir, na barra de cima: 44px, encostado na borda da barra */
+  .topo .m-abre { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; border-radius: var(--raio-m); color: var(--marca); cursor: pointer; }
+  .topo .m-abre .ic { width: 20px; height: 20px; }
+}
+
+/* =====================================================================
+   ENTRAR E CRIAR CONTA (entrar.html e cadastro.html): o login "Dividido" aprovado no protótipo
+   Duas zonas de borda a borda: a parede azul com a marca e o plantão, e a porta com o formulário sobre a folha.
+   Sem manchas de cor, sem vidro e sem frase de propaganda. No celular a parede vira uma faixa no alto.
+   ===================================================================== */
+.entrada { position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(400px, .9fr); background: var(--solido); }
+
+/* a parede: um azul só, do azul da marca ao azul fundo */
+.parede { color: #fff; background: linear-gradient(180deg, var(--azul), var(--azul-fundo)); }
+/* Formulário mais alto que a janela (criar conta em notebook) faz a página rolar: o miolo da parede fica preso
+   no alto, da altura da janela, e a marca e o plantão não saem de vista */
+.parede-dentro { position: sticky; top: 0; height: 100vh; height: 100dvh; overflow: hidden; padding: clamp(24px, 4vw, 56px); display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
+/* o símbolo em marca-d'água, em dois azuis próximos do fundo */
+.parede .agua { position: absolute; right: -12%; top: -6%; width: 62%; opacity: .55; pointer-events: none; --simbolo-face: #2f47c0; --simbolo-sombra: #101c63; }
+.parede .marca { position: relative; display: flex; align-items: center; gap: 11px; --simbolo-face: #fff; --simbolo-sombra: #0f1a5c; }
+.parede .marca .simbolo { width: 34px; }
+.parede .palavra { font-size: 26px; }
+
+/* o plantão: o dia, a hora grande e a régua do dia */
+.plantao { position: relative; max-width: 620px; }
+.plantao .dia { font-size: 15px; font-weight: 600; color: rgba(255,255,255,.78); }
+.plantao .dia::first-letter { text-transform: uppercase; }
+.plantao .hora { font-size: clamp(72px, 10vw, 148px); line-height: .92; letter-spacing: -.055em; font-weight: 700; margin: 6px 0 26px -.04em; }
+/* a régua: 24 horas, um risco por hora; a faixa clara é o expediente (8h às 18h, as mesmas horas do plantao.js) */
+.regua { position: relative; height: 54px; }
+.regua .riscos { position: absolute; inset: 0 0 auto 0; height: 22px; display: flex; justify-content: space-between; align-items: flex-end; }
+.regua .riscos i { width: 1.5px; height: 8px; background: rgba(255,255,255,.38); border-radius: 1px; }
+.regua .riscos i.seis { height: 16px; background: rgba(255,255,255,.75); }
+.regua .trilho, .regua .expediente { position: absolute; top: 26px; height: 4px; border-radius: 2px; }
+.regua .trilho { left: 0; right: 0; background: rgba(255,255,255,.16); }
+.regua .expediente { left: calc(8 / 24 * 100%); width: calc(10 / 24 * 100%); background: rgba(255,255,255,.8); }
+.regua.fds .expediente { opacity: .22; }
+.regua .nomes { position: absolute; left: 0; right: 0; top: 36px; display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.62); }
+/* o ponteiro: um fio branco com a ponta em triângulo, primo do ponteiro do símbolo (o plantao.js diz a posição) */
+.regua .agora { position: absolute; top: -8px; left: 0; width: 2px; height: 40px; margin-left: -1px; background: #fff; border-radius: 1px; }
+.regua .agora::before { content: ""; position: absolute; left: -5px; top: -7px; border: 6px solid transparent; border-top: 8px solid #fff; border-bottom: 0; }
+.plantao .situacao { margin-top: 18px; font-size: 15px; color: rgba(255,255,255,.86); max-width: 46ch; }
+
+/* a porta: o selo de prévia no alto e o formulário embaixo, na altura do plantão da parede */
+.porta { display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: clamp(24px, 4vw, 64px); }
+.porta .previa { align-self: flex-end; }
+/* o mesmo formulário das telas de dentro (rótulo em cima, campo com o fio de contorno), sem o cartão de vidro */
+.porta .formulario { width: 100%; max-width: 380px; margin: 0 auto; padding: 0; }
+.porta h1 { font-size: 28px; line-height: 1.12; letter-spacing: -.03em; font-weight: 700; }
+.chamada p { color: var(--apagado); margin-top: 6px; }
+.porta .formulario .botao { align-self: stretch; height: 50px; font-size: 17px; }
+/* janela baixa (notebook): os vãos apertam para o botão de criar conta nascer à vista, sem rolar */
+@media (min-width: 901px) and (max-height: 760px) {
+  .porta { gap: 14px; padding-block: 16px; }
+  .porta .formulario { gap: 12px; }
+  .porta .aviso { padding-top: 10px; }
+}
+
+@media (max-width: 900px) {
+  .entrada { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  /* a parede vira faixa: a marca de um lado e a hora do outro (o resto do plantão não cabe) */
+  .parede-dentro { position: static; height: auto; flex-direction: row; align-items: center;
+    padding: max(18px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 18px max(20px, env(safe-area-inset-left)); }
+  .parede .agua, .regua, .plantao .situacao, .plantao .dia { display: none; }
+  .plantao .hora { font-size: 28px; margin: 0; letter-spacing: -.03em; }
+  /* O formulário sobe para perto da faixa. Embaixo ele pularia quando a barra do navegador recolhe,
+     e o teclado do celular cobriria os campos */
+  .porta { justify-content: flex-start; gap: 20px; padding: 20px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+}
+
+/* ---------- celular: o botão do formulário ocupa a largura toda, fácil de acertar com o polegar ----------
+   (fica no fim do arquivo para valer sobre o "encostado à esquerda" de cada formulário) */
+@media (max-width: 560px) {
+  .formulario .botao, .resolver .botao, .confirmar .botao, .engano .botao { align-self: stretch; }
+}
+
+/* A tela "Sem conexão" do app instalado (offline.html): sem menu, centrada, dentro da área segura do iPhone */
+.sem-conexao { box-sizing: border-box; min-height: 100dvh; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 16px;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
+.sem-conexao h1, .sem-conexao p { margin: 0; }

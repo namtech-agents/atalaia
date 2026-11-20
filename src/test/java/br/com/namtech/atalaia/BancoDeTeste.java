@@ -1,0 +1,63 @@
+package br.com.namtech.atalaia;
+
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
+//Apoio dos testes: contar, buscar e apagar sem o filtro do escritório.
+//Os repositórios do sistema não têm mais findAll, findById, count nem delete (só buscas que levam o escritório):
+//assim o código do sistema não consegue, nem por engano, ver o dado de outro escritório. Os testes precisam
+//olhar o banco inteiro para conferir, e fazem isso por aqui. Esta classe fica em src/test: o sistema não a enxerga.
+//Transactional: dentro de um teste com transação, usa a dele; num teste sem (ResolverAoMesmoTempoTest), abre uma
+@Component
+@Transactional
+public class BancoDeTeste {
+
+    //A "mesa de trabalho" do JPA, a mesma que os repositórios usam
+    @PersistenceContext
+    private EntityManager mesa;
+
+    //Quantas linhas há da classe dada, de todos os escritórios
+    public long contar(Class<?> tipo) {
+        return mesa.createQuery("select count(x) from " + tipo.getSimpleName() + " x", Long.class).getSingleResult();
+    }
+
+    //A última gravada (o maior id)
+    public <T> T ultima(Class<T> tipo) {
+        return mesa.createQuery("select x from " + tipo.getSimpleName() + " x order by x.id desc", tipo)
+                .setMaxResults(1).getSingleResult();
+    }
+
+    //Quantos eventos do histórico há de um caso só (o contar de cima soma os de todos os casos)
+    public long contarEventosDo(Long notificacaoId) {
+        return mesa.createQuery("select count(e) from EventoDoCaso e where e.notificacao.id = :id", Long.class)
+                .setParameter("id", notificacaoId).getSingleResult();
+    }
+
+    public <T> T buscar(Class<T> tipo, Long id) {
+        return mesa.find(tipo, id);
+    }
+
+    //Lê do banco de verdade: grava e limpa a mesa antes. Uma mudança feita direto no banco (um update em lote, como
+    //o marcarAbertura do simulado) não aparece no objeto que já estava na mesa
+    public <T> T releer(Class<T> tipo, Long id) {
+        mesa.flush();
+        mesa.clear();
+        return mesa.find(tipo, id);
+    }
+
+    //Manda para o banco agora o que está só na mesa (o banco confere as regras dele nesse momento)
+    public void gravar() {
+        mesa.flush();
+    }
+
+    //Apaga a linha, se ela existir
+    public void apagar(Class<?> tipo, Long id) {
+        Object achado = mesa.find(tipo, id);
+        if (achado != null) {
+            mesa.remove(achado);
+        }
+    }
+}

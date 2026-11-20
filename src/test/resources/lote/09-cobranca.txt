@@ -1,0 +1,9 @@
+DOCUMENTO DE TESTE (INVENTADO) - sem valor legal
+
+SECRETARIA DE FAZENDA DO ESTADO DE EXEMPLO
+Aviso de Cobrança nº 889/2026
+Devedor: Mercadinho Bom Preço (exemplo), CNPJ 99.999.004/0001-00
+
+Consta em aberto o débito de ICMS referente a março de 2026.
+Valor atualizado: R$ 5.630,77.
+O pagamento deve ser feito em 30 dias, sob pena de inscrição em dívida ativa.

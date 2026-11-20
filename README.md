@@ -39,7 +39,7 @@ A lista do que entra na prévia, do que vem depois e do que foi descartado está
 
 ## Situação
 
-O projeto está no **Marco 1 (visão e backlog)**.
+O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: criar a conta do escritório e entrar com e-mail e senha, cadastrar as empresas clientes (cada escritório só vê as suas), enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, perguntar de novo à IA se falta algo ou há conflito no documento (com dúvida, o caso vai para uma pessoa com o trecho), mostrar o degrau da notificação (de aviso a cobrança) e o que costuma vir em seguida, com correção em um clique, mostrar tudo na tela, listar os casos em grupos pelo próximo passo (precisa de gente, esperando o cliente, pronto para fechar), com filtro por cliente e a contagem de casos de cada cliente no período, e marcar um caso como resolvido, com o desfecho. Uma vez por semana, a faxina mostra os casos abertos sem movimento há mais de 7 dias. O dono pode soltar um simulado (notificação de teste) e ver quanto tempo a equipe levou para abrir, avisar o cliente e fechar. Cada caso guarda o histórico de quem fez o quê e quando, numa trilha encadeada: mexer num registro antigo aparece na conferência, e a trilha sai em PDF. O prazo já aparece na tela: o escritório cadastra as regras que ele mesmo conferiu na norma (o Atalaia não traz regra pronta), informa o dia da ciência, e a data limite é calculada por código, com a conta passo a passo e o artigo ao lado. A lista mostra primeiro o prazo mais perto. O caminho já fecha: o escritório aprova um resumo simples (rascunhado pela IA), gera um link para o cliente, e a confirmação dele fica gravada como registro de ciência, com uma pergunta que confere se ele entendeu a data. O que falta até 03/12: colocar no ar. Aviso por e-mail e responsável por área ficaram para depois.
 
 Em 10/11 a pesquisa de concorrentes mostrou que só monitorar as caixas já existe. Em 11/11 o rumo mudou para o que vem depois do aviso, e o Canvas, o backlog e este README foram ajustados.
 
@@ -50,7 +50,13 @@ O que já está pronto:
 - Roteiro e mensagens das entrevistas ([docs/02-validacao](docs/02-validacao/))
 - Requisitos funcionais e não funcionais ([docs/03-requisitos](docs/03-requisitos/requisitos.md))
 - Backlog com 36 histórias de usuário nas Issues, organizado no Kanban
-- Projeto Spring Boot criado, com banco PostgreSQL
+- Projeto Spring Boot criado, com banco PostgreSQL e as tabelas criadas pelo Flyway
+- Leitor de PDF, Analista, Verificador e Calculadora de prazo, cada um com os seus testes
+- Um teste do caminho inteiro (`CaminhoInteiroTest`): do PDF enviado ao caso resolvido, pela tela
+- Testes por variação: a mesma notificação inventada com outra data, outra ordem ou outro CNPJ dá o mesmo resultado
+- Login com cadastro do escritório, com teste de que um escritório não vê os dados de outro
+- Aviso ao cliente por link, com resumo rascunhado pela IA e aprovado pelo escritório, pergunta de conferência e registro de ciência; a lista inicial mostra quem ainda não confirmou
+- Arquitetura e diagramas UML ([docs/04-arquitetura](docs/04-arquitetura/arquitetura.md))
 
 Próximos marcos:
 - 12/11 · Marco 1: canvas, stakeholders, pré-mortem, roteiro de funções e backlog
@@ -68,10 +74,12 @@ Próximos marcos:
 - Maven
 - JUnit (testes)
 - Git e GitHub com o Projects
+- PDFBox (ler PDF)
+- Flyway (criar e mudar as tabelas do banco)
+- LangChain4j com o Gemini (a IA que classifica e extrai os dados)
+- Spring Security (login, sessão e a separação entre escritórios)
 
 ### Vão entrar:
-- PDFBox (Ler PDF)
-- LangChain4j (a IA, Claude ou Gemini)
 - Spring Mail e Telegram (os avisos)
 - GitHub Actions (Testes automáticos)
 - Docker com um servidor VPS (colocar no ar)
@@ -100,6 +108,16 @@ Subir o sistema:
 Para ver se subiu, abra http://localhost:8080/actuator/health. Tem que aparecer "status":"UP".
 
 O endereço, o usuário e a senha do banco podem vir das variáveis `ATALAIA_DB_URL`, `ATALAIA_DB_USUARIO` e `ATALAIA_DB_SENHA`.
+
+No ar (com HTTPS e um proxy na frente), defina também:
+
+| Variável | Para quê |
+|---|---|
+| `ATALAIA_ENDERECO` | o endereço público, usado no link do aviso ao cliente |
+| `ATALAIA_COOKIE_SEGURO=true` | o cookie da sessão só viaja por HTTPS |
+| `ATALAIA_PROXY=native` | o Atalaia lê do proxy o endereço real de quem pediu (trava de tentativas) e que veio por HTTPS (liga o HSTS) |
+| `ATALAIA_PROXY_IP` | o IP do proxy, como expressão regular (ex.: `172\.18\.0\.5`). Sem ela, só um proxy na mesma máquina é aceito. A porta do Atalaia fica aberta só para o proxy |
+| `GEMINI_API_KEY` | a chave da IA. Sem ela, tudo vai para revisão |
 
 ## Como trabalho 
 

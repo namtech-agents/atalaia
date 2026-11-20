@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Notificações')}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo('notificacoes')}"></header>
+
+  <main id="conteudo">
+    <div class="titulo com-acao">
+      <h1>Notificações</h1>
+      <a class="botao cheio" th:unless="${semEmpresa}" th:href="@{/enviar}">Enviar notificação</a>
+      <a class="botao cheio" th:if="${semEmpresa}" th:href="@{/empresas}">Cadastrar empresa</a>
+    </div>
+
+    <!-- Escritório novo: o primeiro passo é cadastrar uma empresa; só depois faz sentido falar em enviar -->
+    <section class="vidro vazio" th:if="${semEmpresa}">
+      <p>Comece cadastrando a primeira empresa que o escritório atende. Depois é só enviar o PDF que chegou para ela.</p>
+    </section>
+    <section class="vidro vazio" th:if="${not semEmpresa and nenhuma}">
+      <p>Nenhuma notificação recebida ainda. Envie o PDF que chegou para o cliente e ele aparece aqui.</p>
+    </section>
+
+    <!-- Escolher um cliente: com duas empresas ou mais. Formulário GET sem JavaScript: o endereço guarda a escolha
+         (dá para favoritar), e o botão "Mostrar" envia. Cada opção diz quantos casos abertos o cliente tem -->
+    <form class="escolha-linha" method="get" th:action="@{/}" th:if="${clientes.size() > 1 and not nenhuma}">
+      <input type="hidden" name="ver" value="resolvidas" th:if="${verResolvidas}">
+      <label class="rotulo" for="empresa">Cliente</label>
+      <select id="empresa" name="empresa">
+        <option value="">Todos os clientes</option>
+        <option th:each="cliente : ${clientes}" th:value="${cliente.id}" th:selected="${cliente.id == filtro}"
+                th:with="abertas=${abertasPorCliente.getOrDefault(cliente.id, 0L)}"
+                th:text="${cliente.nome} + ' · ' + (${abertas == 0} ? 'nenhuma aberta' : (${abertas == 1} ? '1 aberta' : ${abertas} + ' abertas'))"></option>
+      </select>
+      <button class="botao" type="submit">Mostrar</button>
+    </form>
+    <section class="vidro vazio" th:if="${nadaDoCliente}">
+      <p>Nenhuma notificação deste cliente. <a th:href="@{/}">Ver todos os clientes</a></p>
+    </section>
+
+    <!-- O filtro: abertas (o que pede ação) ou resolvidas (o histórico). Só aparece quando há resolvidas.
+         Os dois links levam o cliente escolhido junto; sem cliente, o endereço fica sem ele (e não com "empresa=" vazio) -->
+    <nav class="filtro" aria-label="Quais casos mostrar" th:unless="${resolvidas.isEmpty()}">
+      <a th:href="${filtro == null} ? @{/} : @{/(empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas</a>
+      <a th:href="${filtro == null} ? @{/(ver='resolvidas')} : @{/(ver='resolvidas',empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
+    </nav>
+
+    <th:block th:unless="${verResolvidas}">
+      <!-- Os três grupos seguem de quem é o próximo passo (Etapa): primeiro o que o escritório tem que fazer -->
+      <section th:replace="~{:: grupo('gente', 'Precisa de gente', ${precisaDeGente})}"></section>
+
+      <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
+      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma and not nadaDoCliente}">Nada precisa de gente agora.</p>
+
+      <section th:replace="~{:: grupo('cliente', 'Esperando o cliente', ${esperandoOCliente})}"></section>
+      <section th:replace="~{:: grupo('fechar', 'Pronto para fechar', ${prontoParaFechar})}"></section>
+    </th:block>
+
+    <!-- th:block por fora: no mesmo elemento, o th:replace roda antes do th:if e o if seria ignorado -->
+    <th:block th:if="${verResolvidas}">
+      <section th:replace="~{:: grupo('resolvidas', 'Resolvidas', ${resolvidas})}"></section>
+    </th:block>
+  </main>
+</div>
+
+<th:block th:remove="all">
+  <!-- Um grupo da lista: título com a contagem e as linhas. Grupo vazio não aparece -->
+  <section th:fragment="grupo(chave, titulo, linhas)" class="grupo" th:unless="${linhas.isEmpty()}" th:attr="aria-labelledby='titulo-' + ${chave}">
+    <h2 th:id="'titulo-' + ${chave}"><th:block th:text="${titulo}"></th:block> <span class="conta num" th:text="${linhas.size() == 1} ? '1 notificação' : ${linhas.size() + ' notificações'}"></span></h2>
+    <ul class="vidro lista">
+      <li th:each="linha : ${linhas}" th:insert="~{:: linha(${linha})}"></li>
+    </ul>
+  </section>
+
+  <!-- Uma linha da lista: a linha inteira é o link para a notificação. Todos os grupos usam o mesmo pedaço -->
+  <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}" th:with="aviso=${avisos.get(linha.id)}">
+    <strong th:text="${linha.empresa}"></strong>
+    <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
+    <!-- O degrau (gravidade), com "Degrau:" na frente, como o desfecho: sem isso, duas etiquetas lado a lado se confundem -->
+    <span class="etq" th:if="${linha.degrau != null}" th:text="'Degrau: ' + ${linha.degrau.nome}"></span>
+    <!-- o vermelho de atenção só em caso aberto -->
+    <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
+    <!-- "Desfecho:" na frente: sem isso, duas etiquetas lado a lado ("Cobrança", "Arquivado") se confundem -->
+    <span class="etq" th:if="${linha.resolvida()}" th:text="'Desfecho: ' + ${linha.desfecho.nome}"></span>
+    <!-- O que falta fazer, no caso que ainda não tem aviso ao cliente (vem do PainelController, regra na Etapa) -->
+    <span class="etq falta" th:if="${faltas.get(linha.id) != null}" th:text="${faltas.get(linha.id)}"></span>
+    <!-- O prazo, quando já foi calculado, em três níveis: vermelho até 3 dias, amarelo até 7, sem cor com folga.
+         O texto já diz a situação: quem não distingue a cor não perde a informação -->
+    <span class="etq num" th:if="${linha.temPrazo()}"
+          th:classappend="${linha.prazoApertado(hoje)} ? 'atencao' : (${linha.prazoPerto(hoje)} ? 'perto' : '')"
+          th:text="${linha.prazo(hoje)}"></span>
+    <!-- O aviso ao cliente, só em caso aberto (avisos vem do PainelController): aguardando, confirmado ou vencido.
+         Em vermelho quando o escritório precisa agir; o texto e a regra ficam no AvisoAoCliente (naLista, pedeAtencao) -->
+    <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora, linha.dataLimite)} ? 'atencao'"
+          th:text="${aviso.naLista(agora, linha.dataLimite)}"></span>
+    <!-- Caso fechado mostra quando foi resolvido; caso aberto, quando chegou -->
+    <span class="quando"><th:block th:text="${linha.resolvida()} ? 'Resolvida em ' : 'Recebida em '"></th:block><span class="num" th:text="${linha.quando}"></span></span>
+  </a>
+</th:block>
+</body>
+</html>

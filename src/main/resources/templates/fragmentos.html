@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<!-- Pedaços que se repetem em todas as telas. Cada tela chama com th:replace.
+     Dentro de um pedaço, o comentário leva barra e asterisco: é o comentário do Thymeleaf, que não vai para a
+     página. O comentário comum de HTML sairia na página de quem usa o pedaço. -->
+
+<!-- O que vai dentro do <head>; cada tela passa o seu título -->
+<head th:fragment="cabeca(titulo)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title th:text="${titulo} + ' · Atalaia'">Atalaia</title>
+  <!--/* Prévia: não é para aparecer em buscador */-->
+  <meta name="robots" content="noindex">
+  <link rel="icon" th:href="@{/logo/atalaia-simbolo.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/atalaia.css}">
+  <!--/* O app no celular (PWA): o manifesto diz nome, ícone e que abre em tela cheia; theme-color pinta a barra de status
+         com a cor do fundo (o balcão). O iPhone ainda lê o ícone e o título pelas tags da Apple */-->
+  <!--/* Fora da página do cliente (/c/...): o dono da empresa não tem conta, e o app abriria o login do escritório */-->
+  <th:block th:unless="${paginaDoCliente}">
+  <link rel="manifest" th:href="@{/manifest.json}">
+  <meta name="theme-color" content="#e3e7eb">
+  <link rel="apple-touch-icon" th:href="@{/icones/apple-touch-icon.png}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Atalaia">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!--/* Liga a tela "Sem conexão" do app instalado (static/js/app.js e static/sw.js) */-->
+  <script th:src="@{/js/app.js}" defer></script>
+  </th:block>
+  <!--/* O menu funciona sem este arquivo; ele só lembra se o menu ficou aberto (static/js/menu.js).
+         Só entra com a sessão aberta: é quando existe menu.
+         defer: roda depois de a página ser lida. blocking="render": o navegador espera por ele antes de desenhar,
+         para o menu não aparecer fechado e abrir logo em seguida */-->
+  <script th:if="${quemEntrou}" th:src="@{/js/menu.js}" defer blocking="render"></script>
+</head>
+
+<body>
+  <!-- O campo de cor do fundo: três manchas azuis paradas, só enfeite (por isso aria-hidden) -->
+  <div th:fragment="campo" class="campo" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <!-- O símbolo desenhado na própria página (e não como imagem), para cada lugar poder dar as suas cores:
+       a face usa a variável simbolo-face e a sombra usa a simbolo-sombra, do atalaia.css -->
+  <svg th:fragment="simbolo" class="simbolo" viewBox="0 0 64 64" aria-hidden="true"><path class="s-face" d="M25.4 4 4 42.6l17.6-5.4Z"/><path class="s-sombra" d="M28.4 5 43 30.6 37.4 35.4 62 57.6 4.6 46.2 24.6 40Z"/></svg>
+
+  <!-- O selo de prévia -->
+  <span th:fragment="previa" class="previa">Prévia<span>&nbsp;· só documento de teste</span></span>
+
+  <!-- O menu e a barra de cima das telas de dentro. Cada tela diz onde está (atual), para o menu marcar o item.
+       th:block: uma caixa que não vai para a página; só o que está dentro dela vai -->
+  <th:block th:fragment="topo(atual)">
+    <!--/* A primeira parada do teclado: pula o menu e vai direto para o conteúdo (o <main id="conteudo"> de cada tela).
+           Só aparece quando recebe o foco */-->
+    <a class="botao cheio pular" href="#conteudo">Pular para o conteúdo</a>
+
+    <!--/* O menu só aparece com a sessão aberta (quemEntrou vem do QuemEntrou.java) */-->
+    <th:block th:if="${quemEntrou}">
+      <nav class="menu" aria-label="Menu">
+        <div class="m-dentro">
+          <a class="m-item m-marca" th:href="@{/}">
+            <span class="m-ic"><i class="m-selo"><svg th:replace="~{fragmentos :: simbolo}"></svg></i></span>
+            <span class="m-nome palavra">Atalaia</span>
+          </a>
+
+          <!--/* Os desenhos foram feitos para o Atalaia no protótipo (traço de 1,7 e cantos redondos; a classe ic dá o traço).
+                 aria-current="page" diz ao leitor de tela qual é a tela aberta; o CSS usa o mesmo atributo para marcar o item */-->
+          <ul class="m-lista">
+            <li>
+              <a class="m-item" th:href="@{/}" th:attr="aria-current=${atual == 'notificacoes'} ? 'page'">
+                <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 11.5 4.6 4.4A2 2 0 0 1 6.5 3h7a2 2 0 0 1 1.9 1.4l2.1 7.1"/><path d="M2.5 11.5h4.2l1 2h4.6l1-2h4.2V15a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2z"/></svg></i></span>
+                <span class="m-nome">Notificações</span>
+              </a>
+            </li>
+            <li>
+              <a class="m-item" th:href="@{/faxina}" th:attr="aria-current=${atual == 'faxina'} ? 'page'">
+                <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3.5" width="14" height="13.5" rx="2.5"/><path d="M3 7.5h14M7 2v3M13 2v3"/><path d="m7.2 12 2 2 3.8-3.8"/></svg></i></span>
+                <span class="m-nome">Faxina da semana</span>
+              </a>
+            </li>
+            <li>
+              <a class="m-item" th:href="@{/simulado}" th:attr="aria-current=${atual == 'simulado'} ? 'page'">
+                <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="11" r="6.5"/><path d="M10 7.5V11l2.2 1.6M8 2h4M10 2v2.5"/></svg></i></span>
+                <span class="m-nome">Simulado</span>
+              </a>
+            </li>
+            <li>
+              <a class="m-item" th:href="@{/empresas}" th:attr="aria-current=${atual == 'empresas'} ? 'page'">
+                <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="7.5" cy="6.5" r="3"/><path d="M2 17c.4-3.2 2.6-5 5.5-5s5.1 1.8 5.5 5"/><path d="M13.2 4a3 3 0 0 1 0 5.2M15.6 12.6c1.4.8 2.2 2.3 2.4 4.4"/></svg></i></span>
+                <span class="m-nome">Empresas</span>
+              </a>
+            </li>
+            <li>
+              <a class="m-item" th:href="@{/regras}" th:attr="aria-current=${atual == 'regras'} ? 'page'">
+                <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="1.8" y="6.5" width="16.4" height="7" rx="2"/><path d="M5.5 6.8v2.6M8.5 6.8v3.6M11.5 6.8v2.6M14.5 6.8v3.6"/></svg></i></span>
+                <span class="m-nome">Regras de prazo</span>
+              </a>
+            </li>
+          </ul>
+
+          <!--/* Quem está com a sessão aberta. O recuo deixa o e-mail na coluna dos nomes: com o menu recolhido ele não aparece */-->
+          <p class="m-quem" th:text="${quemEntrou}"></p>
+          <ul class="m-pe">
+            <li>
+              <!--/* A CHAVE DO MENU: uma caixa de marcar escondida dentro do próprio rótulo. Marcada, o menu fica aberto
+                     (no computador, fixado ao lado do conteúdo; em tela de toque, a gaveta aberta). O CSS lê o estado
+                     dela com :has(), por isso funciona sem JavaScript. Clicar no rótulo marca e desmarca; no teclado
+                     é a barra de espaço. Ela mora aqui para a ordem do Tab bater com o lugar onde o botão aparece.
+                     O leitor de tela diz o nome que está à vista: dos três nomes, o CSS mostra um de cada vez.
+                     autocomplete="off": ao voltar pelo histórico, o navegador não devolve a marca antiga */-->
+              <label class="m-item m-vira">
+                <input class="m-chave" id="menu-aberto" type="checkbox" autocomplete="off">
+                <span class="m-ic"><i>
+                  <svg class="ic so-largo" viewBox="0 0 20 20" aria-hidden="true"><path d="M7.2 3h5.6l-.7 4.6 2.9 3.4H5l2.9-3.4z"/><path d="M10 11v6"/></svg>
+                  <svg class="ic so-estreito" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4v12"/><path d="M16.5 10H8M11.5 6.5 8 10l3.5 3.5"/></svg>
+                </i></span>
+                <span class="m-nome so-largo">Manter o menu aberto</span>
+                <span class="m-nome so-estreito so-aberta">Fechar o menu</span>
+                <!--/* Com a gaveta fechada o botão que se vê é só o desenho da barra de cima: este nome é para o leitor de tela */-->
+                <span class="m-nome so-estreito so-fechada">Abrir o menu</span>
+              </label>
+            </li>
+            <li>
+              <!--/* Sair é um formulário (POST), não um link: um link poderia ser acionado por outro site */-->
+              <form method="post" th:action="@{/sair}">
+                <button class="m-item" type="submit" th:title="${quemEntrou}">
+                  <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M8 3.5H5.5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2H8"/><path d="M12.5 6.5 16 10l-3.5 3.5M16 10H7.5"/></svg></i></span>
+                  <span class="m-nome">Sair</span>
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      <!--/* O véu: escurece a tela atrás da gaveta. Também é um rótulo da chave (pelo for): tocar fora fecha.
+             aria-hidden: para o leitor de tela, quem abre e fecha é a própria caixa de marcar */-->
+      <label class="m-veu" for="menu-aberto" aria-hidden="true"></label>
+    </th:block>
+
+    <!--/* A barra de cima. No computador, com o menu ao lado, sobra nela só o selo de prévia */-->
+    <header class="topo vidro">
+      <!--/* O botão que abre a gaveta (outro rótulo da mesma chave) */-->
+      <label class="m-abre" for="menu-aberto" aria-hidden="true" th:if="${quemEntrou}">
+        <svg class="ic" viewBox="0 0 20 20"><path d="M3.5 6h13M3.5 10h13M3.5 14h8"/></svg>
+      </label>
+      <a class="marca" th:href="@{/}">
+        <img th:src="@{/logo/atalaia-simbolo.svg}" alt="" width="28" height="28">
+        <span class="palavra">Atalaia</span>
+      </a>
+      <span th:replace="~{fragmentos :: previa}"></span>
+    </header>
+  </th:block>
+
+  <!-- A parede azul das telas de entrar e de criar conta: a marca e o plantão.
+       A régua do dia é desenhada aqui mesmo (um risco por hora; a faixa clara vai das 8h às 18h).
+       O dia, a hora, o ponteiro e a frase dependem do relógio de quem abre a página: nascem escondidos (hidden)
+       e quem preenche é o static/js/plantao.js. Sem ele, a parede fica com a marca e a régua. -->
+  <div th:fragment="parede" class="parede">
+    <div class="parede-dentro">
+      <span class="agua"><svg th:replace="~{fragmentos :: simbolo}"></svg></span>
+      <div class="marca"><svg th:replace="~{fragmentos :: simbolo}"></svg><span class="palavra">Atalaia</span></div>
+      <div class="plantao">
+        <p class="dia" id="plantao-dia" hidden></p>
+        <p class="hora num" id="plantao-hora" hidden></p>
+        <div class="regua" id="plantao-regua" aria-hidden="true">
+          <!--/* 25 riscos, de 0h a 24h; os de 6 em 6 horas são mais altos */-->
+          <div class="riscos"><i th:each="h : ${#numbers.sequence(0, 24)}" th:classappend="${h % 6 == 0} ? 'seis'"></i></div>
+          <div class="trilho"></div><div class="expediente"></div>
+          <div class="agora" id="plantao-agora" hidden></div>
+          <div class="nomes num"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span></div>
+        </div>
+        <p class="situacao" id="plantao-situacao" hidden></p>
+      </div>
+    </div>
+    <!--/* O relógio do plantão vem junto com a parede: só carrega nas telas que têm a parede.
+           defer: roda depois de a página ser lida, quando as peças acima já existem */-->
+    <script th:src="@{/js/plantao.js}" defer></script>
+  </div>
+  <!--/* Os campos de nome e CNPJ da empresa, no cadastro (empresas.html) e na correção (empresa.html).
+         Leem nome, cnpj e campoComErro do que o EmpresaController põe na tela */-->
+  <th:block th:fragment="camposDaEmpresa">
+    <div>
+      <label class="rotulo" for="nome">Nome da empresa</label>
+      <!--/* Só o campo que falhou recebe o foco e o aviso de erro (campoComErro vem do EmpresaController) */-->
+      <input id="nome" name="nome" type="text" maxlength="200" required th:value="${nome}"
+             th:autofocus="${campoComErro == 'nome'}"
+             th:attr="aria-invalid=${campoComErro == 'nome'} ? 'true', aria-describedby=${campoComErro == 'nome'} ? 'erro-empresa'">
+    </div>
+    <div>
+      <label class="rotulo" for="cnpj">CNPJ</label>
+      <!--/* 24: folga para a pontuação e para um espaço que venha junto ao colar; o servidor limpa */-->
+      <input id="cnpj" name="cnpj" type="text" maxlength="24" required th:value="${cnpj}"
+             aria-describedby="dica-cnpj" th:autofocus="${campoComErro == 'cnpj'}"
+             th:attr="aria-invalid=${campoComErro == 'cnpj'} ? 'true', aria-describedby=${campoComErro == 'cnpj'} ? 'erro-empresa dica-cnpj' : 'dica-cnpj'">
+      <p class="dica" id="dica-cnpj">Com ou sem pontuação.</p>
+    </div>
+  </th:block>
+
+</body>
+</html>

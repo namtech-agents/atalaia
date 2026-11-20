@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca('Aviso do escritório ' + ${escritorio})}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<!-- A página do cliente: quem abre é o dono da empresa, pelo link, sem conta no Atalaia.
+     Por isso não tem menu nem caminho para o resto do sistema -->
+<div class="pagina estreita">
+  <header class="topo vidro">
+    <span class="marca">
+      <img th:src="@{/logo/atalaia-simbolo.svg}" alt="" width="28" height="28">
+      <span class="palavra">Atalaia</span>
+    </span>
+  </header>
+
+  <main>
+    <div class="titulo">
+      <h1 th:text="${empresa}"></h1>
+      <p>Aviso do escritório <strong th:text="${escritorio}"></strong>: chegou uma comunicação do governo para a sua empresa.</p>
+    </div>
+
+    <!-- Simulado: se o link de um teste chegar ao cliente por engano, ele sabe que não precisa fazer nada -->
+    <p class="recado" th:if="${simulado}">Este aviso é um teste (simulado) do escritório. Você não precisa fazer nada.</p>
+
+    <!-- Link que não confirma mais: diz o porquê e o que fazer -->
+    <p class="recado" th:if="${situacao.name() == 'SUBSTITUIDO'}">Este aviso foi substituído por um mais novo. Peça o link novo ao escritório.</p>
+    <p class="recado" th:if="${situacao.name() == 'VENCIDO'}">Este link venceu. Peça um link novo ao escritório.</p>
+
+    <!-- O registro de ciência, depois de confirmado -->
+    <section class="vidro cartao" th:if="${situacao.name() == 'CONFIRMADO'}" aria-labelledby="titulo-registro">
+      <h2 class="rotulo" id="titulo-registro">Registro de ciência</h2>
+      <strong class="grande">Recebimento confirmado</strong>
+      <p>Confirmado em <span class="num" th:text="${aviso.confirmadoEmPorExtenso}"></span>. O escritório já consegue ver a sua confirmação.</p>
+      <!-- Errou a pergunta: o aviso explica de novo, sem bronca -->
+      <p class="erro" th:unless="${aviso.acertouOPrazo()}">Você marcou <span class="num" th:text="${#temporals.format(aviso.resposta, 'dd/MM/yyyy')}"></span>, mas a data limite é <strong class="num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></strong>. Se ficou alguma dúvida, fale com o escritório.</p>
+    </section>
+
+    <!-- O conteúdo só aparece no aviso que vale. Link substituído ou vencido não mostra nada:
+         a data dele pode estar velha, e o leigo leria a data errada -->
+    <th:block th:if="${not simulado and (situacao.name() == 'AGUARDANDO' or situacao.name() == 'CONFIRMADO')}">
+    <section class="vidro cartao" aria-labelledby="titulo-resumo">
+      <h2 class="rotulo" id="titulo-resumo">O que é</h2>
+      <p class="observacao" th:text="${aviso.resumo}"></p>
+    </section>
+
+    <section class="vidro cartao" aria-labelledby="titulo-limite">
+      <h2 class="rotulo" id="titulo-limite">Data limite</h2>
+      <strong class="grande num" th:text="${#temporals.format(aviso.prazo, 'dd/MM/yyyy')}"></strong>
+      <p>Calculada pelo escritório. O que você precisa entregar deve chegar ao escritório antes desse dia.</p>
+    </section>
+
+    <section class="vidro cartao" th:unless="${aviso.listaDeDocumentos.isEmpty()}" aria-labelledby="titulo-documentos">
+      <h2 class="rotulo" id="titulo-documentos">O que separar</h2>
+      <ul class="motivos">
+        <li th:each="documento : ${aviso.listaDeDocumentos}" th:text="${documento}"></li>
+      </ul>
+    </section>
+
+    </th:block>
+
+    <!-- A confirmação: uma pergunta montada pelo código, com a data limite entre três datas.
+         Responder mostra que a pessoa leu; errar não impede confirmar -->
+    <form class="vidro cartao confirmar" id="confirmar" method="post" th:if="${not simulado and situacao.name() == 'AGUARDANDO'}" th:action="@{/c/{token}(token=${aviso.token})}">
+      <p class="erro" id="erro-resposta" role="alert" th:if="${erro}" th:text="${erro}"></p>
+      <fieldset th:attr="aria-describedby=${erro} ? 'erro-resposta'">
+        <legend class="rotulo">Para confirmar, marque: qual é a data limite?</legend>
+        <label th:each="opcao : ${aviso.opcoesDePrazo()}">
+          <input type="radio" name="resposta" required th:value="${opcao}">
+          <span class="num" th:text="${#temporals.format(opcao, 'dd/MM/yyyy')}"></span>
+        </label>
+      </fieldset>
+      <button class="botao cheio" type="submit">Confirmar que recebi</button>
+      <!-- Aviso curto junto do formulário: o que fica guardado e para quê -->
+      <p class="dica">Ao confirmar, guardamos a data, a hora e a data que você marcou, para o escritório ter o registro de que você recebeu este aviso. Este link vale até <span class="num" th:text="${aviso.valeAtePorExtenso}"></span>.</p>
+    </form>
+  </main>
+</div>
+</body>
+</html>

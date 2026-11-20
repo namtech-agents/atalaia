@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro · ' + ${empresa.nome} : ${empresa.nome})}"></head>
+<body>
+<div th:replace="~{fragmentos :: campo}"></div>
+<div class="pagina">
+  <header th:replace="~{fragmentos :: topo('empresas')}"></header>
+
+  <main id="conteudo">
+    <div class="titulo">
+      <a class="volta" th:href="@{/empresas}">Empresas</a>
+      <h1 th:text="${empresa.nome}"></h1>
+      <p>CNPJ <span class="num" th:text="${empresa.cnpjFormatado}"></span></p>
+    </div>
+
+    <!-- Corrigir: nome ou CNPJ digitado errado no cadastro -->
+    <form class="vidro formulario" method="post" th:action="@{/empresas/{id}(id=${empresa.id})}" aria-labelledby="titulo-corrigir">
+      <h2 id="titulo-corrigir">Corrigir os dados</h2>
+      <p class="erro" id="erro-empresa" role="alert" th:if="${erro}" th:text="${erro}"></p>
+      <th:block th:replace="~{fragmentos :: camposDaEmpresa}"></th:block>
+      <button class="botao cheio" type="submit">Salvar</button>
+    </form>
+
+    <!-- Excluir: só empresa sem casos. Os casos são o histórico do escritório e a prova do que o cliente confirmou
+         (decisão da dona do projeto, 19/11) -->
+    <section class="vidro formulario" aria-labelledby="titulo-excluir">
+      <h2 id="titulo-excluir">Excluir</h2>
+      <p th:if="${casos > 0}"
+         th:text="${'Esta empresa tem ' + casos + (casos == 1 ? ' caso' : ' casos') + ' no Atalaia, por isso não pode ser excluída: os casos são o histórico do escritório e a prova do que o cliente confirmou.'}"></p>
+      <th:block th:if="${casos == 0}">
+        <p>Esta empresa ainda não tem nenhum caso. Se foi cadastrada por engano, pode sair da lista.</p>
+        <form method="post" th:action="@{/empresas/{id}/excluir(id=${empresa.id})}">
+          <!-- O nome no botão: o clique não tem volta, a pessoa vê o que vai sair -->
+          <button class="botao" type="submit" th:text="'Excluir ' + ${empresa.nome}">Excluir empresa</button>
+        </form>
+      </th:block>
+    </section>
+  </main>
+</div>
+</body>
+</html>

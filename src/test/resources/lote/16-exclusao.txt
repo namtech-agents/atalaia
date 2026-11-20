@@ -1,0 +1,8 @@
+DOCUMENTO DE TESTE (INVENTADO) - sem valor legal
+
+MINISTÉRIO DE EXEMPLO - CADASTRO DE FORNECEDORES
+Notificação de descredenciamento
+Empresa: Clínica Vida Mansa (exemplo)
+
+A empresa será retirada do cadastro de fornecedores por certidão de regularidade vencida.
+Para permanecer no cadastro, apresente a certidão atualizada no prazo de 5 dias úteis.
