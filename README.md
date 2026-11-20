@@ -10,9 +10,9 @@ Atalaia é a torre de vigia, o posto de onde alguém avisa antes do perigo chega
 
 ## O problema
 
-Toda empresa com CNPJ recebe comunicações oficiais em caixas eletrônicas: Receita Federal, Justiça, Ministério do Trabalho, Estado, prefeitura. Muitas vezes ninguém olha todas elas, e o prazo começa a contar mesmo que a mensagem não seja nem sequer aberta.
+Chega uma notificação do governo para um cliente do escritório, e daí em diante é tudo na mão: entender o que o documento pede no meio de várias páginas, descobrir o prazo certo, mandar para quem resolve (contador, advogado ou RH), avisar o cliente de um jeito que fique registrado e acompanhar até fechar. Qualquer passo esquecido vira multa.
 
-Já existem ferramentas que avisam o contador quando chega uma mensagem. O problema que sobra vem depois do aviso: entender o que o documento pede, saber o prazo certo, avisar o cliente com registro e não deixar o caso parado.
+E o prazo não espera ninguém abrir a mensagem:
 
 - No e-CAC, a intimação conta como feita 15 dias depois de chegar na caixa postal, mesmo sem ninguém abrir (Decreto 70.235/72, art. 23).
 - No Domicílio Judicial Eletrônico, são 3 dias úteis para confirmar a citação, com multa de até 5% do valor da causa para quem não confirma (CPC, art. 246).
