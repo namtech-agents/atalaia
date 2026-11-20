@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 60" role="img" aria-label="Atalaia" shape-rendering="crispEdges">
+<title>Atalaia</title>
+<style>
+.feito{opacity:0;animation:feito 8s steps(1,end) infinite}
+@keyframes feito{0%,86%{opacity:1}87%,100%{opacity:0}}
+.t0{animation-delay:0.60s}.t1{animation-delay:0.63s}.t2{animation-delay:0.65s}.t3{animation-delay:0.68s}.t4{animation-delay:0.71s}.t5{animation-delay:0.73s}.t6{animation-delay:0.76s}.t7{animation-delay:0.79s}.t8{animation-delay:0.81s}.t9{animation-delay:0.84s}.t10{animation-delay:0.87s}.t11{animation-delay:0.89s}.t12{animation-delay:0.92s}.t13{animation-delay:0.95s}
+.marca{animation:anda 8s infinite}
+@keyframes anda{
+0%,7.50%{transform:translateX(64px)}
+7.51%{transform:translateX(64px);animation-timing-function:steps(12,end)}
+11.67%,100%{transform:translateX(164px)}}
+/* Quem pediu menos movimento vê a régua parada, com a marca no começo */
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.marca{transform:translateX(64px)}}
+</style>
+<rect width="880" height="60" fill="#141922"/>
+<path fill="#2438A6" d="M30,34h4v4h-4zM34,34h4v4h-4zM38,34h4v4h-4zM42,34h4v4h-4z"/><path fill="#8C9CF2" d="M26,18h4v4h-4zM22,22h4v4h-4zM26,22h4v4h-4zM22,26h4v4h-4zM26,26h4v4h-4zM18,30h4v4h-4zM22,30h4v4h-4zM26,30h4v4h-4zM18,34h4v4h-4zM22,34h4v4h-4zM26,34h4v4h-4z"/>
+<path fill="#FBFCFC" d="M68,16h4v4h-4zM64,20h4v4h-4zM72,20h4v4h-4zM64,24h4v4h-4zM68,24h4v4h-4zM72,24h4v4h-4zM64,28h4v4h-4zM72,28h4v4h-4zM64,32h4v4h-4zM72,32h4v4h-4zM80,16h4v4h-4zM84,16h4v4h-4zM88,16h4v4h-4zM84,20h4v4h-4zM84,24h4v4h-4zM84,28h4v4h-4zM84,32h4v4h-4zM100,16h4v4h-4zM96,20h4v4h-4zM104,20h4v4h-4zM96,24h4v4h-4zM100,24h4v4h-4zM104,24h4v4h-4zM96,28h4v4h-4zM104,28h4v4h-4zM96,32h4v4h-4zM104,32h4v4h-4zM112,16h4v4h-4zM112,20h4v4h-4zM112,24h4v4h-4zM112,28h4v4h-4zM112,32h4v4h-4zM116,32h4v4h-4zM120,32h4v4h-4zM132,16h4v4h-4zM128,20h4v4h-4zM136,20h4v4h-4zM128,24h4v4h-4zM132,24h4v4h-4zM136,24h4v4h-4zM128,28h4v4h-4zM136,28h4v4h-4zM128,32h4v4h-4zM136,32h4v4h-4zM144,16h4v4h-4zM148,16h4v4h-4zM152,16h4v4h-4zM148,20h4v4h-4zM148,24h4v4h-4zM148,28h4v4h-4zM144,32h4v4h-4zM148,32h4v4h-4zM152,32h4v4h-4zM164,16h4v4h-4zM160,20h4v4h-4zM168,20h4v4h-4zM160,24h4v4h-4zM164,24h4v4h-4zM168,24h4v4h-4zM160,28h4v4h-4zM168,28h4v4h-4zM160,32h4v4h-4zM168,32h4v4h-4z"/>
+<path fill="#2C3444" d="M64,44h4v8h-4zM72,48h4v4h-4zM80,48h4v4h-4zM88,48h4v4h-4zM96,48h4v4h-4zM104,44h4v8h-4zM112,48h4v4h-4zM120,48h4v4h-4zM128,48h4v4h-4zM136,48h4v4h-4zM144,44h4v8h-4zM152,48h4v4h-4zM160,48h4v4h-4zM168,48h4v4h-4z"/>
+<path class="feito t0" fill="#8C9CF2" d="M64,44h4v8h-4z"/><path class="feito t1" fill="#8C9CF2" d="M72,48h4v4h-4z"/><path class="feito t2" fill="#8C9CF2" d="M80,48h4v4h-4z"/><path class="feito t3" fill="#8C9CF2" d="M88,48h4v4h-4z"/><path class="feito t4" fill="#8C9CF2" d="M96,48h4v4h-4z"/><path class="feito t5" fill="#8C9CF2" d="M104,44h4v8h-4z"/><path class="feito t6" fill="#8C9CF2" d="M112,48h4v4h-4z"/><path class="feito t7" fill="#8C9CF2" d="M120,48h4v4h-4z"/><path class="feito t8" fill="#8C9CF2" d="M128,48h4v4h-4z"/><path class="feito t9" fill="#8C9CF2" d="M136,48h4v4h-4z"/><path class="feito t10" fill="#8C9CF2" d="M144,44h4v8h-4z"/><path class="feito t11" fill="#8C9CF2" d="M152,48h4v4h-4z"/><path class="feito t12" fill="#8C9CF2" d="M160,48h4v4h-4z"/><path class="feito t13" fill="#8C9CF2" d="M168,48h4v4h-4z"/>
+<path class="marca" fill="#A3271F" d="M0,40h8v12h-8z"/>
+</svg>
