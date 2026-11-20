@@ -1,27 +1,39 @@
+<p align="center">
+  <img src="docs/atalaia.webp" width="100%" alt="Pixel art: a sombra do relógio de sol do Atalaia cresce e gira como ponteiro até a marca vermelha do prazo acender">
+</p>
+
 # Atalaia
 
-Um agente para escritórios de contabilidade que pega a notificação do governo que chegou para um cliente, explica em linguagem simples, calcula o prazo por código, avisa o cliente guardando o registro e garante que alguém resolva antes do prazo.
+> Multa é coisa de quem não tem Atalaia.
+
+Outras ferramentas avisam que chegou uma notificação do governo. O Atalaia cuida do depois: lê o documento, calcula o prazo certo por código e leva o caso até o cliente confirmar que foi avisado, com registro. É o primeiro produto da [Galad](https://github.com/somosgalad).
 
 ## O problema
 
-Toda empresa com CNPJ recebe comunicações oficiais em caixas eletrônicas: Receita Federal, Justiça, Ministério do Trabalho, Estado, prefeitura. Muitas vezes ninguém olha todas elas, e o prazo começa a contar mesmo que a mensagem não seja nem sequer aberta.
+Chega uma notificação do governo para um cliente do escritório, e daí em diante é tudo na mão: entender o que o documento pede no meio de várias páginas, descobrir o prazo certo, mandar para quem resolve (contador, advogado ou RH), avisar o cliente de um jeito que fique registrado e acompanhar até fechar. Qualquer passo esquecido vira multa.
 
-Já existem ferramentas que avisam o contador quando chega uma mensagem. O problema que sobra vem depois do aviso: entender o que o documento pede, saber o prazo certo, avisar o cliente com registro e não deixar o caso parado.
+E o prazo não espera ninguém abrir a mensagem:
+
+- No e-CAC, a intimação conta como feita 15 dias depois de chegar na caixa postal, mesmo sem ninguém abrir (Decreto 70.235/72, art. 23).
+- No Domicílio Judicial Eletrônico, são 3 dias úteis para confirmar a citação, com multa de até 5% do valor da causa para quem não confirma (CPC, art. 246).
 
 Um exemplo real: no TRT de Goiás, empresas levaram multas porque não confirmaram uma citação no Domicílio Judicial Eletrônico dentro do prazo (processo 0000732-75.2025.5.18.0002).
 
 ## O que o Atalaia faz
 
-- Recebe o PDF da notificação, enviado pelo escritório. Na prévia não há robô entrando em portal nem certificado de cliente.
-- Lê o documento e separa os dados, mostrando o trecho de onde tirou cada um.
-- Explica em linguagem simples o que a mensagem pede.
+- Recebe o PDF da notificação, enviado pelo escritório, lê e mostra de que trecho tirou cada dado.
+- Explica em linguagem simples o que a mensagem pede e destaca valor, objetivo e prazo.
 - Calcula o prazo por código, com a regra ao lado. A IA nunca calcula prazo.
-- Quando há dúvida ou conflito no documento, diz "não sei" e manda o caso para uma pessoa conferir.
-- Manda ao cliente um link com o resumo, o prazo e os documentos pedidos. A confirmação dele fica gravada.
-- Destaca o que mais importa. Em meio a muitas páginas, o valor e o objetivo da mensagem ficam escondidos, e o Atalaia vai direto ao ponto.
-- Manda o caso para a pessoa certa. Hoje, mensagens sobre processos chegam ao contador, que as ignora porque acha que é com o advogado, e as do RH chegam ao advogado, e vice-versa.
-- Avisa de novo, e avisa ao dono, se ninguém resolver.
-- Avisa e permite ao dono acompanhar o que está acontecendo no fluxo de sua empresa sobre questões governamentais, evitando deixar ele sem o controle da empresa.
+- Na dúvida, diz "não sei" e manda o caso para uma pessoa conferir.
+- Envia ao cliente um link com o resumo, o prazo e os documentos pedidos, e guarda a confirmação dele como registro de ciência.
+- Organiza os casos pelo próximo passo, com o prazo mais perto primeiro.
+- Registra quem fez o quê e quando, numa trilha que sai em PDF.
+
+## O que ele não faz
+
+- Não responde ao governo. Quem responde é o contador.
+- Não entra sozinho nos portais do governo nem usa o certificado do cliente.
+- Não avisa por WhatsApp nem Telegram.
 
 ## Por que é diferente
 
@@ -32,8 +44,6 @@ A pesquisa de concorrentes de 10/11 olhou o Brasil e mais 16 países. Tratar not
 - o prazo é calculado por código e o contador sempre confere;
 - o sistema prefere dizer "não sei" a mostrar uma data errada;
 - o caso termina no cliente, com o registro de que ele foi avisado.
-
-O Atalaia não responde ao governo. Quem responde é o contador.
 
 A lista do que entra na prévia, do que vem depois e do que foi descartado está no [roteiro de funções](docs/01-visao/roteiro-de-funcoes.md).
 
