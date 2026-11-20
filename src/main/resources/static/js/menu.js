@@ -59,17 +59,24 @@ if (chave) {
   if (vitrine) {
     const cartoes = [...vitrine.querySelectorAll('.v-cartao')];
     const pontos = [...vitrine.querySelectorAll('.v-pontos i')];
+    const janela = vitrine.querySelector('.v-janela');
     const pausa = vitrine.querySelector('.v-pausa');
     const calmo = matchMedia('(prefers-reduced-motion: reduce)');
     const LUGAR = 'atalaia-vitrine';
     let atual = 0;
     let parada = calmo.matches;
     let olhando = false;
+    let andando = false;        // um deslize em curso: outro clique espera ele terminar (senão os cartões pulam)
+    let ultimoClique = 0;       // depois de trocar à mão, o relógio espera 5 s inteiros antes de passar sozinho
+
+    // O leitor de tela fala o cartão novo só quando a pessoa está no controle (parada ou com o foco dentro).
+    // Passando sozinha, fica quieta: anunciar a cada 5 s atrapalharia quem está lendo outra coisa
+    const avisar = () => janela.setAttribute('aria-live', parada || olhando ? 'polite' : 'off');
 
     // mostra o cartão "para"; lado = 1 desliza para a esquerda (próximo), -1 para a direita (anterior)
     const ir = (para, lado, animar) => {
-      para = (para + cartoes.length) % cartoes.length;
-      if (para === atual) return;
+      para = (((para % cartoes.length) + cartoes.length) % cartoes.length);
+      if (para === atual || andando) return;
       const sai = cartoes[atual];
       const entra = cartoes[para];
       sai.classList.remove('atual');
@@ -79,36 +86,44 @@ if (chave) {
       if (animar && !calmo.matches) {
         // os dois deslizam juntos (só transform); quem sai continua à vista até terminar
         const como = { duration: 520, easing: 'cubic-bezier(.32, .72, 0, 1)' };
+        andando = true;
         sai.classList.add('saindo');
         sai.animate([{ transform: 'none' }, { transform: `translateX(${-100 * lado}%)` }], como)
-          .onfinish = () => sai.classList.remove('saindo');
+          .onfinish = () => { sai.classList.remove('saindo'); andando = false; };
         entra.animate([{ transform: `translateX(${100 * lado}%)` }, { transform: 'none' }], como);
       }
       atual = para;
       try { sessionStorage.setItem(LUGAR, String(atual)); } catch (e) { /* só não lembra o cartão */ }
     };
 
-    try { ir(Number(sessionStorage.getItem(LUGAR)) || 0, 1, false); } catch (e) { /* começa na logo */ }
+    // Math.trunc: um valor estranho guardado (ex.: "1.5") vira um cartão que existe
+    try { ir(Math.trunc(Number(sessionStorage.getItem(LUGAR))) || 0, 1, false); } catch (e) { /* começa na logo */ }
 
+    // O estado vai num data-parada (o CSS troca o desenho) e o nome do botão diz o que ele FAZ.
+    // Sem aria-pressed: junto com o nome que muda, o leitor diria "Continuar, pressionado", que confunde
     const pausar = sim => {
       parada = sim;
-      pausa.setAttribute('aria-pressed', String(sim));
+      pausa.dataset.parada = String(sim);
       pausa.setAttribute('aria-label', sim ? 'Continuar a vitrine' : 'Pausar a vitrine');
+      avisar();
     };
     pausar(parada);
 
-    // offsetParent é null quando a vitrine está escondida (menu recolhido ou janela baixa)
+    // checkVisibility percebe também a gaveta fechada (visibility: hidden), além do menu recolhido e da janela
+    // baixa (display: none). Navegador antigo sem ele: offsetParent, que só percebe o display: none
+    const aVista = () => (vitrine.checkVisibility ? vitrine.checkVisibility({ visibilityProperty: true }) : !!vitrine.offsetParent);
     setInterval(() => {
-      if (!parada && !olhando && !document.hidden && vitrine.offsetParent) ir(atual + 1, 1, true);
+      if (!parada && !olhando && !document.hidden && aVista() && Date.now() - ultimoClique >= 5000) ir(atual + 1, 1, true);
     }, 5000);
 
+    const aMao = (para, lado) => { ultimoClique = Date.now(); ir(para, lado, true); };
     pausa.addEventListener('click', () => pausar(!parada));
-    vitrine.querySelector('.v-ant').addEventListener('click', () => ir(atual - 1, -1, true));
-    vitrine.querySelector('.v-prox').addEventListener('click', () => ir(atual + 1, 1, true));
+    vitrine.querySelector('.v-ant').addEventListener('click', () => aMao(atual - 1, -1));
+    vitrine.querySelector('.v-prox').addEventListener('click', () => aMao(atual + 1, 1));
     vitrine.addEventListener('mouseenter', () => { olhando = true; });
     vitrine.addEventListener('mouseleave', () => { olhando = vitrine.contains(document.activeElement); });
-    vitrine.addEventListener('focusin', () => { olhando = true; });
-    vitrine.addEventListener('focusout', saida => { olhando = vitrine.contains(saida.relatedTarget) || vitrine.matches(':hover'); });
+    vitrine.addEventListener('focusin', () => { olhando = true; avisar(); });
+    vitrine.addEventListener('focusout', saida => { olhando = vitrine.contains(saida.relatedTarget) || vitrine.matches(':hover'); avisar(); });
   }
 
   // inert: com a gaveta aberta, o teclado e o leitor de tela não entram no que está atrás dela

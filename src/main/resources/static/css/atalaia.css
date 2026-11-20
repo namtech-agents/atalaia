@@ -411,11 +411,13 @@ html { scroll-padding-top: 92px; }
 
 /* ---------- A VITRINE (#204): o cartão grande do pé do menu. Começa pela logo e passa para o lado ----------
    Os cartões ficam empilhados no mesmo lugar e só o atual aparece; o menu.js troca e faz os dois deslizarem juntos
-   (só transform). Cartão escondido: visibility hidden, então não recebe foco nem é lido */
+   (só transform). Cartão escondido: visibility hidden, então não é lido */
 .vitrine { margin-top: 10px; }
 .v-janela { position: relative; height: 130px; margin: 0; padding: 0; list-style: none; border-radius: 18px; overflow: hidden; background: var(--solido); box-shadow: var(--relevo), 0 0 0 .5px var(--vidro-fora), 0 12px 20px -14px rgba(20,25,34,.5); }
-.v-cartao { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) 108px; visibility: hidden; background: var(--solido); }
-.v-cartao.atual, .v-cartao.saindo { visibility: visible; }
+.v-cartao { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) 108px; background: var(--solido); }
+/* Só os de fora se escondem. O atual HERDA a visibilidade do menu: se ele dissesse "visible", apareceria para o
+   leitor de tela mesmo com a gaveta fechada (filho visible vale mais que pai hidden) */
+.v-cartao:not(.atual, .saindo) { visibility: hidden; }
 .v-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; padding: 14px 6px 10px 14px; white-space: normal; }
 .v-txt strong { font-size: 14.5px; line-height: 1.15; letter-spacing: -.015em; font-weight: 700; text-wrap: balance; }
 .v-txt > span:not(.etq) { font-size: 12px; line-height: 1.3; color: var(--apagado); text-wrap: pretty; }
@@ -440,7 +442,7 @@ html { scroll-padding-top: 92px; }
 .v-controles button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--apagado); display: grid; place-items: center; cursor: pointer; }
 .v-controles button svg { width: 14px; height: 14px; }
 @media (hover: hover) { .v-controles button:hover { background: var(--campo-fundo); color: var(--marca); } }
-.v-pausa[aria-pressed="true"] .v-ic-pausa, .v-pausa[aria-pressed="false"] .v-ic-tocar { display: none; }
+.v-pausa[data-parada="true"] .v-ic-pausa, .v-pausa[data-parada="false"] .v-ic-tocar { display: none; }
 .v-pontos { flex: 1; display: flex; justify-content: center; gap: 9px; }
 .v-pontos i { width: 5px; height: 5px; border-radius: 3px; background: var(--fio); transition: transform .3s var(--sair), background .2s; }
 .v-pontos i.atual { background: var(--marca); transform: scaleX(2.2); }
@@ -494,8 +496,10 @@ html { scroll-padding-top: 92px; }
      Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
   .m-nome, .m-quem { transition: opacity .16s; }
   @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
-  /* a vitrine só existe com o menu aberto: recolhido, não cabe (o menu.js também para de passar os cartões) */
-  @container (max-width: 239px) { .vitrine { display: none; } }
+  /* a vitrine só existe com o menu aberto: recolhido, não cabe. Some e volta como os nomes (opacidade, e
+     visibility tira do teclado e do leitor), e o menu.js para de passar os cartões enquanto ela não está à vista */
+  .vitrine { transition: opacity .16s, visibility .16s; }
+  @container (max-width: 239px) { .vitrine { opacity: 0; visibility: hidden; transition-duration: .08s; } }
   .m-vira:has(:checked) .m-ic i { background: var(--placa-azul); color: #fff; }
 
   /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */
