@@ -111,7 +111,9 @@ if (chave) {
 
     // checkVisibility percebe também a gaveta fechada (visibility: hidden), além do menu recolhido e da janela
     // baixa (display: none). Navegador antigo sem ele: offsetParent, que só percebe o display: none
-    const aVista = () => (vitrine.checkVisibility ? vitrine.checkVisibility({ visibilityProperty: true }) : !!vitrine.offsetParent);
+    // Olha a janela dos cartões, e não a vitrine inteira: com o menu recolhido a vitrine continua lá (é ela que
+    // mostra o cartãozinho da logo), só a janela some
+    const aVista = () => (janela.checkVisibility ? janela.checkVisibility({ visibilityProperty: true }) : !!janela.offsetParent);
     setInterval(() => {
       if (!parada && !olhando && !document.hidden && aVista() && Date.now() - ultimoClique >= 5000) ir(atual + 1, 1, true);
     }, 5000);

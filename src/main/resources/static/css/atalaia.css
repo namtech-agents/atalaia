@@ -412,7 +412,12 @@ html { scroll-padding-top: 92px; }
 /* ---------- A VITRINE (#204): o cartão grande do pé do menu. Começa pela logo e passa para o lado ----------
    Os cartões ficam empilhados no mesmo lugar e só o atual aparece; o menu.js troca e faz os dois deslizarem juntos
    (só transform). Cartão escondido: visibility hidden, então não é lido */
-.vitrine { margin-top: 10px; }
+.vitrine { position: relative; margin-top: 10px; }
+/* o cartãozinho do menu recolhido: o mesmo azul do cartão da logo, com o símbolo no meio. Só aparece recolhido */
+.v-mini { position: absolute; left: 0; top: calc(50% - 43px); width: 44px; height: 86px; display: grid; place-items: center; border-radius: 14px; opacity: 0; visibility: hidden;
+  background: radial-gradient(120% 90% at 10% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), linear-gradient(160deg, #314bcb, var(--azul) 46%, var(--azul-fundo));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.34), 0 10px 16px -10px rgba(28,44,134,.8); --simbolo-face: #fff; --simbolo-sombra: #0d1750; }
+.v-mini .simbolo { width: 26px; }
 .v-janela { position: relative; height: 130px; margin: 0; padding: 0; list-style: none; border-radius: 18px; overflow: hidden; background: var(--solido); box-shadow: var(--relevo), 0 0 0 .5px var(--vidro-fora), 0 12px 20px -14px rgba(20,25,34,.5); }
 .v-cartao { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr) 108px; background: var(--solido); }
 /* Só os de fora se escondem. O atual HERDA a visibilidade do menu: se ele dissesse "visible", apareceria para o
@@ -498,8 +503,12 @@ html { scroll-padding-top: 92px; }
   @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
   /* a vitrine só existe com o menu aberto: recolhido, não cabe. Some e volta como os nomes (opacidade, e
      visibility tira do teclado e do leitor), e o menu.js para de passar os cartões enquanto ela não está à vista */
-  .vitrine { transition: opacity .16s, visibility .16s; }
-  @container (max-width: 239px) { .vitrine { opacity: 0; visibility: hidden; transition-duration: .08s; } }
+  .vitrine > :not(.v-mini), .v-mini { transition: opacity .16s, visibility .16s; }
+  /* recolhido: a vitrine some e o cartãozinho da logo aparece no lugar dela (e o contrário ao abrir) */
+  @container (max-width: 239px) {
+    .vitrine > :not(.v-mini) { opacity: 0; visibility: hidden; transition-duration: .08s; }
+    .v-mini { opacity: 1; visibility: visible; }
+  }
   .m-vira:has(:checked) .m-ic i { background: var(--placa-azul); color: #fff; }
 
   /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */

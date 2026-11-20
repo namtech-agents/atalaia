@@ -101,6 +101,9 @@
                  menu.js; sem ele, fica parada na logo. Some com o menu recolhido e em janela baixa (atalaia.css).
                  Os desenhos são de cada função (não há tela para fotografar): papel, linhas de texto, azul e alerta */-->
           <section class="vitrine" aria-roledescription="carrossel" aria-label="O que vem por aí no Atalaia">
+            <!--/* Com o menu recolhido a vitrine não cabe: no lugar dela fica este cartãozinho azul com a logo, para dar
+                   vontade de abrir o menu (passar o mouse já abre). Só enfeite, por isso aria-hidden */-->
+            <span class="v-mini" aria-hidden="true"><svg th:replace="~{fragmentos :: simbolo}"></svg></span>
             <ul class="v-janela">
               <li class="v-cartao v-logo atual" aria-roledescription="cartão" aria-label="1 de 4">
                 <span class="v-agua"><svg th:replace="~{fragmentos :: simbolo}"></svg></span>
