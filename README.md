@@ -2,13 +2,13 @@
   <img src="docs/atalaia.webp" width="100%" alt="Pixel art: a sombra do relógio de sol do Atalaia cresce e gira como ponteiro até a marca vermelha do prazo acender">
 </p>
 
-# Atalaia
+<h1><img src="docs/titulos/atalaia.svg" width="100%" alt="Atalaia"></h1>
 
 > Multa é coisa de quem não tem Atalaia.
 
 Outras ferramentas avisam que chegou uma notificação do governo. O Atalaia cuida do depois: lê o documento, calcula o prazo certo por código e leva o caso até o cliente confirmar que foi avisado, com registro. É o primeiro produto da [Galad](https://github.com/somosgalad).
 
-## O problema
+<h2><img src="docs/titulos/o-problema.svg" width="100%" alt="O problema"></h2>
 
 Chega uma notificação do governo para um cliente do escritório, e daí em diante é tudo na mão: entender o que o documento pede no meio de várias páginas, descobrir o prazo certo, mandar para quem resolve (contador, advogado ou RH), avisar o cliente de um jeito que fique registrado e acompanhar até fechar. Qualquer passo esquecido vira multa.
 
@@ -19,7 +19,7 @@ E o prazo não espera ninguém abrir a mensagem:
 
 Um exemplo real: no TRT de Goiás, empresas levaram multas porque não confirmaram uma citação no Domicílio Judicial Eletrônico dentro do prazo (processo 0000732-75.2025.5.18.0002).
 
-## O que o Atalaia faz
+<h2><img src="docs/titulos/o-que-faz.svg" width="100%" alt="O que o Atalaia faz"></h2>
 
 - Recebe o PDF da notificação, enviado pelo escritório, lê e mostra de que trecho tirou cada dado.
 - Explica em linguagem simples o que a mensagem pede e destaca valor, objetivo e prazo.
@@ -29,13 +29,13 @@ Um exemplo real: no TRT de Goiás, empresas levaram multas porque não confirmar
 - Organiza os casos pelo próximo passo, com o prazo mais perto primeiro.
 - Registra quem fez o quê e quando, numa trilha que sai em PDF.
 
-## O que ele não faz
+<h2><img src="docs/titulos/o-que-nao-faz.svg" width="100%" alt="O que ele não faz"></h2>
 
 - Não responde ao governo. Quem responde é o contador.
 - Não entra sozinho nos portais do governo nem usa o certificado do cliente.
 - Não avisa por WhatsApp nem Telegram.
 
-## Por que é diferente
+<h2><img src="docs/titulos/por-que-e-diferente.svg" width="100%" alt="Por que é diferente"></h2>
 
 Monitorar as caixas do governo já tem dono. Há ferramentas para a caixa da Receita (Dootax, Jettax, e-Auditoria) e para a trabalhista (Agilizza, Alerte), todas voltadas a avisar o contador. O Atalaia não disputa esse aviso: ele começa onde elas param.
 
@@ -47,7 +47,7 @@ A pesquisa de concorrentes de 10/11 olhou o Brasil e mais 16 países. Tratar not
 
 A lista do que entra na prévia, do que vem depois e do que foi descartado está no [roteiro de funções](docs/01-visao/roteiro-de-funcoes.md).
 
-## Situação
+<h2><img src="docs/titulos/situacao.svg" width="100%" alt="Situação"></h2>
 
 O projeto está no **Marco 2 (protótipo e arquitetura)**. O que já funciona: criar a conta do escritório e entrar com e-mail e senha, cadastrar as empresas clientes (cada escritório só vê as suas), enviar um PDF, tirar o texto dele, classificar e extrair os dados com IA (Analista), conferir cada dado contra o texto, perguntar de novo à IA se falta algo ou há conflito no documento (com dúvida, o caso vai para uma pessoa com o trecho), mostrar o degrau da notificação (de aviso a cobrança) e o que costuma vir em seguida, com correção em um clique, mostrar tudo na tela, listar os casos em grupos pelo próximo passo (precisa de gente, esperando o cliente, pronto para fechar), com filtro por cliente e a contagem de casos de cada cliente no período, e marcar um caso como resolvido, com o desfecho. Uma vez por semana, a faxina mostra os casos abertos sem movimento há mais de 7 dias. O dono pode soltar um simulado (notificação de teste) e ver quanto tempo a equipe levou para abrir, avisar o cliente e fechar. Cada caso guarda o histórico de quem fez o quê e quando, numa trilha encadeada: mexer num registro antigo aparece na conferência, e a trilha sai em PDF. O prazo já aparece na tela: o escritório cadastra as regras que ele mesmo conferiu na norma (o Atalaia não traz regra pronta), informa o dia da ciência, e a data limite é calculada por código, com a conta passo a passo e o artigo ao lado. A lista mostra primeiro o prazo mais perto. O caminho já fecha: o escritório aprova um resumo simples (rascunhado pela IA), gera um link para o cliente, e a confirmação dele fica gravada como registro de ciência, com uma pergunta que confere se ele entendeu a data. O que falta até 03/12: colocar no ar. Aviso por e-mail e responsável por área ficaram para depois.
 
@@ -74,7 +74,7 @@ Próximos marcos:
 - 26/11 · Marco 3: o caminho completo, do PDF até a confirmação do cliente
 - 03/12 · Marco 4: pitch e demonstração
 
-## Tecnologias
+<h2><img src="docs/titulos/tecnologias.svg" width="100%" alt="Tecnologias"></h2>
 
 ### Já no projeto: 
 - Java 21
@@ -94,7 +94,7 @@ Próximos marcos:
 - GitHub Actions (Testes automáticos)
 - Docker com um servidor VPS (colocar no ar)
 
-## Como rodar
+<h2><img src="docs/titulos/como-rodar.svg" width="100%" alt="Como rodar"></h2>
 
 Precisa do Java 21 e do PostgreSQL. O Maven não precisa instalar, o mvnw já baixa sozinho.
 
@@ -129,7 +129,7 @@ No ar (com HTTPS e um proxy na frente), defina também:
 | `ATALAIA_PROXY_IP` | o IP do proxy, como expressão regular (ex.: `172\.18\.0\.5`). Sem ela, só um proxy na mesma máquina é aceito. A porta do Atalaia fica aberta só para o proxy |
 | `GEMINI_API_KEY` | a chave da IA. Sem ela, tudo vai para revisão |
 
-## Como trabalho 
+<h2><img src="docs/titulos/como-trabalho.svg" width="100%" alt="Como trabalho"></h2>
 
 - Scrum adaptado para um time pequeno, com uma entrega a cada marco do projeto.
 - Sprints de uma semana, uma por marco.
@@ -137,7 +137,7 @@ No ar (com HTTPS e um proxy na frente), defina também:
 - Pesquisar antes de construir (a pesquisa de concorrentes já mudou o Canvas e o backlog uma vez, e as entrevistas podem mudar de novo) e uma revisão toda sexta.
 - O caminho de uma tarefa em 5 passos: Issue → branch → código e teste → PR com "Resolve #N" → merge e card em "Feito". O combinado completo está no [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Ferramentas usadas
+<h2><img src="docs/titulos/ferramentas.svg" width="100%" alt="Ferramentas usadas"></h2>
 
 - VS Code: editor, com as extensões de Java e Spring
 - start.spring.io: onde gerei o projeto
@@ -147,7 +147,7 @@ No ar (com HTTPS e um proxy na frente), defina também:
 
 O código Java é escrito à mão pelo time, e as decisões do projeto são nossas.
 
-## Time
+<h2><img src="docs/titulos/time.svg" width="100%" alt="Time"></h2>
 
 - Nicolly Adler, NAM Tech (Teresina, PI): produto, backlog e código
 - Itallo Sampaio ([itallo-dev-code](https://github.com/itallo-dev-code)): banco de dados
