@@ -64,31 +64,31 @@
                  aria-current="page" diz ao leitor de tela qual é a tela aberta; o CSS usa o mesmo atributo para marcar o item */-->
           <ul class="m-lista">
             <li>
-              <a class="m-item" th:href="@{/}" th:attr="aria-current=${atual == 'notificacoes'} ? 'page'">
+              <a class="m-item" title="Notificações" th:href="@{/}" th:attr="aria-current=${atual == 'notificacoes'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 11.5 4.6 4.4A2 2 0 0 1 6.5 3h7a2 2 0 0 1 1.9 1.4l2.1 7.1"/><path d="M2.5 11.5h4.2l1 2h4.6l1-2h4.2V15a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2z"/></svg></i></span>
                 <span class="m-nome">Notificações</span>
               </a>
             </li>
             <li>
-              <a class="m-item" th:href="@{/faxina}" th:attr="aria-current=${atual == 'faxina'} ? 'page'">
+              <a class="m-item" title="Faxina da semana" th:href="@{/faxina}" th:attr="aria-current=${atual == 'faxina'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3.5" width="14" height="13.5" rx="2.5"/><path d="M3 7.5h14M7 2v3M13 2v3"/><path d="m7.2 12 2 2 3.8-3.8"/></svg></i></span>
                 <span class="m-nome">Faxina da semana</span>
               </a>
             </li>
             <li>
-              <a class="m-item" th:href="@{/simulado}" th:attr="aria-current=${atual == 'simulado'} ? 'page'">
+              <a class="m-item" title="Simulado" th:href="@{/simulado}" th:attr="aria-current=${atual == 'simulado'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="11" r="6.5"/><path d="M10 7.5V11l2.2 1.6M8 2h4M10 2v2.5"/></svg></i></span>
                 <span class="m-nome">Simulado</span>
               </a>
             </li>
             <li>
-              <a class="m-item" th:href="@{/empresas}" th:attr="aria-current=${atual == 'empresas'} ? 'page'">
+              <a class="m-item" title="Empresas" th:href="@{/empresas}" th:attr="aria-current=${atual == 'empresas'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="7.5" cy="6.5" r="3"/><path d="M2 17c.4-3.2 2.6-5 5.5-5s5.1 1.8 5.5 5"/><path d="M13.2 4a3 3 0 0 1 0 5.2M15.6 12.6c1.4.8 2.2 2.3 2.4 4.4"/></svg></i></span>
                 <span class="m-nome">Empresas</span>
               </a>
             </li>
             <li>
-              <a class="m-item" th:href="@{/regras}" th:attr="aria-current=${atual == 'regras'} ? 'page'">
+              <a class="m-item" title="Regras de prazo" th:href="@{/regras}" th:attr="aria-current=${atual == 'regras'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="1.8" y="6.5" width="16.4" height="7" rx="2"/><path d="M5.5 6.8v2.6M8.5 6.8v3.6M11.5 6.8v2.6M14.5 6.8v3.6"/></svg></i></span>
                 <span class="m-nome">Regras de prazo</span>
               </a>
@@ -102,7 +102,7 @@
                  Os desenhos são de cada função (não há tela para fotografar): papel, linhas de texto, azul e alerta */-->
           <section class="vitrine" aria-roledescription="carrossel" aria-label="O que vem por aí no Atalaia">
             <!--/* Com o menu recolhido a vitrine não cabe: no lugar dela fica este cartãozinho azul com a logo, para dar
-                   vontade de abrir o menu (passar o mouse já abre). Só enfeite, por isso aria-hidden */-->
+                   vontade de abrir o menu (pelo botão do pé). Só enfeite, por isso aria-hidden */-->
             <span class="v-mini" aria-hidden="true"><svg th:replace="~{fragmentos :: simbolo}"></svg></span>
             <ul class="v-janela">
               <li class="v-cartao v-logo atual" aria-roledescription="cartão" aria-label="1 de 9">
@@ -157,7 +157,8 @@
           <ul class="m-pe">
             <li>
               <!--/* A CHAVE DO MENU: uma caixa de marcar escondida dentro do próprio rótulo. Marcada, o menu fica aberto
-                     (no computador, fixado ao lado do conteúdo; em tela de toque, a gaveta aberta). O CSS lê o estado
+                     (no computador, ao lado do conteúdo; em tela de toque, a gaveta aberta). É o ÚNICO jeito de abrir
+                     com o mouse (#212): abrir ao passar o mouse fazia o menu abrir e fechar sozinho. O CSS lê o estado
                      dela com :has(), por isso funciona sem JavaScript. Clicar no rótulo marca e desmarca; no teclado
                      é a barra de espaço. Ela mora aqui para a ordem do Tab bater com o lugar onde o botão aparece.
                      O leitor de tela diz o nome que está à vista: dos três nomes, o CSS mostra um de cada vez.
@@ -165,10 +166,13 @@
               <label class="m-item m-vira">
                 <input class="m-chave" id="menu-aberto" type="checkbox" autocomplete="off">
                 <span class="m-ic"><i>
-                  <svg class="ic so-largo" viewBox="0 0 20 20" aria-hidden="true"><path d="M7.2 3h5.6l-.7 4.6 2.9 3.4H5l2.9-3.4z"/><path d="M10 11v6"/></svg>
+                  <!--/* No computador, setas duplas: para a direita abre, para a esquerda recolhe */-->
+                  <svg class="ic so-largo so-fechada" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5.5 4.5 4.5L5 14.5M10.5 5.5 15 10l-4.5 4.5"/></svg>
+                  <svg class="ic so-largo so-aberta" viewBox="0 0 20 20" aria-hidden="true"><path d="M15 5.5 10.5 10l4.5 4.5M9.5 5.5 5 10l4.5 4.5"/></svg>
                   <svg class="ic so-estreito" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4v12"/><path d="M16.5 10H8M11.5 6.5 8 10l3.5 3.5"/></svg>
                 </i></span>
-                <span class="m-nome so-largo">Manter o menu aberto</span>
+                <span class="m-nome so-largo so-aberta">Recolher o menu</span>
+                <span class="m-nome so-largo so-fechada">Abrir o menu</span>
                 <span class="m-nome so-estreito so-aberta">Fechar o menu</span>
                 <!--/* Com a gaveta fechada o botão que se vê é só o desenho da barra de cima: este nome é para o leitor de tela */-->
                 <span class="m-nome so-estreito so-fechada">Abrir o menu</span>

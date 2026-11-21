@@ -1,9 +1,9 @@
 // ATALAIA · o menu lateral
 // O menu abre, fecha e fixa sem este arquivo: quem faz isso é o CSS, lendo a caixa de marcar #menu-aberto
 // (fragmentos.html). Aqui fica só o que o CSS não consegue:
-//   1. lembrar, de uma tela para a outra, se a pessoa deixou o menu fixado (só no computador);
+//   1. lembrar, de uma tela para a outra, se a pessoa deixou o menu aberto (só no computador);
 //   2. no celular, fechar a gaveta com a tecla Esc e deixar o resto da tela parado enquanto ela está aberta;
-//   3. manter o menu aberto na tela seguinte quando a pessoa clica num item com ele aberto pelo mouse;
+//   3. ligar o movimento do menu só depois da primeira pintura (a tela nasce como a pessoa deixou, sem animar);
 //   4. passar os cartões da vitrine no pé do menu.
 // Não é chamado dentro da página (a CSP proíbe script embutido): entra pelo <head>, com defer.
 
@@ -21,35 +21,13 @@ if (chave) {
   const lembrar = () => { try { return localStorage.getItem(GUARDADO) === '1'; } catch (e) { return false; } };
   const guardar = fixo => { try { localStorage.setItem(GUARDADO, fixo ? '1' : '0'); } catch (e) { /* segue sem guardar */ } };
 
-  // 3. Clicou num item com o menu aberto pelo mouse (#202): a tela seguinte nasce com ele aberto, em vez de nascer
-  //    fechada e abrir de novo, empurrando o conteúdo de um lado para o outro a cada clique. sessionStorage: vale
-  //    só para esta aba e só para o próximo carregamento. Ao tirar o mouse, ele volta ao normal (fecha devagar)
-  const PASSAGEM = 'atalaia-menu-passagem';
   const pagina = chave.closest('.pagina');
   const menu = chave.closest('.menu');
-  menu.addEventListener('click', clique => {
-    // Clique com Cmd, Ctrl, Shift ou Alt abre o link em outra aba ou janela: esta aba não troca de tela
-    const outraAba = clique.button !== 0 || clique.metaKey || clique.ctrlKey || clique.shiftKey || clique.altKey;
-    if (computador.matches && !chave.checked && !outraAba && clique.target.closest('a.m-item') && menu.matches(':hover')) {
-      // Guarda a hora, e não só "sim": se a tela nova não chegar (rede caiu, Esc), o aviso vence sozinho
-      try { sessionStorage.setItem(PASSAGEM, String(Date.now())); } catch (e) { /* só não segura o menu aberto */ }
-    }
-  });
-  try {
-    const quando = Number(sessionStorage.getItem(PASSAGEM));
-    sessionStorage.removeItem(PASSAGEM);
-    if (quando && Date.now() - quando < 5000) {
-      pagina.classList.add('m-segue');
-      // Solta quando o mouse se mexer de verdade e estiver fora do menu. Não dá para usar "mouseleave": durante a
-      // troca de tela a transição cobre a página por um instante e o navegador acha que o mouse saiu
-      const soltar = () => {
-        if (menu.matches(':hover')) return;
-        pagina.classList.remove('m-segue');
-        document.removeEventListener('mousemove', soltar);
-      };
-      document.addEventListener('mousemove', soltar);
-    }
-  } catch (e) { /* sem sessionStorage, o menu só nasce fechado */ }
+
+  // 3. (#212) O menu abre só pelo botão do pé, nunca ao passar o mouse. A classe m-pronto liga o movimento de abrir e
+  //    recolher (atalaia.css); ela entra dois quadros depois da primeira pintura, quando o menu já está como a
+  //    pessoa deixou. Sem isso, o menu guardado aberto abriria de novo, deslizando, a cada troca de tela
+  requestAnimationFrame(() => requestAnimationFrame(() => pagina.classList.add('m-pronto')));
 
   // 4. A vitrine (#204): passa sozinha a cada 5 s, mas para com o mouse em cima, com o foco dentro, com a aba
   //    escondida, com o menu recolhido (aí ela nem aparece) e quando a pessoa aperta pausar. Quem pediu menos
