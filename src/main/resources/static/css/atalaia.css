@@ -658,3 +658,47 @@ html { scroll-padding-top: 92px; }
 
 /* as ações do link do aviso: copiar (a principal), WhatsApp e ver a página do cliente */
 .acoes-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* ---------- a lista e o primeiro uso (#215) ---------- */
+/* A linha em colunas fixas: empresa e tipo | o que pede ação | prazo | quando chegou. Com 50 casos o olho desce
+   pela coluna do prazo sem procurar. Abaixo de 760px de conteúdo (celular, janela estreita), vira linha empilhada */
+.casos a { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 190px 150px; align-items: center; gap: 12px; }
+.l-quem { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.l-tipo { font-size: 13px; color: var(--apagado); overflow-wrap: anywhere; }
+.l-tipo .etq { align-self: flex-start; }
+.l-acao { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.l-prazo { min-width: 0; }
+.sem-prazo { font-size: 13px; color: var(--apagado); }
+.casos a .quando { margin-left: 0; text-align: right; }
+@container (max-width: 760px) {
+  .casos a { grid-template-columns: minmax(0, 1fr) auto; }
+  .l-acao, .l-prazo { grid-column: 1 / -1; }
+  .casos a .quando { grid-column: 2; grid-row: 1; align-self: start; }
+}
+
+/* a busca: o campo ocupa o que sobra, a lista do cliente e o botão ao lado */
+.busca input[type="search"] { flex: 2 1 260px; min-height: 44px; font-size: 16px; border: 0; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px #7d8693; padding: 0 12px; }
+.busca .limpar { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; color: var(--marca-fora); font-weight: 600; }
+/* o filtro abertas/resolvidas com a contagem ao lado do nome */
+.filtro .num { font-size: 12.5px; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: var(--campo-fundo); color: var(--texto); }
+
+/* Para começar: três passos com a bolinha de feito (o mesmo desenho da faixa do caso) */
+.comecar { padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; }
+.comecar h2 { font-size: 17px; font-weight: 700; }
+.comecar > p { color: var(--apagado); font-size: 14px; max-width: 70ch; }
+.comecar ol { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.comecar li { display: flex; align-items: flex-start; gap: 10px; }
+.comecar li a { font-weight: 600; }
+.c-marca { flex: none; position: relative; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--picote); }
+.comecar li.feito { color: var(--apagado); }
+.comecar li.feito a { color: inherit; }
+.comecar li.feito .c-marca { background: var(--azul); box-shadow: none; }
+.comecar li.feito .c-marca::after { content: ""; position: absolute; left: 7px; top: 4px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+/* Empresas e Regras na tela larga: a lista à esquerda e o cadastro à direita, preso no alto ao rolar.
+   Só quando há lista (:has(> .grupo)); sem ela, o formulário fica sozinho como antes */
+@container (min-width: 1000px) {
+  .lado-a-lado:has(> .grupo) { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+  .lado-a-lado:has(> .grupo) > .formulario { grid-column: 2; grid-row: 1; position: sticky; top: var(--borda); max-width: none; margin-top: 0; }
+  .lado-a-lado:has(> .grupo) > .grupo { grid-column: 1; grid-row: 1; }
+}

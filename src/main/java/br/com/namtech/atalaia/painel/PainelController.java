@@ -3,7 +3,9 @@ package br.com.namtech.atalaia.painel;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.text.Normalizer;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,7 @@ import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.NotificacaoNaLista;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
+import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
 
 //Painel: a tela inicial. Mostra os casos abertos em tres grupos, pelo proximo passo (ver Etapa),
 //com o que precisa de gente em cima
@@ -32,13 +35,15 @@ public class PainelController {
     private final NotificacaoRepository notificacoes;
     private final EmpresaRepository empresas;
     private final AvisoAoClienteRepository avisos;
+    private final RegraCadastradaRepository regras;
     private final Clock relogio;
 
     public PainelController(NotificacaoRepository notificacoes, EmpresaRepository empresas,
-            AvisoAoClienteRepository avisos, Clock relogio) {
+            AvisoAoClienteRepository avisos, RegraCadastradaRepository regras, Clock relogio) {
         this.notificacoes = notificacoes;
         this.empresas = empresas;
         this.avisos = avisos;
+        this.regras = regras;
         this.relogio = relogio;
     }
 
@@ -47,7 +52,8 @@ public class PainelController {
     //"empresa" filtra os casos de um cliente só (o resto da tela funciona igual, só com menos linhas)
     @GetMapping("/")
     public String painel(@AuthenticationPrincipal UsuarioLogado usuario,
-            @RequestParam(defaultValue = "") String ver, @RequestParam(defaultValue = "") String empresa, Model model) {
+            @RequestParam(defaultValue = "") String ver, @RequestParam(defaultValue = "") String empresa,
+            @RequestParam(defaultValue = "") String q, Model model) {
         //Só as notificações do escritório de quem entrou
         List<NotificacaoNaLista> doEscritorio = notificacoes.listar(usuario.escritorioId());
         List<Empresa> clientes = empresas.findAllByEscritorioIdOrderByNome(usuario.escritorioId());
@@ -58,8 +64,18 @@ public class PainelController {
         //(chega como texto para "abc" nao virar erro 400):
         //a tela mostra todos os clientes, e nada da outra empresa aparece, porque a lista já é só do escritório
         Long filtro = clientes.stream().map(Empresa::getId).filter(id -> id.toString().equals(empresa)).findFirst().orElse(null);
-        List<NotificacaoNaLista> todas = filtro == null ? doEscritorio
+        List<NotificacaoNaLista> doCliente = filtro == null ? doEscritorio
                 : doEscritorio.stream().filter(linha -> linha.empresaId().equals(filtro)).toList();
+        //A busca (#215): pelo nome da empresa, pelo CNPJ (só os números contam) ou pelo tipo do documento.
+        //Sem acento e sem maiúscula: "joao" acha "João". Texto vazio não filtra nada
+        String busca = semAcento(q.strip());
+        String numerosDaBusca = q.replaceAll("\\D", "");
+        Map<Long, String> cnpjs = clientes.stream().collect(Collectors.toMap(Empresa::getId, Empresa::getCnpj));
+        List<NotificacaoNaLista> todas = busca.isEmpty() ? doCliente : doCliente.stream()
+                .filter(linha -> semAcento(linha.empresa()).contains(busca)
+                        || (linha.tipo() != null && semAcento(linha.tipo().getNome()).contains(busca))
+                        || (numerosDaBusca.length() >= 3 && cnpjs.getOrDefault(linha.empresaId(), "").contains(numerosDaBusca)))
+                .toList();
         Instant agora = Instant.now(relogio);
         //O aviso ao cliente de cada caso aberto, guardado pelo numero da notificação: decide o grupo do caso e
         //a etiqueta da linha. (um, outro) -> um: dois avisos do mesmo caso criados no mesmo instante viriam os dois;
@@ -99,7 +115,10 @@ public class PainelController {
         model.addAttribute("verResolvidas", "resolvidas".equals(ver) && !resolvidas.isEmpty());
         //"nenhuma" fala do escritório (nunca recebeu nada); "nadaDoCliente", do filtro (o cliente escolhido nao tem casos)
         model.addAttribute("nenhuma", doEscritorio.isEmpty());
-        model.addAttribute("nadaDoCliente", filtro != null && todas.isEmpty());
+        model.addAttribute("nadaDoCliente", filtro != null && busca.isEmpty() && todas.isEmpty());
+        model.addAttribute("busca", q.strip());
+        model.addAttribute("nadaNaBusca", !busca.isEmpty() && todas.isEmpty());
+        model.addAttribute("abertasNoTotal", abertas.size());
         model.addAttribute("clientes", clientes);
         model.addAttribute("abertasPorCliente", abertasPorCliente);
         model.addAttribute("filtro", filtro);
@@ -109,6 +128,16 @@ public class PainelController {
         model.addAttribute("hoje", LocalDate.now(relogio));
         //Escritório novo, ainda sem empresa: o primeiro passo é cadastrar uma, e a tela aponta para la
         model.addAttribute("semEmpresa", clientes.isEmpty());
+        //"Para começar" (#215): os três passos que uma conta nova precisa dar, na ordem. Sem regra de prazo não sai
+        //prazo nem aviso, e antes isso só aparecia dentro do caso. Some quando os três estão feitos
+        boolean temRegra = !regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()).isEmpty();
+        model.addAttribute("temRegra", temRegra);
+        model.addAttribute("paraComecar", clientes.isEmpty() || !temRegra || doEscritorio.isEmpty());
         return "painel";
+    }
+
+    //Para comparar textos sem ligar para acento nem maiúscula
+    private static String semAcento(String texto) {
+        return Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
     }
 }

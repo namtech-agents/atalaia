@@ -19,7 +19,12 @@ if (chave) {
   const atras = document.querySelectorAll('.pagina > .pular, .pagina > .topo, .pagina > main');
 
   // Em janela privada o navegador pode recusar o localStorage: o menu só não lembra
-  const lembrar = () => { try { return localStorage.getItem(GUARDADO) === '1'; } catch (e) { return false; } };
+  // Quem nunca escolheu (#215): em tela de 1280px ou mais o menu começa aberto, com os nomes à vista (recolhido, só os
+  // desenhos deixavam a pessoa perdida). Depois que ela abre ou recolhe, vale a escolha dela
+  const lembrar = () => {
+    try { const guardado = localStorage.getItem(GUARDADO); return guardado === null ? innerWidth >= 1280 : guardado === '1'; }
+    catch (e) { return innerWidth >= 1280; }
+  };
   const guardar = fixo => { try { localStorage.setItem(GUARDADO, fixo ? '1' : '0'); } catch (e) { /* segue sem guardar */ } };
 
   const pagina = chave.closest('.pagina');

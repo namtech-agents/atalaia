@@ -17,6 +17,8 @@
     <p class="recado" role="status" th:if="${alterada}">Empresa alterada.</p>
     <p class="recado" role="status" th:if="${excluida}">Empresa excluída.</p>
 
+    <!-- #215: na tela larga, a lista à esquerda e o cadastro à direita (atalaia.css, .lado-a-lado) -->
+    <div class="lado-a-lado">
     <section class="grupo" th:unless="${empresas.isEmpty()}" aria-labelledby="titulo-empresas">
       <h2 id="titulo-empresas" th:text="${empresas.size() == 1} ? '1 empresa' : ${empresas.size() + ' empresas'}"></h2>
       <!-- O periodo da contagem de casos: formulário GET, o endereço guarda a escolha. O número aparece em cada empresa -->
@@ -49,6 +51,7 @@
 
       <button class="botao cheio" type="submit">Cadastrar empresa</button>
     </form>
+    </div>
   </main>
 </div>
 </body>

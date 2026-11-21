@@ -75,7 +75,7 @@ class PainelControllerTest {
         //Agir e conferir: escritório novo ainda nao tem para quem enviar; a tela aponta para o cadastro de empresas
         navegador.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Comece cadastrando a primeira empresa")))
+                .andExpect(content().string(containsString("Cadastrar uma empresa")))
                 .andExpect(content().string(containsString("href=\"/empresas\"")))
                 .andExpect(content().string(not(containsString("Nova notificação"))));
     }
@@ -88,7 +88,7 @@ class PainelControllerTest {
         //Agir e conferir: a tela explica o que fazer
         navegador.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Nenhuma notificação recebida ainda")))
+                .andExpect(content().string(containsString("Subir a primeira notificação")))
                 .andExpect(content().string(containsString("Nova notificação")));
     }
 
@@ -317,6 +317,37 @@ class PainelControllerTest {
         //Conferir: o filtro não vale, a tela mostra os meus dois casos e nada do outro escritório
         assertThat(pagina).contains("2 notificações", "<strong>Minha Padaria</strong>", "<strong>Minha Oficina</strong>")
                 .doesNotContain("Empresa Alheia");
+    }
+
+    @Test
+    void buscaAchaPeloNomeSemAcentoPeloCnpjEPeloTipo() throws Exception {
+        //Arrumar: dois clientes, cada um com um caso de tipo diferente (#215)
+        Empresa joao = empresas.save(new Empresa(escritorio, "99999009000100", "Mercadinho João"));
+        Empresa outra = empresas.save(new Empresa(escritorio, "99999009000281", "Farmácia Central"));
+        notificacoes.save(new Notificacao(joao, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
+        notificacoes.save(new Notificacao(outra, PDF, "texto", TipoDeDocumento.INTIMACAO, List.of(), List.of()));
+
+        //Agir e conferir: sem acento e sem maiúscula, pelo pedaço do CNPJ com pontuação, e pelo tipo.
+        //Olha só a lista de casos: a escolha do cliente, acima dela, sempre mostra os dois nomes
+        assertThat(casosDaBusca("joao")).contains("Mercadinho João").doesNotContain("Farmácia Central");
+        assertThat(casosDaBusca("09.000/281")).contains("Farmácia Central").doesNotContain("Mercadinho João");
+        assertThat(casosDaBusca("cobranca")).contains("Mercadinho João").doesNotContain("Farmácia Central");
+        //Nada encontrado: a tela diz e oferece voltar
+        assertThat(navegador.perform(get("/").param("q", "xyz")).andReturn().getResponse().getContentAsString())
+                .contains("Nada encontrado para");
+    }
+
+    //A lista de casos (da classe "casos" até o fim) depois de uma busca
+    private String casosDaBusca(String busca) throws Exception {
+        String pagina = navegador.perform(get("/").param("q", busca)).andReturn().getResponse().getContentAsString();
+        return pagina.substring(pagina.indexOf("lista casos"));
+    }
+
+    @Test
+    void paraComecarMostraOQueFaltaESomeComTudoFeito() throws Exception {
+        //Conta nova: os três passos à vista, nenhum feito
+        assertThat(navegador.perform(get("/")).andReturn().getResponse().getContentAsString())
+                .contains("Para começar", "Cadastrar uma regra de prazo").doesNotContain("(feito)");
     }
 
     @Test
