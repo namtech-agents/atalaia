@@ -116,7 +116,7 @@ class FaxinaControllerTest {
         assertThat(oficina).isLessThan(padaria);
         assertThat(pagina).contains("etq num atencao\">Venceu em ", "etq falta\">Sem prazo calculado<");
         //"Resolvido" leva ao cartão de fechar o caso, que pede desfecho e observação
-        assertThat(pagina).contains("href=\"/notificacoes/" + vencido.getId() + "#titulo-resolver\"");
+        assertThat(pagina).contains("href=\"/notificacoes/" + vencido.getId() + "?fechar=1#fechar\"");
     }
 
     @Test

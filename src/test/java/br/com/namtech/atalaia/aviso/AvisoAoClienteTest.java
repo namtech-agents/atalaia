@@ -253,7 +253,7 @@ class AvisoAoClienteTest {
         //Sem prazo, a tela explica o que falta e nao mostra o formulario do aviso
         escritorioLogado.perform(get("/notificacoes/" + semPrazo.getId()))
                 .andExpect(content().string(containsString("Calcule a data limite primeiro")))
-                .andExpect(content().string(not(containsString("Gerar o link do cliente"))));
+                .andExpect(content().string(not(containsString("Gerar o link de aviso"))));
     }
 
     @Test

@@ -658,7 +658,7 @@ class RecepcaoControllerTest {
 
         //Agir: reabre
         navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir").param("fechadoEm", carimbo()))
-                .andExpect(redirectedUrl("/notificacoes/" + aberta.getId() + "#titulo-resolver"));
+                .andExpect(redirectedUrl("/notificacoes/" + aberta.getId() + "?fechar=1#fechar"));
 
         //Conferir: a tela inicial lista o caso de novo entre os abertos, o filtro das resolvidas ficou sem ele
         //(cai nas abertas), e a tela do caso volta a oferecer o link do cliente
@@ -669,7 +669,7 @@ class RecepcaoControllerTest {
         //(sem nenhuma resolvida, a tela nem mostra o filtro: lista as abertas, com o caso de volta)
         assertThat(filtro).contains("/notificacoes/" + aberta.getId() + "\"", "Recebida em").doesNotContain("Desfecho: Outro");
         navegador.perform(get("/notificacoes/" + aberta.getId()))
-                .andExpect(content().string(containsString("Gerar o link do cliente")));
+                .andExpect(content().string(containsString("Gerar o link de aviso")));
         //e a conta do prazo pode ser refeita (com o caso fechado, registrarPrazo recusaria)
         //(relida do banco: o carimbo() acima desliga o objeto "aberta" da sessão, e ele ficou com o estado antigo)
         Notificacao reaberta = ultimaGuardadaNoBanco();
