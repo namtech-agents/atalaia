@@ -9,7 +9,7 @@
   <main id="conteudo">
     <div class="titulo com-acao">
       <h1>Notificações</h1>
-      <a class="botao cheio" th:unless="${semEmpresa}" th:href="@{/enviar}">Enviar notificação</a>
+      <a class="botao cheio" th:unless="${semEmpresa}" th:href="@{/enviar}">Nova notificação</a>
       <a class="botao cheio" th:if="${semEmpresa}" th:href="@{/empresas}">Cadastrar empresa</a>
     </div>
 
@@ -47,10 +47,10 @@
 
     <th:block th:unless="${verResolvidas}">
       <!-- Os três grupos seguem de quem é o próximo passo (Etapa): primeiro o que o escritório tem que fazer -->
-      <section th:replace="~{:: grupo('gente', 'Precisa de gente', ${precisaDeGente})}"></section>
+      <section th:replace="~{:: grupo('gente', 'Vez do escritório', ${precisaDeGente})}"></section>
 
       <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
-      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma and not nadaDoCliente}">Nada precisa de gente agora.</p>
+      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma and not nadaDoCliente}">Nada pendente com o escritório agora.</p>
 
       <section th:replace="~{:: grupo('cliente', 'Esperando o cliente', ${esperandoOCliente})}"></section>
       <section th:replace="~{:: grupo('fechar', 'Pronto para fechar', ${prontoParaFechar})}"></section>
@@ -76,8 +76,8 @@
   <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}" th:with="aviso=${avisos.get(linha.id)}">
     <strong th:text="${linha.empresa}"></strong>
     <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
-    <!-- O degrau (gravidade), com "Degrau:" na frente, como o desfecho: sem isso, duas etiquetas lado a lado se confundem -->
-    <span class="etq" th:if="${linha.degrau != null}" th:text="'Degrau: ' + ${linha.degrau.nome}"></span>
+    <!-- O degrau (na tela: gravidade), com "Gravidade:" na frente, como o desfecho: sem isso, duas etiquetas lado a lado se confundem -->
+    <span class="etq" th:if="${linha.degrau != null}" th:text="'Gravidade: ' + ${linha.degrau.nome}"></span>
     <!-- o vermelho de atenção só em caso aberto -->
     <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
     <!-- "Desfecho:" na frente: sem isso, duas etiquetas lado a lado ("Cobrança", "Arquivado") se confundem -->

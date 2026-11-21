@@ -254,7 +254,7 @@ class RecepcaoControllerTest {
         assertThat(guardada.isPrecisaDeRevisao()).isTrue();
         verify(ia, never()).responder(anyString());
         navegador.perform(get("/notificacoes/" + guardada.getId()))
-                .andExpect(content().string(containsString("Precisa de gente")))
+                .andExpect(content().string(containsString("Conferir a leitura")))
                 .andExpect(content().string(containsString("parece escaneado")))
                 .andExpect(content().string(containsString("Abrir o PDF em outra aba")));
     }
@@ -274,7 +274,7 @@ class RecepcaoControllerTest {
         assertThat(guardada.isPrecisaDeRevisao()).isTrue();
         assertThat(guardada.getMotivosDaRevisao()).hasSize(1);
         navegador.perform(get("/notificacoes/" + guardada.getId()))
-                .andExpect(content().string(containsString("Por que precisa de gente")))
+                .andExpect(content().string(containsString("Por que conferir a leitura")))
                 .andExpect(content().string(containsString("não aparece no trecho")))
                 //o dado inventado nao chega na tela, nem a frase de conferido
                 .andExpect(content().string(not(containsString("45 dias"))))
@@ -327,7 +327,7 @@ class RecepcaoControllerTest {
                 + " Trecho: \"Prazo: 30 dias a contar da ciência\"");
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Precisa de gente")))
+                .andExpect(content().string(containsString("Conferir a leitura")))
                 .andExpect(content().string(containsString("O prazo aparece de dois jeitos.")))
                 .andExpect(content().string(containsString("/notificacoes/" + guardada.getId() + "/pdf")));
     }

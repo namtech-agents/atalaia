@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: cabeca('Simulado')}"></head>
+<head th:replace="~{fragmentos :: cabeca('Teste da equipe')}"></head>
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
@@ -8,11 +8,15 @@
 
   <main id="conteudo">
     <div class="titulo">
-      <a class="volta" th:href="@{/}">Notificações</a>
-      <h1>Simulado</h1>
-      <p>Solte uma notificação de teste e veja quanto tempo a equipe leva para abrir o caso e avisar o cliente. Ela entra na lista como qualquer outra; o caso só mostra que era um simulado quando o aviso ao cliente é gerado ou o caso é fechado. A sua própria abertura não conta.</p>
-      <!-- Sem papéis no Atalaia, qualquer pessoa da conta vê esta tela: o segredo do exercício depende da equipe -->
-      <p class="dica">Qualquer pessoa da conta pode abrir esta tela. Para o teste valer, combine com a equipe que só quem solta o simulado entra aqui. O simulado conta como caso da empresa escolhida: depois dele, essa empresa não pode ser excluída.</p>
+      <h1>Teste da equipe</h1>
+      <p>Lança uma notificação de teste e mede quanto a equipe leva para abrir, avisar o cliente e fechar.</p>
+      <!-- #213: as regras do exercício ficam recolhidas; o título diz numa linha para que serve a tela.
+           Sem papéis no Atalaia, qualquer pessoa da conta vê esta tela: o segredo do exercício depende da equipe -->
+      <details class="como">
+        <summary>Como funciona</summary>
+        <p>O teste entra na lista como qualquer outra notificação. Ele só aparece como teste depois que o aviso ao cliente é gerado ou o caso é fechado. A sua própria abertura não conta.</p>
+        <p>Qualquer pessoa da conta pode abrir esta tela: combine com a equipe que só quem lança o teste entra aqui. O teste conta como caso da empresa escolhida, e depois dele essa empresa não pode ser excluída.</p>
+      </details>
     </div>
 
     <p class="recado" role="status" th:if="${solto}" th:text="${solto}"></p>
@@ -27,14 +31,14 @@
       <select id="empresaId" name="empresaId">
         <option th:each="empresa : ${empresas}" th:value="${empresa.id}" th:text="${empresa.nome}"></option>
       </select>
-      <button class="botao cheio" type="submit">Soltar simulado</button>
+      <button class="botao cheio" type="submit">Lançar notificação de teste</button>
     </form>
 
     <p class="recado" role="status" th:if="${emAndamento > 0}"
-       th:text="${emAndamento == 1} ? '1 simulado em andamento.' : ${emAndamento} + ' simulados em andamento.'"></p>
+       th:text="${emAndamento == 1} ? '1 teste em andamento.' : ${emAndamento} + ' testes em andamento.'"></p>
 
     <section class="grupo" th:unless="${terminados.isEmpty()}" aria-labelledby="titulo-simulados">
-      <h2 id="titulo-simulados">Simulados terminados</h2>
+      <h2 id="titulo-simulados">Testes terminados</h2>
       <ul class="vidro lista">
         <li th:each="teste : ${terminados}">
           <a th:href="@{/notificacoes/{id}(id=${teste.id})}">

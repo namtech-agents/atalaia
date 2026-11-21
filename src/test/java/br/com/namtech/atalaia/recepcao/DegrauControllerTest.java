@@ -116,12 +116,12 @@ class DegrauControllerTest {
         //Conferir: o degrau mudou e o histórico diz de qual para qual
         assertThat(notificacoes.buscar(caso.getId(), escritorio.getId()).orElseThrow().getDegrau())
                 .isEqualTo(Degrau.AUTO_DE_INFRACAO);
-        assertThat(acoesDoHistorico()).containsExactly("Corrigiu o degrau: de Pedido de documento para Auto de infração");
+        assertThat(acoesDoHistorico()).containsExactly("Corrigiu a gravidade: de Pedido de documento para Auto de infração");
         //A tela diz quem corrigiu, em vez de continuar dizendo que foi a IA; a lista mostra o degrau com o rótulo
         navegador.perform(get("/notificacoes/" + caso.getId()))
                 .andExpect(content().string(containsString("Corrigido por ")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Sugerido por inteligência artificial."))));
-        navegador.perform(get("/")).andExpect(content().string(containsString("Degrau: Auto de infração")));
+        navegador.perform(get("/")).andExpect(content().string(containsString("Gravidade: Auto de infração")));
     }
 
     @Test

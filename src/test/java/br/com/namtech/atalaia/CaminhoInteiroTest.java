@@ -103,7 +103,7 @@ class CaminhoInteiroTest {
         assertThat(enderecoDoCaso).isEqualTo("/notificacoes/" + caso.getId());
         //A tela do caso mostra a leitura conferida, sem nada para revisar
         escritorioLogado.perform(get(enderecoDoCaso))
-                .andExpect(content().string(containsString("Lido e conferido")))
+                .andExpect(content().string(containsString("Leitura conferida")))
                 .andExpect(content().string(containsString("30 dias")));
         //Na tela inicial, o caso está com o escritório: falta calcular o prazo
         confereATelaInicial(escritorioLogado, 1, 0, 0, "Calcular o prazo");
