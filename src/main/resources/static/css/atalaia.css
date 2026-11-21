@@ -674,6 +674,12 @@ html { scroll-padding-top: 92px; }
   .l-acao, .l-prazo { grid-column: 1 / -1; }
   .casos a .quando { grid-column: 2; grid-row: 1; align-self: start; }
 }
+/* Celular (conteúdo até ~480px): a data ao lado espremia o nome da empresa em três linhas. Tudo numa coluna só,
+   com a data por último, junto do prazo */
+@container (max-width: 480px) {
+  .casos a { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .casos a .quando { grid-column: 1; grid-row: auto; text-align: left; }
+}
 
 /* a busca: o campo ocupa o que sobra, a lista do cliente e o botão ao lado */
 .busca input[type="search"] { flex: 2 1 260px; min-height: 44px; font-size: 16px; border: 0; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px #7d8693; padding: 0 12px; }
