@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -122,12 +123,38 @@ public class Notificacao {
         this.texto = texto;
         this.tipo = tipo;
         this.dados = dados;
+        guardarMotivos(motivosDaRevisao);
+        this.recebidaEm = Instant.now();
+    }
+
+    //Os motivos da revisão numa coluna só, um por linha
+    private void guardarMotivos(List<String> motivosDaRevisao) {
         this.precisaDeRevisao = !motivosDaRevisao.isEmpty();
         //Um motivo pode citar um nome de campo vindo da IA: sem quebra de linha dentro dele, para nao virar dois motivos
         this.motivoDaRevisao = precisaDeRevisao
                 ? motivosDaRevisao.stream().map(motivo -> motivo.replaceAll("\\R", " ")).collect(Collectors.joining("\n"))
                 : null;
-        this.recebidaEm = Instant.now();
+    }
+
+    //Uma leitura nova, pedida pela pessoa (#216): quando a IA falhou na chegada (fora do ar, resposta estranha), o
+    //caso ficava sem tipo e sem dados para sempre. Troca o que a leitura anterior deixou: tipo, dados, revisão e as
+    //sugestões de resumo e gravidade. A gravidade que uma pessoa já corrigiu fica: a decisão dela vale mais
+    public void lerDeNovo(TipoDeDocumento tipo, List<DadoExtraido> dados, List<String> motivosDaRevisao,
+            String resumo, Degrau degrau) {
+        this.tipo = tipo;
+        //Lista nova (e não clear/addAll): a do construtor pode ser uma lista que não aceita mudança
+        this.dados = new ArrayList<>(dados);
+        guardarMotivos(motivosDaRevisao);
+        sugerirResumo(resumo);
+        if (degrauPor == null) {
+            sugerirDegrau(degrau);
+        }
+    }
+
+    //O tipo escolhido por uma pessoa (#216), para o caso que a IA não conseguiu classificar. Quem chama grava no
+    //histórico. Os dados continuam escondidos enquanto o caso pede revisão: o tipo não prova que a leitura está certa
+    public void corrigirTipo(TipoDeDocumento tipo) {
+        this.tipo = tipo;
     }
 
     //Um simulado: o documento de teste, já classificado, sem passar pela IA (não gasta chamada) e sem motivo de revisão,

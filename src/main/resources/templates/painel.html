@@ -99,8 +99,8 @@
       <strong th:text="${linha.empresa}"></strong>
       <span class="l-tipo">
         <th:block th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></th:block>
-        <!-- vermelho só em caso aberto; cinza no fechado (vermelho é só para prazo e erro) -->
-        <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
+        <!-- Cinza (#216): vermelho é só para prazo e erro. O que falta fazer já aparece na coluna ao lado -->
+        <span class="etq" th:if="${linha.tipo == null}">Sem tipo</span>
         <!-- "Gravidade:" na frente: sem isso, tipo e gravidade lado a lado se confundem -->
         <th:block th:if="${linha.degrau != null}" th:text="' · Gravidade: ' + ${linha.degrau.nome}"></th:block>
       </span>

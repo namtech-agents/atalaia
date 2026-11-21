@@ -703,3 +703,8 @@ html { scroll-padding-top: 92px; }
     max-height: calc(100dvh - 2 * var(--borda)); overflow: auto; }
   .lado-a-lado:has(> .grupo) > .grupo { grid-column: 1; grid-row: 1; }
 }
+
+/* o caso que a IA não leu (#216): escolher o tipo e pedir outra leitura, abaixo dos motivos */
+.corrigir-tipo, .ler-de-novo { margin-top: 14px; }
+.ler-de-novo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ler-de-novo .dica { font-size: 13px; color: var(--apagado); }

@@ -31,6 +31,7 @@ import br.com.namtech.atalaia.analista.Analise;
 import br.com.namtech.atalaia.analista.Analista;
 import br.com.namtech.atalaia.analista.Degrau;
 import br.com.namtech.atalaia.analista.ModeloDeIA;
+import br.com.namtech.atalaia.analista.TipoDeDocumento;
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
 import br.com.namtech.atalaia.aviso.SituacaoDoAviso;
@@ -203,6 +204,8 @@ public class RecepcaoController {
         model.addAttribute("dados", List.copyOf(notificacao.getDados()));
         model.addAttribute("desfechos", Desfecho.values());
         model.addAttribute("degraus", Degrau.values());
+        //Para escolher o tipo à mão no caso que a IA não classificou (#216)
+        model.addAttribute("tipos", TipoDeDocumento.values());
         //As regras do escritório, para o cartão do prazo (quem calcula é o PrazoController)
         model.addAttribute("regras", regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()));
         //O campo da ciência nao deixa escolher dia no futuro; o aviso dos feriados fica logo abaixo da data
@@ -300,6 +303,47 @@ public class RecepcaoController {
             historico.registrar(notificacao, usuario.email(), "Resolveu o caso. Desfecho: " + desfecho.getNome());
         }
         //Redireciona: recarregar a tela nao envia o formulario de novo
+        return "redirect:/notificacoes/" + id;
+    }
+
+    //Pede uma leitura nova do documento (#216), para o caso que a IA não conseguiu ler na chegada.
+    //Em dois tempos: a IA leva alguns segundos, e ninguém deve ficar esperando com o caso trancado por ela.
+    //1) lê o texto sem trancar nada; 2) chama a IA; 3) grava trancando o caso (fechado nesse meio tempo: não mexe)
+    @PostMapping("/notificacoes/{id}/ler-de-novo")
+    public String lerDeNovo(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id) {
+        String texto = transacaoDeLeitura.execute(conversa -> buscar(id, usuario).getTexto());
+        //Sem texto (PDF escaneado) não há o que mandar para a IA
+        if (texto == null || texto.isBlank()) {
+            return "redirect:/notificacoes/" + id;
+        }
+        Analise analise = analista.analisar(texto);
+        List<String> motivos = analista.motivosDaRevisao(analise, texto);
+        transacao.executeWithoutResult(conversa -> {
+            Notificacao caso = notificacoes.buscarParaAlterar(id, usuario.escritorioId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+            if (!caso.isResolvida()) {
+                caso.lerDeNovo(analise.tipo(), analise.dados(), motivos, analise.resumoSugerido(), analise.degrau());
+                historico.registrar(caso, usuario.email(), motivos.isEmpty()
+                        ? "Pediu uma nova leitura do documento: leitura conferida"
+                        : "Pediu uma nova leitura do documento: ainda pede conferência");
+            }
+        });
+        return "redirect:/notificacoes/" + id;
+    }
+
+    //O tipo do documento escolhido à mão (#216), quando a IA não classificou. Vai para o histórico
+    @PostMapping("/notificacoes/{id}/tipo")
+    @Transactional
+    public String corrigirTipo(@AuthenticationPrincipal UsuarioLogado usuario, @PathVariable Long id,
+            @RequestParam(required = false) TipoDeDocumento tipo) {
+        Notificacao caso = notificacoes.buscarParaAlterar(id, usuario.escritorioId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        //Sem escolha, caso fechado ou o mesmo tipo: nada a gravar
+        if (tipo != null && !caso.isResolvida() && caso.getTipo() != tipo) {
+            String antes = caso.getTipo() == null ? "sem tipo" : caso.getTipo().getNome();
+            caso.corrigirTipo(tipo);
+            historico.registrar(caso, usuario.email(), "Corrigiu o tipo do documento: de " + antes + " para " + tipo.getNome());
+        }
         return "redirect:/notificacoes/" + id;
     }
 
