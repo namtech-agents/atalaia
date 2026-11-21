@@ -80,8 +80,8 @@ public class SimuladoController {
         byte[] pdf = PdfDeTexto.montar(TITULO, LINHAS);
         Notificacao teste = notificacoes.save(Notificacao.simulado(empresa, pdf, TITULO + "\n" + String.join("\n", LINHAS),
                 usuario.email()));
-        historico.registrar(teste, usuario.email(), "Soltou um simulado");
-        recado.addFlashAttribute("solto", "Simulado solto para " + empresa.getNome()
+        historico.registrar(teste, usuario.email(), "Lançou uma notificação de teste");
+        recado.addFlashAttribute("solto", "Teste lançado para " + empresa.getNome()
                 + ". Ele já está na lista de notificações. Os tempos aparecem aqui quando a equipe gerar o aviso ao cliente ou fechar o caso.");
         //Redireciona: recarregar a tela não solta outro
         return "redirect:/simulado";

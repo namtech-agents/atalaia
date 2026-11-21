@@ -77,7 +77,7 @@ class PainelControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Comece cadastrando a primeira empresa")))
                 .andExpect(content().string(containsString("href=\"/empresas\"")))
-                .andExpect(content().string(not(containsString("Enviar notificação"))));
+                .andExpect(content().string(not(containsString("Nova notificação"))));
     }
 
     @Test
@@ -89,7 +89,7 @@ class PainelControllerTest {
         navegador.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Nenhuma notificação recebida ainda")))
-                .andExpect(content().string(containsString("Enviar notificação")));
+                .andExpect(content().string(containsString("Nova notificação")));
     }
 
     @Test
@@ -106,7 +106,7 @@ class PainelControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         //Conferir: as duas precisam de gente, cada uma com o que falta; os outros grupos nem aparecem
-        assertThat(pagina).contains("Precisa de gente", "2 notificações", "Cobrança", "Sem tipo")
+        assertThat(pagina).contains("Vez do escritório", "2 notificações", "Cobrança", "Sem tipo")
                 .doesNotContain("Esperando o cliente", "Pronto para fechar");
         assertThat(linhaDa(pagina, "Empresa de Teste")).contains("etq falta\">Calcular o prazo<");
         assertThat(linhaDa(pagina, "Empresa Escaneada")).contains("etq falta\">Conferir a leitura<");
@@ -168,10 +168,10 @@ class PainelControllerTest {
 
         //Conferir: a tela inicial diz que nada precisa de gente e aponta para o filtro, sem listar o caso;
         //no filtro ele aparece com o desfecho e a data em que foi resolvido
-        assertThat(inicial).doesNotContain("/notificacoes/" + resolvida.getId() + "\"", "Precisa de gente")
-                .contains("Nada precisa de gente", "href=\"/?ver=resolvidas\"", "aria-current=\"page\">Abertas");
+        assertThat(inicial).doesNotContain("/notificacoes/" + resolvida.getId() + "\"", "Vez do escritório")
+                .contains("Nada pendente com o escritório", "href=\"/?ver=resolvidas\"", "aria-current=\"page\">Abertas");
         assertThat(filtro).contains("/notificacoes/" + resolvida.getId() + "\"", "Desfecho: Arquivado", "Resolvida em")
-                .doesNotContain("Nada precisa de gente", "Recebida em")
+                .doesNotContain("Nada pendente com o escritório", "Recebida em")
                 .contains("aria-current=\"page\">Resolvidas");
     }
 
@@ -186,7 +186,7 @@ class PainelControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         //Conferir: a tela mostra as abertas, em vez de ficar vazia
-        assertThat(pagina).contains("Empresa Aberta", "Precisa de gente");
+        assertThat(pagina).contains("Empresa Aberta", "Vez do escritório");
     }
 
     @Test
@@ -295,7 +295,7 @@ class PainelControllerTest {
                 .andExpect(content().string(containsString("Nenhuma notificação deste cliente.")))
                 .andExpect(content().string(containsString("Todos os clientes")))
                 .andExpect(content().string(not(containsString("Nenhuma notificação recebida ainda"))))
-                .andExpect(content().string(not(containsString("Nada precisa de gente agora."))))
+                .andExpect(content().string(not(containsString("Nada pendente com o escritório agora."))))
                 .andExpect(content().string(not(containsString("<strong>Padaria Com Caso</strong>"))));
     }
 

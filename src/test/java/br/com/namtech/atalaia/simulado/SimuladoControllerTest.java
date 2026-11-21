@@ -97,7 +97,7 @@ class SimuladoControllerTest {
         assertThat(teste.isSimulado()).isTrue();
         assertThat(teste.isPrecisaDeRevisao()).isFalse();
         assertThat(teste.getEmpresa().getId()).isEqualTo(empresa.getId());
-        assertThat(acoes(teste)).containsExactly("Soltou um simulado");
+        assertThat(acoes(teste)).containsExactly("Lançou uma notificação de teste");
         //O PDF é de verdade: o Leitor tira dele o mesmo texto, com a linha que diz que é exercício
         assertThat(new LeitorPdf().ler(teste.getArquivo()).texto()).contains("Documento de exercício gerado pelo Atalaia");
     }
@@ -122,7 +122,7 @@ class SimuladoControllerTest {
 
         //Conferir: a hora ficou marcada e o evento saiu uma vez só
         assertThat(banco.releer(Notificacao.class, teste.getId()).getAbertaEm()).isNotNull();
-        assertThat(acoes(teste)).containsExactly("Soltou um simulado", "Abriu o caso");
+        assertThat(acoes(teste)).containsExactly("Lançou uma notificação de teste", "Abriu o caso");
     }
 
     @Test
@@ -177,7 +177,7 @@ class SimuladoControllerTest {
 
         navegador.perform(get("/simulado"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Simulados terminados")))
+                .andExpect(content().string(containsString("Testes terminados")))
                 .andExpect(content().string(containsString("Gerou o aviso: ainda não")))
                 .andExpect(content().string(containsString("Fechou: menos de 1 min")));
         navegador.perform(get("/notificacoes/" + teste.getId()))
@@ -207,9 +207,9 @@ class SimuladoControllerTest {
         Notificacao teste = soltar();
 
         navegador.perform(get("/simulado"))
-                .andExpect(content().string(containsString("1 simulado em andamento.")))
+                .andExpect(content().string(containsString("1 teste em andamento.")))
                 .andExpect(content().string(not(containsString("/notificacoes/" + teste.getId()))))
-                .andExpect(content().string(not(containsString("Simulados terminados"))));
+                .andExpect(content().string(not(containsString("Testes terminados"))));
     }
 
     //Se o cliente tentar confirmar o link de um simulado, nada é gravado

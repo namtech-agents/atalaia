@@ -39,7 +39,7 @@ public class DegrauController {
         if (!caso.isResolvida() && caso.getDegrau() != degrau) {
             String antes = caso.getDegrau() == null ? "sem degrau" : caso.getDegrau().getNome();
             caso.corrigirDegrau(degrau, usuario.email());
-            historico.registrar(caso, usuario.email(), "Corrigiu o degrau: de " + antes + " para " + degrau.getNome());
+            historico.registrar(caso, usuario.email(), "Corrigiu a gravidade: de " + antes + " para " + degrau.getNome());
         }
         //Volta para o cartão do degrau: recarregar a tela não envia de novo
         return "redirect:/notificacoes/" + id + "#titulo-degrau";

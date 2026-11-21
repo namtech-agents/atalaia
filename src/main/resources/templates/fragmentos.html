@@ -34,8 +34,8 @@
 </head>
 
 <body>
-  <!-- O campo de cor do fundo: três manchas azuis paradas, só enfeite (por isso aria-hidden) -->
-  <div th:fragment="campo" class="campo" aria-hidden="true"><i></i><i></i><i></i></div>
+  <!-- O campo de cor do fundo: um degradê leve no canto do menu, só enfeite (por isso aria-hidden) -->
+  <div th:fragment="campo" class="campo" aria-hidden="true"></div>
 
   <!-- O símbolo desenhado na própria página (e não como imagem), para cada lugar poder dar as suas cores:
        a face usa a variável simbolo-face e a sombra usa a simbolo-sombra, do atalaia.css -->
@@ -70,15 +70,15 @@
               </a>
             </li>
             <li>
-              <a class="m-item" title="Faxina da semana" th:href="@{/faxina}" th:attr="aria-current=${atual == 'faxina'} ? 'page'">
+              <a class="m-item" title="Casos parados" th:href="@{/faxina}" th:attr="aria-current=${atual == 'faxina'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3.5" width="14" height="13.5" rx="2.5"/><path d="M3 7.5h14M7 2v3M13 2v3"/><path d="m7.2 12 2 2 3.8-3.8"/></svg></i></span>
-                <span class="m-nome">Faxina da semana</span>
+                <span class="m-nome">Casos parados</span>
               </a>
             </li>
             <li>
-              <a class="m-item" title="Simulado" th:href="@{/simulado}" th:attr="aria-current=${atual == 'simulado'} ? 'page'">
+              <a class="m-item" title="Teste da equipe" th:href="@{/simulado}" th:attr="aria-current=${atual == 'simulado'} ? 'page'">
                 <span class="m-ic"><i><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="11" r="6.5"/><path d="M10 7.5V11l2.2 1.6M8 2h4M10 2v2.5"/></svg></i></span>
-                <span class="m-nome">Simulado</span>
+                <span class="m-nome">Teste da equipe</span>
               </a>
             </li>
             <li>

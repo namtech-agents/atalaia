@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <!-- Com erro, o título da aba muda: é a primeira coisa que o leitor de tela anuncia -->
-<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro no envio · Enviar notificação' : 'Enviar notificação')}"></head>
+<head th:replace="~{fragmentos :: cabeca(${erro != null} ? 'Erro no envio · Nova notificação' : 'Nova notificação')}"></head>
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
@@ -9,7 +9,7 @@
 
   <main id="conteudo">
     <div class="titulo">
-      <h1>Enviar notificação</h1>
+      <h1>Nova notificação</h1>
       <p th:unless="${empresas.isEmpty()}">Envie o PDF que chegou para o cliente. O Atalaia lê o documento e guarda o original para conferência.</p>
     </div>
 
@@ -48,7 +48,7 @@
       </div>
 
       <!-- O enviar.js desliga o botão enquanto o Atalaia lê o PDF: o clique duplo criaria dois casos -->
-      <button class="botao cheio" id="botao-enviar" type="submit">Enviar PDF</button>
+      <button class="botao cheio" id="botao-enviar" type="submit">Ler o PDF</button>
 
       <p class="aviso">Nesta prévia, envie só documento inventado, marcado como teste. O arquivo e o texto lido ficam guardados no Atalaia para a conferência do caso.</p>
     </form>

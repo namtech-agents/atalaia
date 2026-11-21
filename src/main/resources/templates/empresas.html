@@ -8,13 +8,12 @@
 
   <main id="conteudo">
     <div class="titulo">
-      <a class="volta" th:href="@{/}">Notificações</a>
       <h1>Empresas</h1>
       <p>As empresas que o escritório atende. Cada notificação enviada fica ligada a uma delas.</p>
     </div>
 
     <!-- Logo depois de cadastrar: confirma e mostra o próximo passo -->
-    <p class="recado" role="status" th:if="${cadastrada}">Empresa cadastrada. <a th:href="@{/enviar}">Enviar notificação</a></p>
+    <p class="recado" role="status" th:if="${cadastrada}">Empresa cadastrada. <a th:href="@{/enviar}">Nova notificação</a></p>
     <p class="recado" role="status" th:if="${alterada}">Empresa alterada.</p>
     <p class="recado" role="status" th:if="${excluida}">Empresa excluída.</p>
 
@@ -27,7 +26,7 @@
           <option th:each="dias : ${periodos}" th:value="${dias}" th:selected="${dias == periodo}"
                   th:text="${dias == 365} ? 'nos últimos 12 meses' : 'nos últimos ' + ${dias} + ' dias'"></option>
         </select>
-        <button class="botao" type="submit">Contar</button>
+        <button class="botao" type="submit">Mostrar</button>
       </form>
       <ul class="vidro lista">
         <!-- Cada empresa abre a tela dela (empresa.html), onde dá para corrigir o nome e o CNPJ -->

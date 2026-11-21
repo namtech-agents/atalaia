@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragmentos :: cabeca('Faxina da semana')}"></head>
+<head th:replace="~{fragmentos :: cabeca('Casos parados')}"></head>
 <body>
 <div th:replace="~{fragmentos :: campo}"></div>
 <div class="pagina">
@@ -8,8 +8,7 @@
 
   <main id="conteudo">
     <div class="titulo">
-      <a class="volta" th:href="@{/}">Notificações</a>
-      <h1>Faxina da semana</h1>
+      <h1>Casos parados</h1>
       <p>Casos abertos em que ninguém mexe há mais de 7 dias. Feche o que já foi resolvido e só ficou sem baixa; o que continua pendente, anote e ele volta daqui a uma semana.</p>
     </div>
 

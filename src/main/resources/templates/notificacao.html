@@ -12,8 +12,8 @@
       <h1>
         <span th:text="${empresa}"></span>
         <span class="etq" th:if="${notificacao.resolvida}">Resolvida</span>
-        <span class="etq atencao" th:if="${notificacao.precisaDeRevisao and not notificacao.resolvida}">Precisa de gente</span>
-        <span class="etq" th:if="${not notificacao.precisaDeRevisao and not notificacao.resolvida}">Lido e conferido</span>
+        <span class="etq atencao" th:if="${notificacao.precisaDeRevisao and not notificacao.resolvida}">Conferir a leitura</span>
+        <span class="etq" th:if="${not notificacao.precisaDeRevisao and not notificacao.resolvida}">Leitura conferida</span>
       </h1>
       <p>Recebida em <span class="num" th:text="${recebidaEm}"></span></p>
     </div>
@@ -54,7 +54,7 @@
         <!-- Só aparece quando alguma peça desconfiou: diz por que uma pessoa precisa olhar -->
         <section class="vidro cartao" th:if="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-revisao">
           <!-- Caso fechado: o cartão vira registro do que aconteceu, sem pedir ação -->
-          <h2 class="rotulo" id="titulo-revisao" th:text="${notificacao.resolvida} ? 'Por que precisou de gente' : 'Por que precisa de gente'"></h2>
+          <h2 class="rotulo" id="titulo-revisao" th:text="${notificacao.resolvida} ? 'Por que a leitura foi conferida' : 'Por que conferir a leitura'"></h2>
           <strong class="grande" th:unless="${notificacao.resolvida}">Confira no documento original</strong>
           <ul class="motivos">
             <li th:each="motivo : ${notificacao.motivosDaRevisao}" th:text="${motivo}"></li>
@@ -83,7 +83,7 @@
         <!-- O degrau (US28): a gravidade e o que costuma vir se ninguém agir. A IA sugere, o contador corrige com um clique
              (DegrauController), e a correção vai para o histórico -->
         <section class="vidro cartao" aria-labelledby="titulo-degrau">
-          <h2 class="rotulo" id="titulo-degrau">Degrau</h2>
+          <h2 class="rotulo" id="titulo-degrau">Gravidade</h2>
           <strong class="grande" th:text="${notificacao.degrau != null} ? ${notificacao.degrau.nome} : 'Sem degrau'"></strong>
           <!-- O degrau seguinte é a escala do Atalaia, não a regra do órgão: a frase diz isso. Citação e exclusão seguem
                caminhos próprios (processo, regime), que a escala não descreve: nesses tipos o seguinte não aparece -->
