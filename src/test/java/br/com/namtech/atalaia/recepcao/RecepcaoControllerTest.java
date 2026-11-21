@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -363,6 +364,88 @@ class RecepcaoControllerTest {
         navegador.perform(get("/notificacoes/" + guardada.getId()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("A IA não respondeu")));
+    }
+
+    @Test
+    void casoQueAIaNaoLeuPodeSerLidoDeNovo() throws Exception {
+        //Arrumar: na chegada a IA estava fora do ar, e o caso ficou sem tipo, pedindo revisão (#216)
+        when(ia.responder(anyString())).thenThrow(new IllegalStateException("fora do ar"));
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()));
+        Notificacao semTipo = ultimaGuardadaNoBanco();
+        assertThat(semTipo.getTipo()).isNull();
+        navegador.perform(get("/notificacoes/" + semTipo.getId()))
+                .andExpect(content().string(containsString("Tentar ler de novo")))
+                .andExpect(content().string(containsString("Escolha o tipo")));
+
+        //Agir: a IA voltou, e a pessoa pede outra leitura
+        reset(ia);
+        iaResponde("30 dias");
+        navegador.perform(post("/notificacoes/" + semTipo.getId() + "/ler-de-novo"))
+                .andExpect(redirectedUrl("/notificacoes/" + semTipo.getId()));
+
+        //Conferir: agora tem tipo, a leitura foi conferida e o pedido ficou no histórico
+        Notificacao lida = ultimaGuardadaNoBanco();
+        assertThat(lida.getTipo()).isEqualTo(TipoDeDocumento.INTIMACAO);
+        assertThat(lida.isPrecisaDeRevisao()).isFalse();
+        assertThat(lida.getDados()).isNotEmpty();
+        navegador.perform(get("/notificacoes/" + lida.getId()))
+                .andExpect(content().string(containsString("Pediu uma nova leitura do documento: leitura conferida")));
+
+        //Um segundo clique (aba velha, clique duplo) não chama a IA de novo: o caso já tem tipo
+        reset(ia);
+        navegador.perform(post("/notificacoes/" + lida.getId() + "/ler-de-novo"));
+        verify(ia, never()).responder(anyString());
+        assertThat(ultimaGuardadaNoBanco().getTipo()).isEqualTo(TipoDeDocumento.INTIMACAO);
+    }
+
+    @Test
+    void tipoEscolhidoAMaoNaoEApagadoPorOutraLeitura() throws Exception {
+        //Arrumar: caso sem tipo, e a pessoa escolhe Cobrança (revisão do Hefesto, #216)
+        when(ia.responder(anyString())).thenThrow(new IllegalStateException("fora do ar"));
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()));
+        Notificacao caso = ultimaGuardadaNoBanco();
+        navegador.perform(post("/notificacoes/" + caso.getId() + "/tipo").param("tipo", "COBRANCA"));
+
+        //Agir: alguém pede outra leitura (a IA continua fora do ar)
+        navegador.perform(post("/notificacoes/" + caso.getId() + "/ler-de-novo"));
+
+        //Conferir: a escolha da pessoa ficou, e o botão nem aparece mais
+        assertThat(ultimaGuardadaNoBanco().getTipo()).isEqualTo(TipoDeDocumento.COBRANCA);
+        navegador.perform(get("/notificacoes/" + caso.getId()))
+                .andExpect(content().string(not(containsString("Tentar ler de novo"))));
+    }
+
+    @Test
+    void tipoQueNaoExisteERecusado() throws Exception {
+        when(ia.responder(anyString())).thenThrow(new IllegalStateException("fora do ar"));
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()));
+        Notificacao caso = ultimaGuardadaNoBanco();
+        navegador.perform(post("/notificacoes/" + caso.getId() + "/tipo").param("tipo", "XYZ"))
+                .andExpect(status().isBadRequest());
+        assertThat(ultimaGuardadaNoBanco().getTipo()).isNull();
+    }
+
+    @Test
+    void tipoEscolhidoAMaoVaiParaOCasoEParaOHistorico() throws Exception {
+        //Arrumar: um caso sem tipo (IA fora do ar na chegada)
+        when(ia.responder(anyString())).thenThrow(new IllegalStateException("fora do ar"));
+        navegador.perform(multipart("/enviar").file(pdfDeExemplo("notificacao-acentuada.pdf"))
+                .param("empresaId", empresa.getId().toString()));
+        Notificacao semTipo = ultimaGuardadaNoBanco();
+
+        //Agir: a pessoa escolhe o tipo
+        navegador.perform(post("/notificacoes/" + semTipo.getId() + "/tipo").param("tipo", "COBRANCA"))
+                .andExpect(redirectedUrl("/notificacoes/" + semTipo.getId()));
+
+        //Conferir: o tipo ficou, a revisão continua (o tipo não prova a leitura) e o histórico conta quem mudou
+        Notificacao corrigida = ultimaGuardadaNoBanco();
+        assertThat(corrigida.getTipo()).isEqualTo(TipoDeDocumento.COBRANCA);
+        assertThat(corrigida.isPrecisaDeRevisao()).isTrue();
+        navegador.perform(get("/notificacoes/" + corrigida.getId()))
+                .andExpect(content().string(containsString("Corrigiu o tipo do documento: de sem tipo para Cobrança")));
     }
 
     @Test

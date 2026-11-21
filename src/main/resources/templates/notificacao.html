@@ -84,6 +84,9 @@
           </form>
         </section>
 
+        <!-- O resultado da leitura nova pedida pela pessoa (#216). Fora do cartão da revisão: lida com sucesso, ele some -->
+        <p class="recado" role="status" th:if="${recadoDaLeitura}" th:text="${recadoDaLeitura}"></p>
+
         <!-- Só aparece quando alguma peça desconfiou: diz por que uma pessoa precisa olhar -->
         <section class="vidro cartao" th:if="${notificacao.precisaDeRevisao}" aria-labelledby="titulo-revisao">
           <!-- Caso fechado: o cartão vira registro do que aconteceu, sem pedir ação -->
@@ -92,6 +95,27 @@
           <ul class="motivos">
             <li th:each="motivo : ${notificacao.motivosDaRevisao}" th:text="${motivo}"></li>
           </ul>
+          <!-- #216: o caso que a IA não leu não fica travado. Dá para pedir outra leitura (quando o PDF tem texto) e
+               escolher o tipo à mão; as duas coisas vão para o histórico -->
+          <th:block th:unless="${notificacao.resolvida}">
+            <form class="resolver corrigir-tipo" method="post" th:action="@{/notificacoes/{id}/tipo(id=${notificacao.id})}">
+              <div>
+                <label class="rotulo" for="tipo">Tipo do documento</label>
+                <select id="tipo" name="tipo" required>
+                  <option value="" th:selected="${notificacao.tipo == null}">Escolha o tipo</option>
+                  <option th:each="opcao : ${tipos}" th:value="${opcao.name()}" th:text="${opcao.nome}"
+                          th:selected="${opcao == notificacao.tipo}"></option>
+                </select>
+              </div>
+              <button class="botao" type="submit">Salvar o tipo</button>
+            </form>
+            <!-- Só para o caso que a IA não leu (Notificacao.podeLerDeNovo); o servidor confere a mesma regra -->
+            <form class="ler-de-novo" method="post" th:if="${notificacao.podeLerDeNovo()}"
+                  th:action="@{/notificacoes/{id}/ler-de-novo(id=${notificacao.id})}">
+              <button class="botao" type="submit" aria-describedby="dica-ler">Tentar ler de novo</button>
+              <p class="dica" id="dica-ler">A inteligência artificial lê o documento outra vez. Leva alguns segundos.</p>
+            </form>
+          </th:block>
         </section>
 
         <section class="vidro cartao" th:if="${notificacao.tipo != null}" aria-labelledby="titulo-tipo">
@@ -110,7 +134,7 @@
             </div>
           </dl>
           <p class="aviso-ia" th:unless="${notificacao.precisaDeRevisao}">Lido por inteligência artificial e conferido com o texto do PDF.</p>
-          <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Tipo sugerido por inteligência artificial, ainda sem conferência. Os dados não aparecem porque o documento foi para revisão.</p>
+          <p class="aviso-ia" th:if="${notificacao.precisaDeRevisao}">Ainda sem conferência: os dados não aparecem porque o documento foi para revisão. Quem escolheu ou mudou o tipo fica no histórico.</p>
         </section>
 
         <!-- O degrau (US28): a gravidade e o que costuma vir se ninguém agir. A IA sugere, o contador corrige com um clique
