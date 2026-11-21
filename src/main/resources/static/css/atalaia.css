@@ -328,9 +328,10 @@ html { scroll-padding-top: 92px; }
    COMO ABRE E FECHA, SEM JAVASCRIPT: tudo depende de UMA medida, a largura do menu.
      - Cada linha (.m-item) ocupa a largura que houver e corta o que não cabe. Com o menu em 72px sobra só
        o quadrado do desenho (44px); com 284px aparece o nome ao lado. O movimento também só olha para ela.
-     - Quem muda a largura: o mouse em cima, o foco do teclado dentro, ou a chave marcada (.m-chave:checked).
+     - Quem muda a largura: a chave marcada (.m-chave:checked, o botão do pé do menu) ou o foco do teclado dentro.
+       O mouse em cima NÃO abre (#212): fazia o menu abrir e fechar sozinho.
      - No celular, e em qualquer tela de toque, o menu é uma gaveta, e a mesma chave abre e fecha.
-   O static/js/menu.js lembra se o menu ficou fixado e segura ele aberto na tela seguinte a um clique no menu.
+   O static/js/menu.js lembra se o menu ficou aberto e liga o movimento só depois da primeira pintura.
    ===================================================================== */
 
 
@@ -341,6 +342,8 @@ html { scroll-padding-top: 92px; }
 .pular { position: absolute; z-index: 50; top: max(var(--borda), env(safe-area-inset-top)); left: max(var(--borda), env(safe-area-inset-left)); transform: translateY(-300%); }
 .pular:focus { transform: none; }
 .m-veu, .so-estreito { display: none; }
+/* o botão da chave diz o que o clique vai fazer: aberto, "recolher"; fechado, "abrir" */
+.menu:has(.m-chave:checked) .so-fechada, .menu:not(:has(.m-chave:checked)) .so-aberta { display: none; }
 
 /* Lados retos (#202). A curva que entrava nos dois lados recortava só o vidro: a sombra continuava retangular e
    aparecia no vão do recorte, como um fantasma ao lado do menu */
@@ -455,49 +458,39 @@ html { scroll-padding-top: 92px; }
 @media (max-height: 760px) { .vitrine { display: none; } }
 
 /* ---------- computador: o menu fica ao lado do conteúdo ----------
-   Computador = janela larga E mouse. O menu recolhido só mostra os nomes com o mouse em cima; em tela de toque
-   (tablet, celular deitado) não existe "em cima", então lá vale a gaveta do bloco seguinte, com os nomes à vista */
+   Computador = janela larga E mouse. O menu recolhido mostra só os desenhos (o nome aparece na dica do navegador);
+   em tela de toque (tablet, celular deitado) vale a gaveta do bloco seguinte, com os nomes à vista */
 @media (min-width: 861px) and (hover: hover) and (pointer: fine) {
   /* :has(> .menu): só a página que tem menu (com a sessão aberta) vira grade de duas colunas.
      Duas medidas: --m-largura é a largura do menu e --m-coluna o espaço que ele ocupa ao lado do conteúdo.
-     Quando são iguais, o menu aberto empurra o conteúdo; quando a coluna fica em 72px e o menu em 284px, ele abre
-     por cima do conteúdo, sem tirar espaço dele.
+     Desde a #212 as duas mudam juntas (aberto, o menu empurra o conteúdo). Ficam separadas porque a coluna muda de
+     uma vez e a largura do menu desliza: enquanto recolhe, o menu ainda é mais largo que a coluna e passa por cima.
      A página ocupa a janela inteira (max-width: none) para o menu ficar colado na borda esquerda: se a página fosse
      uma caixa centralizada, em tela larga o menu iria junto para perto do meio (#202). Quem tem largura máxima é o
      conteúdo, logo abaixo */
-  .pagina:has(> .menu) { --m-coluna: 72px; --m-largura: 72px; display: grid; grid-template-columns: var(--m-coluna) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 14px 16px; align-items: start; max-width: none;
-    /* O MOVIMENTO: menu e coluna mudam juntos, com o mesmo par de tempos (o do .menu, logo abaixo). Recolher:
-       espera 0,15s (perdoa quem tira o mouse um instante) e fecha em 0,18s, mais rápido do que abre */
-    transition: grid-template-columns .18s var(--sair) .15s; }
-  /* Abrir pelo mouse: espera 0,1s, para quem só atravessa o menu não abrir nada, e abre em 0,22s.
-     Aqui o menu abre POR CIMA do conteúdo; o bloco de 1240px logo abaixo decide quando ele empurra */
-  .pagina:has(> .menu:hover) { --m-largura: 284px; transition-duration: .22s; transition-delay: .1s; }
-  /* Empurrar só quando sobra lugar (#202): abaixo de ~1213px de janela, os 212px a mais do menu deixam o conteúdo
-     com menos de 880px e a tela da notificação passaria de duas colunas para uma só cada vez que o mouse cruzasse
-     o menu (o PDF mudaria de lugar). A folga até 1240px é para a barra de rolagem do Windows */
-  @media (min-width: 1240px) {
-    .pagina:has(> .menu:hover), .pagina.m-segue { --m-coluna: 284px; }
-  }
-  /* SEM MOVIMENTO em três casos, todos abertos e empurrando. Teclado dentro do menu: quem usa o teclado anda
-     rápido, e animação ali só atrasa. Fixado: a tela seguinte já nasce com o menu aberto, sem abrir de novo.
-     .m-segue: chegou de um clique no menu aberto pelo mouse; o menu.js tira a classe quando o mouse se mexe fora
-     dele, e aí o menu fecha com o movimento de recolher. Estas regras vêm depois da do mouse e ganham dela */
-  .pagina:has(> .menu :focus-visible), .pagina:has(.m-chave:checked) { --m-coluna: 284px; --m-largura: 284px; transition: none; }
-  .pagina.m-segue { --m-largura: 284px; transition: none; }
+  .pagina:has(> .menu) { --m-coluna: 72px; --m-largura: 72px; display: grid; grid-template-columns: var(--m-coluna) minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 14px 16px; align-items: start; max-width: none; }
+  /* ABERTO (#212): só pelo botão do pé do menu (a chave marcada) ou com o teclado dentro dele. Abrir ao passar o
+     mouse saiu: o menu abria e fechava sozinho (na troca de tela o navegador achava que o mouse tinha saído) e,
+     animando as colunas da página, o navegador refazia a tela inteira a cada quadro.
+     A coluna muda DE UMA VEZ (o conteúdo se arruma uma vez só) e só o menu desliza até a largura nova */
+  .pagina:has(> .menu :focus-visible), .pagina:has(.m-chave:checked) { --m-coluna: 284px; --m-largura: 284px; }
   /* O conteúdo continua com no máximo 1180px (linhas longas demais cansam a leitura) e fica no meio do espaço
      que sobra ao lado do menu. width: 100% porque, numa grade, justify-self: center encolheria o conteúdo até o texto */
   .pagina:has(> .menu) > :is(.topo, main) { grid-column: 2; width: 100%; max-width: 1180px; justify-self: center; }
 
-  /* Preso no alto, da altura da janela. Mais largo que a coluna, ele passa por cima do conteúdo.
+  /* Preso no alto, da altura da janela. Enquanto recolhe, fica mais largo que a coluna e passa por cima do conteúdo.
      A largura é arrumação (o navegador refaz as contas a cada quadro), mas só as do próprio menu.
      container-type: as linhas de dentro ficam sabendo a largura do menu */
-  .menu { grid-column: 1; grid-row: 1 / 3; position: sticky; top: var(--borda); width: var(--m-largura); height: calc(100vh - 2 * var(--borda)); height: calc(100dvh - 2 * var(--borda)); container-type: inline-size;
-    transition: width .18s var(--sair) .15s; }
-  .menu:hover { transition-duration: .22s; transition-delay: .1s; }
-  .menu:has(:focus-visible, .m-chave:checked), .m-segue > .menu { transition: none; }
+  .menu { grid-column: 1; grid-row: 1 / 3; position: sticky; top: var(--borda); width: var(--m-largura); height: calc(100vh - 2 * var(--borda)); height: calc(100dvh - 2 * var(--borda)); container-type: inline-size; }
+  /* O MOVIMENTO só depois da primeira pintura (.m-pronto, posto pelo menu.js): a tela que nasce com o menu aberto
+     já aparece aberta, sem abrir de novo a cada troca de tela. Recolher é mais rápido (0,18s) do que abrir (0,22s).
+     Teclado dentro do menu: sem movimento, quem usa o teclado anda rápido */
+  .m-pronto > .menu { transition: width .18s var(--sair); }
+  .m-pronto > .menu:has(.m-chave:checked) { transition-duration: .22s; }
+  .menu:has(:focus-visible) { transition: none; }
   /* Os nomes só aparecem quando há lugar para eles. Sem isso, enquanto o menu abre, cada nome surgiria cortado
      com reticências ("Not…"). Quem decide é a largura do menu naquele quadro (consulta de contêiner), então a
-     espera do mouse já vem junto. Somem mais rápido (0,08s) do que aparecem (0,16s).
+     abertura já vem junto. Somem mais rápido (0,08s) do que aparecem (0,16s).
      Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
   .m-nome, .m-quem { transition: opacity .16s; }
   @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
@@ -509,7 +502,6 @@ html { scroll-padding-top: 92px; }
     .vitrine > :not(.v-mini) { opacity: 0; visibility: hidden; transition-duration: .08s; }
     .v-mini { opacity: 1; visibility: visible; }
   }
-  .m-vira:has(:checked) .m-ic i { background: var(--placa-azul); color: #fff; }
 
   /* a barra de cima: a marca já está no menu, então sobra só o selo de prévia, à direita e sem o vidro */
   .pagina:has(> .menu) > .topo { position: static; height: auto; padding: 0 6px; justify-content: flex-end; background: none; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -533,11 +525,10 @@ html { scroll-padding-top: 92px; }
   .menu:has(.m-chave:checked) ~ .m-veu { visibility: visible; opacity: 1; transition: opacity .24s; }
   /* com a gaveta aberta, a página de trás não rola */
   html:has(.m-chave:checked) { overflow: hidden; }
-  /* o botão da chave troca de papel: no computador fixa, aqui abre e fecha a gaveta. Dos dois nomes daqui fica
+  /* o botão da chave troca de papel: no computador abre e recolhe o menu ao lado, aqui abre e fecha a gaveta. Dos dois nomes daqui fica
      um só, o do que o toque vai fazer (é esse o nome que o leitor de tela diz) */
   .so-largo { display: none; }
   .so-estreito { display: block; }
-  .menu:has(.m-chave:checked) .so-fechada, .menu:not(:has(.m-chave:checked)) .so-aberta { display: none; }
   /* gaveta fechada: o rótulo da chave fica fora da tela junto com ela, mas continua existindo para o leitor de
      tela. Tem que ser o rótulo inteiro: rótulo com visibility: hidden não dá nome ao campo, mesmo com o texto visível */
   .m-vira { visibility: visible; }
