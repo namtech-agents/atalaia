@@ -328,9 +328,10 @@ html { scroll-padding-top: 92px; }
    COMO ABRE E FECHA, SEM JAVASCRIPT: tudo depende de UMA medida, a largura do menu.
      - Cada linha (.m-item) ocupa a largura que houver e corta o que não cabe. Com o menu em 72px sobra só
        o quadrado do desenho (44px); com 284px aparece o nome ao lado. O movimento também só olha para ela.
-     - Quem muda a largura: o mouse em cima, o foco do teclado dentro, ou a chave marcada (.m-chave:checked).
+     - Quem muda a largura: a chave marcada (.m-chave:checked, o botão do pé do menu) ou o foco do teclado dentro.
+       O mouse em cima NÃO abre (#212): fazia o menu abrir e fechar sozinho.
      - No celular, e em qualquer tela de toque, o menu é uma gaveta, e a mesma chave abre e fecha.
-   O static/js/menu.js lembra se o menu ficou fixado e segura ele aberto na tela seguinte a um clique no menu.
+   O static/js/menu.js lembra se o menu ficou aberto e liga o movimento só depois da primeira pintura.
    ===================================================================== */
 
 
