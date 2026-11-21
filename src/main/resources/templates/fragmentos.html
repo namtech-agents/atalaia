@@ -161,7 +161,7 @@
                      com o mouse (#212): abrir ao passar o mouse fazia o menu abrir e fechar sozinho. O CSS lê o estado
                      dela com :has(), por isso funciona sem JavaScript. Clicar no rótulo marca e desmarca; no teclado
                      é a barra de espaço. Ela mora aqui para a ordem do Tab bater com o lugar onde o botão aparece.
-                     O leitor de tela diz o nome que está à vista: dos três nomes, o CSS mostra um de cada vez.
+                     O leitor de tela diz o nome que está à vista: dos quatro nomes, o CSS mostra um de cada vez.
                      autocomplete="off": ao voltar pelo histórico, o navegador não devolve a marca antiga */-->
               <label class="m-item m-vira">
                 <input class="m-chave" id="menu-aberto" type="checkbox" autocomplete="off">
@@ -172,7 +172,8 @@
                   <svg class="ic so-estreito" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4v12"/><path d="M16.5 10H8M11.5 6.5 8 10l3.5 3.5"/></svg>
                 </i></span>
                 <span class="m-nome so-largo so-aberta">Recolher o menu</span>
-                <span class="m-nome so-largo so-fechada">Abrir o menu</span>
+                <!--/* Desmarcada, o nome só aparece quando o menu está aberto pelo teclado (foco dentro): marcar deixa ele aberto */-->
+                <span class="m-nome so-largo so-fechada">Manter o menu aberto</span>
                 <span class="m-nome so-estreito so-aberta">Fechar o menu</span>
                 <!--/* Com a gaveta fechada o botão que se vê é só o desenho da barra de cima: este nome é para o leitor de tela */-->
                 <span class="m-nome so-estreito so-fechada">Abrir o menu</span>

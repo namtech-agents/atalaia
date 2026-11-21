@@ -1,5 +1,5 @@
 // ATALAIA · o menu lateral
-// O menu abre, fecha e fixa sem este arquivo: quem faz isso é o CSS, lendo a caixa de marcar #menu-aberto
+// O menu abre e fecha sem este arquivo: quem faz isso é o CSS, lendo a caixa de marcar #menu-aberto
 // (fragmentos.html). Aqui fica só o que o CSS não consegue:
 //   1. lembrar, de uma tela para a outra, se a pessoa deixou o menu aberto (só no computador);
 //   2. no celular, fechar a gaveta com a tecla Esc e deixar o resto da tela parado enquanto ela está aberta;
@@ -11,6 +11,7 @@ const chave = document.getElementById('menu-aberto');
 
 // Tela sem menu (ninguém entrou): não há o que fazer
 if (chave) {
+  // O nome antigo ("fixo") ficou de propósito: quem já tinha deixado o menu aberto não perde a escolha guardada
   const GUARDADO = 'atalaia-menu-fixo';
   // A mesma condição que o atalaia.css usa para o menu lateral: janela larga e mouse. Fora dela, é a gaveta
   const computador = matchMedia('(min-width: 861px) and (hover: hover) and (pointer: fine)');
@@ -27,7 +28,15 @@ if (chave) {
   // 3. (#212) O menu abre só pelo botão do pé, nunca ao passar o mouse. A classe m-pronto liga o movimento de abrir e
   //    recolher (atalaia.css); ela entra dois quadros depois da primeira pintura, quando o menu já está como a
   //    pessoa deixou. Sem isso, o menu guardado aberto abriria de novo, deslizando, a cada troca de tela
-  requestAnimationFrame(() => requestAnimationFrame(() => pagina.classList.add('m-pronto')));
+  const ligarMovimento = () => requestAnimationFrame(() => requestAnimationFrame(() => pagina.classList.add('m-pronto')));
+  ligarMovimento();
+
+  // Clique de MOUSE no botão do pé: o foco fica na chave, e a primeira tecla apertada depois (uma seta para rolar)
+  // faria o navegador tratar esse foco como de teclado (:focus-visible), e o CSS abriria o menu sozinho. Soltar o
+  // foco evita isso. detail > 0 = clique de verdade; pela barra de espaço (teclado) o foco fica onde está
+  chave.closest('.m-vira').addEventListener('click', clique => {
+    if (clique.detail > 0) requestAnimationFrame(() => chave.blur());
+  });
 
   // 4. A vitrine (#204): passa sozinha a cada 5 s, mas para com o mouse em cima, com o foco dentro, com a aba
   //    escondida, com o menu recolhido (aí ela nem aparece) e quando a pessoa aperta pausar. Quem pediu menos
@@ -116,8 +125,11 @@ if (chave) {
   // "change" acontece quando a pessoa marca ou desmarca (pelo botão, pelo véu ou pela barra de espaço)
   chave.addEventListener('change', () => { if (computador.matches) guardar(chave.checked); parar(); });
   computador.addEventListener('change', arrumar);
-  // pageshow: também vale para a tela que volta pelo botão "voltar" do navegador
-  window.addEventListener('pageshow', arrumar);
+  // pageshow: também vale para a tela que volta pelo botão "voltar" do navegador. Essa tela volta da memória já com
+  // o movimento ligado: desliga, arruma o menu como a pessoa deixou e liga de novo (senão ele deslizaria na volta)
+  window.addEventListener('pageshow', volta => {
+    if (volta.persisted) { pagina.classList.remove('m-pronto'); arrumar(); ligarMovimento(); } else { arrumar(); }
+  });
 
   // Esc fecha a gaveta e devolve o foco para a chave, que é quem abre de novo.
   // preventScroll: a página não rola por causa disso (quem tinha rolado continua onde estava)

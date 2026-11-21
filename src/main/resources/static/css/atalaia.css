@@ -463,8 +463,8 @@ html { scroll-padding-top: 92px; }
 @media (min-width: 861px) and (hover: hover) and (pointer: fine) {
   /* :has(> .menu): só a página que tem menu (com a sessão aberta) vira grade de duas colunas.
      Duas medidas: --m-largura é a largura do menu e --m-coluna o espaço que ele ocupa ao lado do conteúdo.
-     Quando são iguais, o menu aberto empurra o conteúdo; quando a coluna fica em 72px e o menu em 284px, ele abre
-     por cima do conteúdo, sem tirar espaço dele.
+     Desde a #212 as duas mudam juntas (aberto, o menu empurra o conteúdo). Ficam separadas porque a coluna muda de
+     uma vez e a largura do menu desliza: enquanto recolhe, o menu ainda é mais largo que a coluna e passa por cima.
      A página ocupa a janela inteira (max-width: none) para o menu ficar colado na borda esquerda: se a página fosse
      uma caixa centralizada, em tela larga o menu iria junto para perto do meio (#202). Quem tem largura máxima é o
      conteúdo, logo abaixo */
@@ -490,7 +490,7 @@ html { scroll-padding-top: 92px; }
   .menu:has(:focus-visible) { transition: none; }
   /* Os nomes só aparecem quando há lugar para eles. Sem isso, enquanto o menu abre, cada nome surgiria cortado
      com reticências ("Not…"). Quem decide é a largura do menu naquele quadro (consulta de contêiner), então a
-     espera do mouse já vem junto. Somem mais rápido (0,08s) do que aparecem (0,16s).
+     abertura já vem junto. Somem mais rápido (0,08s) do que aparecem (0,16s).
      Navegador sem consulta de contêiner não entra na regra: os nomes ficam sempre à vista, cortados pela linha */
   .m-nome, .m-quem { transition: opacity .16s; }
   @container (max-width: 219px) { .m-nome, .m-quem { opacity: 0; transition-duration: .08s; } }
@@ -525,7 +525,7 @@ html { scroll-padding-top: 92px; }
   .menu:has(.m-chave:checked) ~ .m-veu { visibility: visible; opacity: 1; transition: opacity .24s; }
   /* com a gaveta aberta, a página de trás não rola */
   html:has(.m-chave:checked) { overflow: hidden; }
-  /* o botão da chave troca de papel: no computador fixa, aqui abre e fecha a gaveta. Dos dois nomes daqui fica
+  /* o botão da chave troca de papel: no computador abre e recolhe o menu ao lado, aqui abre e fecha a gaveta. Dos dois nomes daqui fica
      um só, o do que o toque vai fazer (é esse o nome que o leitor de tela diz) */
   .so-largo { display: none; }
   .so-estreito { display: block; }
