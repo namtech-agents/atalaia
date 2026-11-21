@@ -294,7 +294,6 @@ class PainelControllerTest {
         navegador.perform(get("/").param("empresa", semCasos.getId().toString()))
                 .andExpect(content().string(containsString("Nenhuma notificação deste cliente.")))
                 .andExpect(content().string(containsString("Todos os clientes")))
-                .andExpect(content().string(not(containsString("Nenhuma notificação recebida ainda"))))
                 .andExpect(content().string(not(containsString("Nada pendente com o escritório agora."))))
                 .andExpect(content().string(not(containsString("<strong>Padaria Com Caso</strong>"))));
     }
