@@ -151,6 +151,15 @@ public class Notificacao {
         }
     }
 
+    //Só o caso que a IA não leu (sem tipo) pode pedir outra leitura (revisão do Hefesto, #216). Assim:
+    //- um clique duplo não troca uma leitura boa por uma pior (a primeira que acerta já dá o tipo);
+    //- o tipo que uma pessoa escolheu nunca é apagado por uma leitura que falhou de novo;
+    //- um caso que foi para revisão por dúvida ou divergência continua com uma pessoa, e não é relido até "passar".
+    //E precisa de texto: PDF escaneado não tem o que mandar para a IA
+    public boolean podeLerDeNovo() {
+        return !isResolvida() && tipo == null && texto != null && !texto.isBlank();
+    }
+
     //O tipo escolhido por uma pessoa (#216), para o caso que a IA não conseguiu classificar. Quem chama grava no
     //histórico. Os dados continuam escondidos enquanto o caso pede revisão: o tipo não prova que a leitura está certa
     public void corrigirTipo(TipoDeDocumento tipo) {
