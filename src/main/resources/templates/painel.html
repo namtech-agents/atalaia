@@ -13,36 +13,55 @@
       <a class="botao cheio" th:if="${semEmpresa}" th:href="@{/empresas}">Cadastrar empresa</a>
     </div>
 
-    <!-- Escritório novo: o primeiro passo é cadastrar uma empresa; só depois faz sentido falar em enviar -->
-    <section class="vidro vazio" th:if="${semEmpresa}">
-      <p>Comece cadastrando a primeira empresa que o escritório atende. Depois é só enviar o PDF que chegou para ela.</p>
-    </section>
-    <section class="vidro vazio" th:if="${not semEmpresa and nenhuma}">
-      <p>Nenhuma notificação recebida ainda. Envie o PDF que chegou para o cliente e ele aparece aqui.</p>
+    <!-- PARA COMEÇAR (#215): os três passos de uma conta nova, na ordem, com o que já foi feito. Antes, a falta de regra
+         de prazo só aparecia dentro do caso, quando a pessoa já estava travada. Some quando os três estão feitos -->
+    <section class="vidro comecar" th:if="${paraComecar}" aria-labelledby="titulo-comecar">
+      <h2 id="titulo-comecar">Para começar</h2>
+      <p>O Atalaia lê o documento que chegou para o cliente, calcula a data limite e gera um link de aviso que você manda ao cliente pelo WhatsApp ou e-mail. Quando ele confirmar, o caso fica pronto para fechar.</p>
+      <ol>
+        <li th:classappend="${not semEmpresa} ? 'feito'">
+          <span class="c-marca" aria-hidden="true"></span>
+          <span><a th:href="@{/empresas}">Cadastrar uma empresa</a> que o escritório atende<span class="ler-so" th:if="${not semEmpresa}"> (feito)</span></span>
+        </li>
+        <li th:classappend="${temRegra} ? 'feito'">
+          <span class="c-marca" aria-hidden="true"></span>
+          <span><a th:href="@{/regras}">Cadastrar uma regra de prazo</a> conferida na norma: é com ela que a data limite é calculada<span class="ler-so" th:if="${temRegra}"> (feito)</span></span>
+        </li>
+        <li th:classappend="${not nenhuma} ? 'feito'">
+          <span class="c-marca" aria-hidden="true"></span>
+          <span><a th:href="@{/enviar}">Subir a primeira notificação</a>, o PDF que chegou para o cliente<span class="ler-so" th:if="${not nenhuma}"> (feito)</span></span>
+        </li>
+      </ol>
     </section>
 
-    <!-- Escolher um cliente: com duas empresas ou mais. Formulário GET sem JavaScript: o endereço guarda a escolha
-         (dá para favoritar), e o botão "Mostrar" envia. Cada opção diz quantos casos abertos o cliente tem -->
-    <form class="escolha-linha" method="get" th:action="@{/}" th:if="${clientes.size() > 1 and not nenhuma}">
+    <!-- #215: busca por nome, CNPJ ou tipo, junto da escolha do cliente. GET sem JavaScript: o endereço guarda a busca -->
+    <form class="escolha-linha busca" method="get" th:action="@{/}" role="search" th:unless="${nenhuma}">
       <input type="hidden" name="ver" value="resolvidas" th:if="${verResolvidas}">
-      <label class="rotulo" for="empresa">Cliente</label>
-      <select id="empresa" name="empresa">
+      <label class="ler-so" for="q">Buscar</label>
+      <input id="q" name="q" type="search" maxlength="80" th:value="${busca}" placeholder="Buscar por empresa, CNPJ ou tipo">
+      <label class="ler-so" for="empresa" th:if="${clientes.size() > 1}">Cliente</label>
+      <select id="empresa" name="empresa" th:if="${clientes.size() > 1}">
         <option value="">Todos os clientes</option>
         <option th:each="cliente : ${clientes}" th:value="${cliente.id}" th:selected="${cliente.id == filtro}"
                 th:with="abertas=${abertasPorCliente.getOrDefault(cliente.id, 0L)}"
                 th:text="${cliente.nome} + ' · ' + (${abertas == 0} ? 'nenhuma aberta' : (${abertas == 1} ? '1 aberta' : ${abertas} + ' abertas'))"></option>
       </select>
-      <button class="botao" type="submit">Mostrar</button>
+      <button class="botao" type="submit">Buscar</button>
+      <a class="limpar" th:if="${busca != '' or filtro != null}" th:href="@{/}">Limpar</a>
     </form>
+    <section class="vidro vazio" th:if="${nadaNaBusca}">
+      <p>Nada encontrado para "<span th:text="${busca}"></span>". <a th:href="@{/}">Ver todas</a></p>
+    </section>
     <section class="vidro vazio" th:if="${nadaDoCliente}">
       <p>Nenhuma notificação deste cliente. <a th:href="@{/}">Ver todos os clientes</a></p>
     </section>
 
     <!-- O filtro: abertas (o que pede ação) ou resolvidas (o histórico). Só aparece quando há resolvidas.
-         Os dois links levam o cliente escolhido junto; sem cliente, o endereço fica sem ele (e não com "empresa=" vazio) -->
-    <nav class="filtro" aria-label="Quais casos mostrar" th:unless="${resolvidas.isEmpty()}">
-      <a th:href="${filtro == null} ? @{/} : @{/(empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas</a>
-      <a th:href="${filtro == null} ? @{/(ver='resolvidas')} : @{/(ver='resolvidas',empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
+         Os dois links levam o cliente escolhido e a busca junto; o controller monta o endereço só com o que
+         estiver preenchido (sem "empresa=" vazio) -->
+    <nav class="filtro" aria-label="Quais casos mostrar" th:if="${temResolvidas}">
+      <a th:href="@{${linkAbertas}}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas <span class="num" th:text="${abertasNoTotal}"></span></a>
+      <a th:href="@{${linkResolvidas}}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
     </nav>
 
     <th:block th:unless="${verResolvidas}">
@@ -50,7 +69,7 @@
       <section th:replace="~{:: grupo('gente', 'Vez do escritório', ${precisaDeGente})}"></section>
 
       <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
-      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma and not nadaDoCliente}">Nada pendente com o escritório agora.</p>
+      <p class="tudo-certo" th:if="${tudoCerto}">Nada pendente com o escritório agora.</p>
 
       <section th:replace="~{:: grupo('cliente', 'Esperando o cliente', ${esperandoOCliente})}"></section>
       <section th:replace="~{:: grupo('fechar', 'Pronto para fechar', ${prontoParaFechar})}"></section>
@@ -67,32 +86,42 @@
   <!-- Um grupo da lista: título com a contagem e as linhas. Grupo vazio não aparece -->
   <section th:fragment="grupo(chave, titulo, linhas)" class="grupo" th:unless="${linhas.isEmpty()}" th:attr="aria-labelledby='titulo-' + ${chave}">
     <h2 th:id="'titulo-' + ${chave}"><th:block th:text="${titulo}"></th:block> <span class="conta num" th:text="${linhas.size() == 1} ? '1 notificação' : ${linhas.size() + ' notificações'}"></span></h2>
-    <ul class="vidro lista">
+    <ul class="vidro lista casos">
       <li th:each="linha : ${linhas}" th:insert="~{:: linha(${linha})}"></li>
     </ul>
   </section>
 
   <!-- Uma linha da lista: a linha inteira é o link para a notificação. Todos os grupos usam o mesmo pedaço -->
+  <!-- #215: a linha em COLUNAS fixas (o CSS faz a grade), para varrer 50 casos de olho: empresa e tipo, o que pede
+       ação (o que falta ou o aviso ao cliente), o prazo sempre no mesmo lugar e, à direita, quando chegou -->
   <a th:fragment="linha(linha)" th:href="@{/notificacoes/{id}(id=${linha.id})}" th:with="aviso=${avisos.get(linha.id)}">
-    <strong th:text="${linha.empresa}"></strong>
-    <span class="etq" th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></span>
-    <!-- O degrau (na tela: gravidade), com "Gravidade:" na frente, como o desfecho: sem isso, duas etiquetas lado a lado se confundem -->
-    <span class="etq" th:if="${linha.degrau != null}" th:text="'Gravidade: ' + ${linha.degrau.nome}"></span>
-    <!-- o vermelho de atenção só em caso aberto -->
-    <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
-    <!-- "Desfecho:" na frente: sem isso, duas etiquetas lado a lado ("Cobrança", "Arquivado") se confundem -->
-    <span class="etq" th:if="${linha.resolvida()}" th:text="'Desfecho: ' + ${linha.desfecho.nome}"></span>
-    <!-- O que falta fazer, no caso que ainda não tem aviso ao cliente (vem do PainelController, regra na Etapa) -->
-    <span class="etq falta" th:if="${faltas.get(linha.id) != null}" th:text="${faltas.get(linha.id)}"></span>
-    <!-- O prazo, quando já foi calculado, em três níveis: vermelho até 3 dias, amarelo até 7, sem cor com folga.
-         O texto já diz a situação: quem não distingue a cor não perde a informação -->
-    <span class="etq num" th:if="${linha.temPrazo()}"
-          th:classappend="${linha.prazoApertado(hoje)} ? 'atencao' : (${linha.prazoPerto(hoje)} ? 'perto' : '')"
-          th:text="${linha.prazo(hoje)}"></span>
-    <!-- O aviso ao cliente, só em caso aberto (avisos vem do PainelController): aguardando, confirmado ou vencido.
-         Em vermelho quando o escritório precisa agir; o texto e a regra ficam no AvisoAoCliente (naLista, pedeAtencao) -->
-    <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora, linha.dataLimite)} ? 'atencao'"
-          th:text="${aviso.naLista(agora, linha.dataLimite)}"></span>
+    <span class="l-quem">
+      <strong th:text="${linha.empresa}"></strong>
+      <span class="l-tipo">
+        <th:block th:if="${linha.tipo != null}" th:text="${linha.tipo.nome}"></th:block>
+        <!-- vermelho só em caso aberto; cinza no fechado (vermelho é só para prazo e erro) -->
+        <span class="etq" th:classappend="${linha.desfecho == null} ? 'atencao'" th:if="${linha.tipo == null}">Sem tipo</span>
+        <!-- "Gravidade:" na frente: sem isso, tipo e gravidade lado a lado se confundem -->
+        <th:block th:if="${linha.degrau != null}" th:text="' · Gravidade: ' + ${linha.degrau.nome}"></th:block>
+      </span>
+    </span>
+    <span class="l-acao">
+      <!-- "Desfecho:" na frente, no caso fechado -->
+      <span class="etq" th:if="${linha.resolvida()}" th:text="'Desfecho: ' + ${linha.desfecho.nome}"></span>
+      <!-- O que falta fazer, no caso que ainda não tem aviso ao cliente (vem do PainelController, regra na Etapa) -->
+      <span class="etq falta" th:if="${faltas.get(linha.id) != null}" th:text="${faltas.get(linha.id)}"></span>
+      <!-- O aviso ao cliente, só em caso aberto: aguardando, confirmado ou vencido. Em vermelho quando o escritório
+           precisa agir; o texto e a regra ficam no AvisoAoCliente (naLista, pedeAtencao) -->
+      <span class="etq" th:if="${aviso != null}" th:classappend="${aviso.pedeAtencao(agora, linha.dataLimite)} ? 'atencao'"
+            th:text="${aviso.naLista(agora, linha.dataLimite)}"></span>
+    </span>
+    <!-- O prazo, em três níveis: vermelho até 3 dias, amarelo até 7, sem cor com folga. O texto já diz a situação -->
+    <span class="l-prazo">
+      <span class="etq num" th:if="${linha.temPrazo()}"
+            th:classappend="${linha.prazoApertado(hoje)} ? 'atencao' : (${linha.prazoPerto(hoje)} ? 'perto' : '')"
+            th:text="${linha.prazo(hoje)}"></span>
+      <span class="sem-prazo" th:unless="${linha.temPrazo()}">Sem prazo</span>
+    </span>
     <!-- Caso fechado mostra quando foi resolvido; caso aberto, quando chegou -->
     <span class="quando"><th:block th:text="${linha.resolvida()} ? 'Resolvida em ' : 'Recebida em '"></th:block><span class="num" th:text="${linha.quando}"></span></span>
   </a>

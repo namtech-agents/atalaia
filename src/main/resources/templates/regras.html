@@ -15,6 +15,8 @@
     <p class="recado" role="status" th:if="${cadastrada}">Regra cadastrada. Ela já pode ser escolhida na tela de uma notificação.</p>
     <p class="recado" role="status" th:if="${excluida}">Regra excluída. Os prazos já calculados com ela continuam como estavam.</p>
 
+    <!-- #215: na tela larga, a lista à esquerda e o cadastro à direita (atalaia.css, .lado-a-lado) -->
+    <div class="lado-a-lado">
     <section class="grupo" th:unless="${regras.isEmpty()}" aria-labelledby="titulo-regras">
       <h2 id="titulo-regras" th:text="${regras.size() == 1} ? '1 regra' : ${regras.size() + ' regras'}"></h2>
       <ul class="vidro lista">
@@ -88,6 +90,7 @@
 
       <button class="botao cheio" type="submit">Cadastrar regra</button>
     </form>
+    </div>
   </main>
 </div>
 </body>

@@ -19,6 +19,9 @@ public interface RegraCadastradaRepository extends Repository<RegraCadastrada, L
     //Vazio se a regra nao existe ou é de outro escritório (quem chama nao fica sabendo qual dos dois)
     Optional<RegraCadastrada> findByIdAndEscritorioId(Long id, Long escritorioId);
 
+    //Só para saber se o escritório já tem alguma regra (o Para começar da tela inicial), sem carregar todas
+    boolean existsByEscritorioId(Long escritorioId);
+
     boolean existsByEscritorioIdAndNome(Long escritorioId, String nome);
 
     //Apaga direto no banco e devolve quantas linhas saíram: 0 se a regra nao existe, é de outro escritório

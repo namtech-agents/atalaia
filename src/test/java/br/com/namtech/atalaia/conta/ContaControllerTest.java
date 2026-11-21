@@ -59,7 +59,7 @@ class ContaControllerTest {
         //Conferir: a conta ja nasce com a sessão aberta (a tela inicial abre sem pedir para entrar)
         navegador.perform(get("/").session(sessao))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Comece cadastrando a primeira empresa")));
+                .andExpect(content().string(containsString("Cadastrar uma empresa")));
 
         //Conferir: a conta ficou guardada com o e-mail arrumado e o escritório, e a senha nao esta escrita no banco
         Usuario guardada = usuarios.findByEmail("ana@escritorio.test").orElseThrow();
