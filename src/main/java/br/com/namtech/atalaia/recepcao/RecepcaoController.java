@@ -45,6 +45,7 @@ import br.com.namtech.atalaia.notificacao.Desfecho;
 import br.com.namtech.atalaia.notificacao.Empresa;
 import br.com.namtech.atalaia.notificacao.EmpresaRepository;
 import br.com.namtech.atalaia.notificacao.Notificacao;
+import br.com.namtech.atalaia.notificacao.NotificacaoNaLista;
 import br.com.namtech.atalaia.notificacao.NotificacaoRepository;
 import br.com.namtech.atalaia.prazo.FeriadosNacionais;
 import br.com.namtech.atalaia.prazo.RegraCadastradaRepository;
@@ -251,6 +252,16 @@ public class RecepcaoController {
                     .filter(antigo -> antigo.getConfirmadoEmPorExtenso() != null).toList());
         }
         model.addAttribute("prazoMudou", prazoMudou);
+        //O painel Situação (#214): o passo atual, a faixa com os quatro passos e o prazo dito por extenso
+        Instant agora = Instant.now(relogio);
+        model.addAttribute("passo", Passo.de(notificacao, aviso, agora));
+        model.addAttribute("passos", Passo.values());
+        if (notificacao.getDataLimite() != null) {
+            LocalDate hoje = LocalDate.now(relogio);
+            model.addAttribute("prazoPorExtenso", NotificacaoNaLista.prazo(notificacao.getDataLimite(), hoje));
+            model.addAttribute("prazoNivel", NotificacaoNaLista.prazoApertado(notificacao.getDataLimite(), hoje) ? "atencao"
+                    : NotificacaoNaLista.prazoPerto(notificacao.getDataLimite(), hoje) ? "perto" : "");
+        }
         //Da para avisar com o caso aberto e a data limite calculada. Depois que o cliente confirmou,
         //só faz sentido um aviso novo se a data mudou
         model.addAttribute("podeAvisar", !notificacao.isResolvida() && notificacao.getDataLimite() != null

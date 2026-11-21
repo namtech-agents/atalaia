@@ -38,6 +38,11 @@ public record NotificacaoNaLista(Long id, Long empresaId, String empresa, TipoDe
     //O prazo como a lista mostra. "hoje" vem de fora para o teste poder parar o tempo.
     //O texto diz a situação por extenso: quem nao distingue a cor nao perde a informação
     public String prazo(LocalDate hoje) {
+        return prazo(dataLimite, hoje);
+    }
+
+    //A mesma frase para quem tem só a data: a tela do caso usa no painel Situação (#214)
+    public static String prazo(LocalDate dataLimite, LocalDate hoje) {
         long dias = ChronoUnit.DAYS.between(hoje, dataLimite);
         if (dias < 0) {
             return "Venceu em " + DIA.format(dataLimite);
@@ -55,11 +60,19 @@ public record NotificacaoNaLista(Long id, Long empresaId, String empresa, TipoDe
     static final int DIAS_DE_PERTO = 7;
 
     public boolean prazoApertado(LocalDate hoje) {
+        return prazoApertado(dataLimite, hoje);
+    }
+
+    public static boolean prazoApertado(LocalDate dataLimite, LocalDate hoje) {
         return ChronoUnit.DAYS.between(hoje, dataLimite) <= DIAS_DE_ALERTA;
     }
 
     //Tres niveis de cor: apertado (vermelho), perto (amarelo) e com folga (sem cor). Cada caso fica em um só
     public boolean prazoPerto(LocalDate hoje) {
-        return !prazoApertado(hoje) && ChronoUnit.DAYS.between(hoje, dataLimite) <= DIAS_DE_PERTO;
+        return prazoPerto(dataLimite, hoje);
+    }
+
+    public static boolean prazoPerto(LocalDate dataLimite, LocalDate hoje) {
+        return !prazoApertado(dataLimite, hoje) && ChronoUnit.DAYS.between(hoje, dataLimite) <= DIAS_DE_PERTO;
     }
 }

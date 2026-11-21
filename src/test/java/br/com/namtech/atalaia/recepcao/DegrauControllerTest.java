@@ -79,7 +79,7 @@ class DegrauControllerTest {
         String pagina = navegador.perform(get("/notificacoes/" + caso.getId()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Se ninguém agir, o próximo degrau na escala do Atalaia é: Exigência sob pena.")))
-                .andExpect(content().string(containsString("Sugerido por inteligência artificial.")))
+                .andExpect(content().string(containsString("Sugerida por inteligência artificial.")))
                 .andReturn().getResponse().getContentAsString();
 
         //Um botão só marcado como o atual, e é o do degrau do caso (a ordem dos atributos no HTML não importa)
@@ -103,8 +103,8 @@ class DegrauControllerTest {
         caso.sugerirDegrau(null);
 
         navegador.perform(get("/notificacoes/" + caso.getId()))
-                .andExpect(content().string(containsString("Sem degrau")))
-                .andExpect(content().string(containsString("Escolha o degrau:")));
+                .andExpect(content().string(containsString("Sem gravidade")))
+                .andExpect(content().string(containsString("Escolha a gravidade:")));
     }
 
     @Test
@@ -120,7 +120,7 @@ class DegrauControllerTest {
         //A tela diz quem corrigiu, em vez de continuar dizendo que foi a IA; a lista mostra o degrau com o rótulo
         navegador.perform(get("/notificacoes/" + caso.getId()))
                 .andExpect(content().string(containsString("Corrigido por ")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Sugerido por inteligência artificial."))));
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Sugerida por inteligência artificial."))));
         navegador.perform(get("/")).andExpect(content().string(containsString("Gravidade: Auto de infração")));
     }
 

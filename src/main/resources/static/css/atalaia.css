@@ -620,3 +620,42 @@ html { scroll-padding-top: 92px; }
 .titulo .como { margin-top: 8px; max-width: 62ch; }
 .titulo .como summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--marca-fora); font-weight: 600; cursor: pointer; }
 .titulo .como p { margin-top: 4px; font-size: 14px; }
+
+/* ---------- a tela do caso guiada (#214) ---------- */
+/* Texto só para o leitor de tela (ex.: "feito" ao lado de um passo que a tela marca com o desenho) */
+.ler-so { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Os outros cartões ficam com o valor menor: o destaque da tela é um só, o painel Situação */
+.cartao:not(.situacao) .grande { font-size: 17px; letter-spacing: -.01em; }
+
+/* A faixa dos quatro passos: uma bolinha por passo, ligadas por um fio. Feito = bolinha azul com o tique;
+   atual = anel azul e nome em negrito; o que vem depois = bolinha vazia. O texto diz o passo, a cor só reforça */
+.passos { list-style: none; margin: 10px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.passos li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--apagado); }
+/* o fio que liga uma bolinha à anterior (fica atrás dela) */
+.passos li + li::before { content: ""; position: absolute; top: 8px; right: 50%; width: 100%; height: 2px; background: var(--fio); }
+.passos li.feito + li::before { background: var(--azul); }
+.p-marca { position: relative; z-index: 1; width: 18px; height: 18px; border-radius: 50%; background: var(--folha); box-shadow: inset 0 0 0 2px var(--picote); }
+.passos li.feito .p-marca { background: var(--azul); box-shadow: none; }
+.passos li.feito .p-marca::after { content: ""; position: absolute; left: 6px; top: 3.5px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.passos li[aria-current] { color: var(--texto); font-weight: 700; }
+.passos li[aria-current] .p-marca { box-shadow: inset 0 0 0 2px var(--azul), 0 0 0 4px var(--campo-fundo); }
+
+/* data limite e gravidade, lado a lado */
+.resumo { margin: 0 0 16px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+.resumo dt { font-size: 13px; font-weight: 600; color: var(--apagado); margin-bottom: 2px; }
+.resumo dd { margin: 0; font-weight: 600; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.resumo .grande { font-size: 26px; margin: 0; }
+.situacao > .botao { width: 100%; }
+.situacao > p { font-size: 14px; }
+
+/* cartão recolhido (Fechar o caso, Texto lido do PDF): o título é o botão que abre, com a setinha à direita */
+.recolhe > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin: -12px 0; cursor: pointer; list-style: none; }
+.recolhe > summary::-webkit-details-marker { display: none; }
+.recolhe > summary h2 { margin: 0; }
+.recolhe > summary::after { content: ""; width: 8px; height: 8px; margin-right: 4px; border: solid var(--apagado); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .2s var(--sair); }
+.recolhe[open] > summary { margin-bottom: 6px; }
+.recolhe[open] > summary::after { transform: rotate(-135deg); }
+
+/* as ações do link do aviso: copiar (a principal), WhatsApp e ver a página do cliente */
+.acoes-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.acoes-link .dica:empty { display: none; }

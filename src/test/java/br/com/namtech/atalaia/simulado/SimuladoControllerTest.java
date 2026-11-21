@@ -157,13 +157,13 @@ class SimuladoControllerTest {
                 teste.getRecebidaEm().plus(Duration.ofMinutes(40))));
 
         //Agir e conferir: o cartão do simulado com os tempos (o primeiro aviso conta, não o mais novo; a abertura foi
-        //logo depois da chegada); responsável diz que ainda não existe
+        //logo depois da chegada). A linha do responsável saiu (#214): era recado de roteiro, não dado do caso
         navegador.perform(get("/notificacoes/" + teste.getId()))
                 .andExpect(content().string(containsString("Era um simulado")))
                 .andExpect(content().string(containsString("12 min")))
                 .andExpect(content().string(not(containsString("40 min"))))
                 .andExpect(content().string(containsString("<dt>Até alguém abrir</dt><dd class=\"num\">menos de 1 min</dd>")))
-                .andExpect(content().string(containsString("o Atalaia ainda não tem responsável por caso")));
+                .andExpect(content().string(not(containsString("Até ter responsável"))));
         //A página do cliente avisa que é teste, se o link escapar, e não pede confirmação nenhuma
         navegador.perform(get("/c/token-do-simulado"))
                 .andExpect(content().string(containsString("Este aviso é um teste (simulado) do escritório.")))
