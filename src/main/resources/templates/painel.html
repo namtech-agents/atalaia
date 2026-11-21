@@ -57,10 +57,11 @@
     </section>
 
     <!-- O filtro: abertas (o que pede ação) ou resolvidas (o histórico). Só aparece quando há resolvidas.
-         Os dois links levam o cliente escolhido junto; sem cliente, o endereço fica sem ele (e não com "empresa=" vazio) -->
-    <nav class="filtro" aria-label="Quais casos mostrar" th:unless="${resolvidas.isEmpty()}">
-      <a th:href="${filtro == null} ? @{/} : @{/(empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas <span class="num" th:text="${abertasNoTotal}"></span></a>
-      <a th:href="${filtro == null} ? @{/(ver='resolvidas')} : @{/(ver='resolvidas',empresa=${filtro})}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
+         Os dois links levam o cliente escolhido e a busca junto; o controller monta o endereço só com o que
+         estiver preenchido (sem "empresa=" vazio) -->
+    <nav class="filtro" aria-label="Quais casos mostrar" th:if="${temResolvidas}">
+      <a th:href="@{${linkAbertas}}" th:attr="aria-current=${verResolvidas} ? null : 'page'">Abertas <span class="num" th:text="${abertasNoTotal}"></span></a>
+      <a th:href="@{${linkResolvidas}}" th:attr="aria-current=${verResolvidas} ? 'page' : null">Resolvidas <span class="num" th:text="${resolvidas.size()}"></span></a>
     </nav>
 
     <th:block th:unless="${verResolvidas}">
@@ -68,7 +69,7 @@
       <section th:replace="~{:: grupo('gente', 'Vez do escritório', ${precisaDeGente})}"></section>
 
       <!-- A boa notícia também é dita: sem isso, o grupo de cima só sumiria -->
-      <p class="tudo-certo" th:if="${precisaDeGente.isEmpty() and not nenhuma and not nadaDoCliente}">Nada pendente com o escritório agora.</p>
+      <p class="tudo-certo" th:if="${tudoCerto}">Nada pendente com o escritório agora.</p>
 
       <section th:replace="~{:: grupo('cliente', 'Esperando o cliente', ${esperandoOCliente})}"></section>
       <section th:replace="~{:: grupo('fechar', 'Pronto para fechar', ${prontoParaFechar})}"></section>

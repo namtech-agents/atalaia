@@ -336,9 +336,45 @@ class PainelControllerTest {
                 .contains("Nada encontrado para");
     }
 
+    @Test
+    void buscaNaoSePerdeNoFiltroENaoDizQueEstaTudoCerto() throws Exception {
+        //Arrumar: um caso aberto do João e um resolvido da Farmácia (revisão do Hefesto, #215)
+        Empresa joao = empresas.save(new Empresa(escritorio, "99999009000100", "Mercadinho João"));
+        Empresa farmacia = empresas.save(new Empresa(escritorio, "99999009000281", "Farmácia Central"));
+        notificacoes.save(new Notificacao(joao, PDF, "texto", TipoDeDocumento.COBRANCA, List.of(), List.of()));
+        Notificacao fechado = new Notificacao(farmacia, PDF, "texto", TipoDeDocumento.INTIMACAO, List.of(), List.of());
+        fechado.resolver(Desfecho.ARQUIVADO, "Feito.");
+        notificacoes.save(fechado);
+
+        //Os links Abertas/Resolvidas levam a busca junto
+        String comBusca = navegador.perform(get("/").param("q", "joao")).andReturn().getResponse().getContentAsString();
+        assertThat(comBusca).contains("ver=resolvidas&amp;q=joao");
+        //Busca nas resolvidas sem acerto: continua nas resolvidas e diz que não achou (não cai nas abertas)
+        String resolvidasSemAcerto = navegador.perform(get("/").param("ver", "resolvidas").param("q", "joao"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(resolvidasSemAcerto).contains("Nada encontrado para").doesNotContain("Mercadinho João</strong>");
+        //Busca que só acha resolvida, na aba Abertas: diz que não achou, e não "Nada pendente"
+        String abertasSemAcerto = navegador.perform(get("/").param("q", "farmacia"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(abertasSemAcerto).contains("Nada encontrado para").doesNotContain("Nada pendente com o escritório");
+    }
+
+    @Test
+    void numeroNoMeioDoNomeNaoViraBuscaDeCnpj() throws Exception {
+        //"0001" está no CNPJ de toda matriz; dentro de um texto com letras, só o nome conta
+        Empresa loja = empresas.save(new Empresa(escritorio, "99999009000100", "Loja 77"));
+        Empresa outra = empresas.save(new Empresa(escritorio, "99999009000281", "Farmácia Central"));
+        casoDa(loja);
+        casoDa(outra);
+        assertThat(casosDaBusca("loja 77")).contains("Loja 77").doesNotContain("Farmácia Central");
+        assertThat(casosDaBusca("00028")).contains("Farmácia Central").doesNotContain("Loja 77");
+    }
+
     //A lista de casos (da classe "casos" até o fim) depois de uma busca
     private String casosDaBusca(String busca) throws Exception {
         String pagina = navegador.perform(get("/").param("q", busca)).andReturn().getResponse().getContentAsString();
+        //Sem a lista, o teste falha dizendo isso (e não com um erro de substring)
+        assertThat(pagina).contains("lista casos");
         return pagina.substring(pagina.indexOf("lista casos"));
     }
 

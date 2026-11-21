@@ -662,10 +662,9 @@ html { scroll-padding-top: 92px; }
 /* ---------- a lista e o primeiro uso (#215) ---------- */
 /* A linha em colunas fixas: empresa e tipo | o que pede ação | prazo | quando chegou. Com 50 casos o olho desce
    pela coluna do prazo sem procurar. Abaixo de 760px de conteúdo (celular, janela estreita), vira linha empilhada */
-.casos a { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 190px 150px; align-items: center; gap: 12px; }
+.casos a { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.1fr) 190px max-content; align-items: center; gap: 12px; }
 .l-quem { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.l-tipo { font-size: 13px; color: var(--apagado); overflow-wrap: anywhere; }
-.l-tipo .etq { align-self: flex-start; }
+.l-tipo { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 13px; color: var(--apagado); overflow-wrap: anywhere; }
 .l-acao { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .l-prazo { min-width: 0; }
 .sem-prazo { font-size: 13px; color: var(--apagado); }
@@ -697,8 +696,10 @@ html { scroll-padding-top: 92px; }
 
 /* Empresas e Regras na tela larga: a lista à esquerda e o cadastro à direita, preso no alto ao rolar.
    Só quando há lista (:has(> .grupo)); sem ela, o formulário fica sozinho como antes */
-@container (min-width: 1000px) {
+@container (min-width: 900px) {
   .lado-a-lado:has(> .grupo) { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
-  .lado-a-lado:has(> .grupo) > .formulario { grid-column: 2; grid-row: 1; position: sticky; top: var(--borda); max-width: none; margin-top: 0; }
+  .lado-a-lado:has(> .grupo) > .formulario { grid-column: 2; grid-row: 1; position: sticky; top: var(--borda); max-width: none; margin-top: 0;
+    /* formulário mais alto que a tela (Regras): rola por dentro, para o botão de cadastrar nunca ficar escondido */
+    max-height: calc(100dvh - 2 * var(--borda)); overflow: auto; }
   .lado-a-lado:has(> .grupo) > .grupo { grid-column: 1; grid-row: 1; }
 }

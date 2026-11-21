@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.AvisoAoClienteRepository;
@@ -69,8 +71,11 @@ public class PainelController {
         //A busca (#215): pelo nome da empresa, pelo CNPJ (só os números contam) ou pelo tipo do documento.
         //Sem acento e sem maiúscula: "joao" acha "João". Texto vazio não filtra nada
         String busca = semAcento(q.strip());
-        String numerosDaBusca = q.replaceAll("\\D", "");
-        Map<Long, String> cnpjs = clientes.stream().collect(Collectors.toMap(Empresa::getId, Empresa::getCnpj));
+        //O CNPJ só entra quando a busca é só número e pontuação: "Loja 100" procura o nome, não "100" nos CNPJs
+        String numerosDaBusca = q.strip().matches("[\\d.\\-/\\s]+") ? q.replaceAll("\\D", "") : "";
+        //Empresa sem CNPJ (a coluna aceita vazio) vira "" para o toMap não quebrar a tela
+        Map<Long, String> cnpjs = clientes.stream()
+                .collect(Collectors.toMap(Empresa::getId, e -> Objects.requireNonNullElse(e.getCnpj(), "")));
         List<NotificacaoNaLista> todas = busca.isEmpty() ? doCliente : doCliente.stream()
                 .filter(linha -> semAcento(linha.empresa()).contains(busca)
                         || (linha.tipo() != null && semAcento(linha.tipo().getNome()).contains(busca))
@@ -110,14 +115,26 @@ public class PainelController {
         List<NotificacaoNaLista> resolvidas = todas.stream().filter(NotificacaoNaLista::resolvida)
                 .sorted(Comparator.comparing(NotificacaoNaLista::resolvidaEm).reversed()).toList();
         model.addAttribute("resolvidas", resolvidas);
+        //Há resolvidas antes da busca? É isso que decide o filtro abertas/resolvidas: uma busca sem acerto nas
+        //resolvidas continua nas resolvidas (com "Nada encontrado"), em vez de cair nas abertas sem avisar
+        boolean temResolvidas = doCliente.stream().anyMatch(NotificacaoNaLista::resolvida);
+        model.addAttribute("temResolvidas", temResolvidas);
         //Sem nenhuma resolvida, "ver=resolvidas" (favorito, link antigo) cai nas abertas: senao a tela ficaria
         //vazia e sem o filtro para voltar
-        model.addAttribute("verResolvidas", "resolvidas".equals(ver) && !resolvidas.isEmpty());
+        boolean verResolvidas = "resolvidas".equals(ver) && temResolvidas;
+        model.addAttribute("verResolvidas", verResolvidas);
+        //Os links Abertas/Resolvidas levam o cliente e a busca junto, e só o que estiver preenchido
+        //(o Thymeleaf escreveria "empresa=" vazio para um valor nulo)
+        model.addAttribute("linkAbertas", linkDoFiltro(null, filtro, q));
+        model.addAttribute("linkResolvidas", linkDoFiltro("resolvidas", filtro, q));
         //"nenhuma" fala do escritório (nunca recebeu nada); "nadaDoCliente", do filtro (o cliente escolhido nao tem casos)
         model.addAttribute("nenhuma", doEscritorio.isEmpty());
         model.addAttribute("nadaDoCliente", filtro != null && busca.isEmpty() && todas.isEmpty());
         model.addAttribute("busca", q.strip());
-        model.addAttribute("nadaNaBusca", !busca.isEmpty() && todas.isEmpty());
+        //"Nada encontrado" olha só a aba que está na tela (abertas ou resolvidas)
+        model.addAttribute("nadaNaBusca", !busca.isEmpty() && (verResolvidas ? resolvidas : abertas).isEmpty());
+        //"Nada pendente com o escritório" só vale sem busca: com busca, a lista mostra um pedaço e pode esconder pendência
+        model.addAttribute("tudoCerto", busca.isEmpty() && precisaDeGente.isEmpty() && !doCliente.isEmpty());
         model.addAttribute("abertasNoTotal", abertas.size());
         model.addAttribute("clientes", clientes);
         model.addAttribute("abertasPorCliente", abertasPorCliente);
@@ -130,10 +147,25 @@ public class PainelController {
         model.addAttribute("semEmpresa", clientes.isEmpty());
         //"Para começar" (#215): os três passos que uma conta nova precisa dar, na ordem. Sem regra de prazo não sai
         //prazo nem aviso, e antes isso só aparecia dentro do caso. Some quando os três estão feitos
-        boolean temRegra = !regras.findAllByEscritorioIdOrderByNome(usuario.escritorioId()).isEmpty();
+        boolean temRegra = regras.existsByEscritorioId(usuario.escritorioId());
         model.addAttribute("temRegra", temRegra);
         model.addAttribute("paraComecar", clientes.isEmpty() || !temRegra || doEscritorio.isEmpty());
         return "painel";
+    }
+
+    //O endereço da tela inicial com os parâmetros que estiverem preenchidos, na ordem ver, empresa, q
+    private static String linkDoFiltro(String ver, Long filtro, String q) {
+        UriComponentsBuilder link = UriComponentsBuilder.fromPath("/");
+        if (ver != null) {
+            link.queryParam("ver", ver);
+        }
+        if (filtro != null) {
+            link.queryParam("empresa", filtro);
+        }
+        if (!q.isBlank()) {
+            link.queryParam("q", q.strip());
+        }
+        return link.encode().build().toUriString();
     }
 
     //Para comparar textos sem ligar para acento nem maiúscula
