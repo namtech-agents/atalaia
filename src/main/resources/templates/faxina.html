@@ -35,7 +35,7 @@
             <span class="quando">Parado há <span class="num" th:text="${caso.diasParado(agora)}"></span> dias</span>
             <!-- Leva ao cartão "Fechar o caso", que pede o desfecho e o que foi feito: o texto diz isso, para ninguém achar
                  que o clique já fecha -->
-            <a class="botao" th:href="@{/notificacoes/{id}(id=${caso.id})} + '#titulo-resolver'"
+            <a class="botao" th:href="@{/notificacoes/{id}(id=${caso.id},fechar=1)} + '#fechar'"
                th:attr="aria-label='Fechar o caso de ' + ${caso.empresa}">Fechar o caso</a>
             <!-- Os outros dois gravam no histórico (POST: um link poderia ser acionado por outro site) -->
             <form method="post" th:action="@{/faxina/{id}(id=${caso.id})}">

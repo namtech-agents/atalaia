@@ -658,7 +658,7 @@ class RecepcaoControllerTest {
 
         //Agir: reabre
         navegador.perform(post("/notificacoes/" + aberta.getId() + "/reabrir").param("fechadoEm", carimbo()))
-                .andExpect(redirectedUrl("/notificacoes/" + aberta.getId() + "#titulo-resolver"));
+                .andExpect(redirectedUrl("/notificacoes/" + aberta.getId() + "?fechar=1#fechar"));
 
         //Conferir: a tela inicial lista o caso de novo entre os abertos, o filtro das resolvidas ficou sem ele
         //(cai nas abertas), e a tela do caso volta a oferecer o link do cliente

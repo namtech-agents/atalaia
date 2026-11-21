@@ -72,6 +72,11 @@ public record NotificacaoNaLista(Long id, Long empresaId, String empresa, TipoDe
         return prazoPerto(dataLimite, hoje);
     }
 
+    //O nível como classe do CSS: "atencao" (vermelho), "perto" (amarelo) ou nada (com folga)
+    public static String nivel(LocalDate dataLimite, LocalDate hoje) {
+        return prazoApertado(dataLimite, hoje) ? "atencao" : prazoPerto(dataLimite, hoje) ? "perto" : "";
+    }
+
     public static boolean prazoPerto(LocalDate dataLimite, LocalDate hoje) {
         return !prazoApertado(dataLimite, hoje) && ChronoUnit.DAYS.between(hoje, dataLimite) <= DIAS_DE_PERTO;
     }

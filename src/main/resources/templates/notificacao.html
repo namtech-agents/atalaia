@@ -27,7 +27,8 @@
              passo é feito. A data limite e a gravidade ficam aqui em cima porque são o que se olha primeiro -->
         <section class="vidro cartao situacao" aria-labelledby="titulo-situacao">
           <h2 class="rotulo" id="titulo-situacao">Situação</h2>
-          <ol class="passos" th:with="indice=${passo != null} ? ${passo.ordinal()} : 99">
+          <!-- Caso fechado não mostra a faixa: ela diria "feito" em passo que pode não ter acontecido (fechado sem aviso) -->
+          <ol class="passos" th:if="${passo != null}" th:with="indice=${passo.ordinal()}">
             <li th:each="p : ${passos}" th:classappend="${p.ordinal() < indice} ? 'feito'"
                 th:attr="aria-current=${p == passo} ? 'step'">
               <span class="p-marca" aria-hidden="true"></span>
@@ -40,7 +41,7 @@
               <dt>Data limite</dt>
               <dd th:if="${prazoPorExtenso != null}"><strong class="grande num" th:text="${#temporals.format(notificacao.dataLimite, 'dd/MM/yyyy')}"></strong>
                 <span class="etq num" th:classappend="${notificacao.resolvida} ? '' : ${prazoNivel}" th:text="${prazoPorExtenso}"></span></dd>
-              <dd th:unless="${prazoPorExtenso != null}"><strong class="grande">Ainda sem prazo</strong></dd>
+              <dd th:unless="${prazoPorExtenso != null}"><strong class="grande" th:text="${notificacao.ciencia != null} ? 'Sem data: confira a conta' : 'Ainda sem prazo'"></strong></dd>
             </div>
             <div>
               <dt>Gravidade</dt>
@@ -214,7 +215,8 @@
                    Ver o que o cliente vê: a página do cliente só lê (ClienteController, GET sem gravar nada) -->
               <div class="acoes-link">
                 <button class="botao cheio" type="button" id="copiar-link" hidden>Copiar link</button>
-                <a class="botao" target="_blank" rel="noopener"
+                <!-- No simulado o cartão diz para não mandar o link: o WhatsApp nem aparece -->
+                <a class="botao" target="_blank" rel="noopener" th:unless="${notificacao.simulado}"
                    th:href="@{https://wa.me/(text=${'Olá! Chegou um documento do governo para ' + empresa + '. Veja o resumo e a data limite, e confirme que leu, neste link: ' + linkDoAviso})}">Mandar pelo WhatsApp</a>
                 <a class="botao" th:href="${linkDoAviso}" target="_blank" rel="noopener">Ver o que o cliente vê</a>
                 <!-- O aviso de "copiado" para quem usa leitor de tela (e para quem enxerga, ao lado dos botões) -->
@@ -255,9 +257,10 @@
 
         <!-- Fechar o caso: o desfecho e uma observação curta, para todo mundo saber que já foi tratado -->
         <!-- #214: recolhido até ser o passo (o cliente confirmou), para não disputar com o passo atual. Sempre alcançável:
-             um clique no título abre. Volta aberto quando o envio falhou (erro), para mostrar o campo errado -->
+             um clique no título abre. Volta aberto quando o envio falhou (erro), e com ?fechar=1 no endereço (o botão
+             da faxina e a volta do reabrir), que levam a pessoa direto ao formulário -->
         <details class="vidro cartao recolhe" id="fechar" th:unless="${notificacao.resolvida}"
-                 th:open="${passo?.name() == 'FECHAR' or erro != null}">
+                 th:open="${passo?.name() == 'FECHAR' or erro != null or param.fechar != null}">
           <summary><h2 class="rotulo" id="titulo-resolver">Fechar o caso</h2></summary>
           <!-- O #titulo-resolver no endereço: se o envio voltar com erro, o navegador já abre a página neste cartão.
                O campo que falhou recebe o foco e o aviso (aria-invalid), para o erro não passar despercebido -->

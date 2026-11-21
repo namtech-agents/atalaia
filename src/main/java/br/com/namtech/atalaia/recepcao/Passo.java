@@ -1,6 +1,7 @@
 package br.com.namtech.atalaia.recepcao;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import br.com.namtech.atalaia.aviso.AvisoAoCliente;
 import br.com.namtech.atalaia.aviso.SituacaoDoAviso;
@@ -9,8 +10,8 @@ import br.com.namtech.atalaia.notificacao.Notificacao;
 //O passo em que um caso aberto está, para a faixa de etapas no alto da tela do caso (#214).
 //São quatro, na ordem em que o escritório trabalha: só o passo atual ganha o botão azul, e é isso que diz
 //"o que fazer agora". Caso fechado não tem passo (a faixa aparece toda feita).
-//A regra é a mesma da tela inicial (Etapa), olhada de dentro do caso: lá a pergunta é "de quem é a vez",
-//aqui é "qual é o próximo passo"
+//É A regra do andamento do caso: a tela inicial (Etapa) também sai daqui, só agrupando os passos por
+//"de quem é a vez". Uma regra só, para a lista e o caso nunca discordarem
 public enum Passo {
     PRAZO("Prazo", "titulo-prazo"),
     AVISO("Avisar o cliente", "titulo-aviso"),
@@ -36,15 +37,20 @@ public enum Passo {
 
     //"aviso" é o aviso que vale (o mais novo), ou null se o cliente ainda não foi avisado
     public static Passo de(Notificacao caso, AvisoAoCliente aviso, Instant agora) {
-        if (caso.isResolvida()) {
+        return de(caso.isResolvida(), caso.getDataLimite(), aviso, agora);
+    }
+
+    //A mesma regra para quem tem só os dados da linha da lista (Etapa)
+    public static Passo de(boolean resolvida, LocalDate dataLimite, AvisoAoCliente aviso, Instant agora) {
+        if (resolvida) {
             return null;
         }
         //Sem data limite não há o que avisar: o aviso leva a data junto
-        if (caso.getDataLimite() == null) {
+        if (dataLimite == null) {
             return PRAZO;
         }
         //Sem aviso, ou com um que pede atenção (link vencido, data que mudou, cliente marcou a data errada): avisar de novo
-        if (aviso == null || aviso.pedeAtencao(agora, caso.getDataLimite())) {
+        if (aviso == null || aviso.pedeAtencao(agora, dataLimite)) {
             return AVISO;
         }
         return aviso.situacao(agora) == SituacaoDoAviso.CONFIRMADO ? FECHAR : CLIENTE;

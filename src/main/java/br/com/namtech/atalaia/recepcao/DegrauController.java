@@ -37,7 +37,7 @@ public class DegrauController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         //Caso fechado não muda (para corrigir, reabre); tocar no degrau que já está não suja o histórico
         if (!caso.isResolvida() && caso.getDegrau() != degrau) {
-            String antes = caso.getDegrau() == null ? "sem degrau" : caso.getDegrau().getNome();
+            String antes = caso.getDegrau() == null ? "sem gravidade" : caso.getDegrau().getNome();
             caso.corrigirDegrau(degrau, usuario.email());
             historico.registrar(caso, usuario.email(), "Corrigiu a gravidade: de " + antes + " para " + degrau.getNome());
         }

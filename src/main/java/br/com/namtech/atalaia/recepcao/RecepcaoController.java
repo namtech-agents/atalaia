@@ -254,18 +254,19 @@ public class RecepcaoController {
         model.addAttribute("prazoMudou", prazoMudou);
         //O painel Situação (#214): o passo atual, a faixa com os quatro passos e o prazo dito por extenso
         Instant agora = Instant.now(relogio);
-        model.addAttribute("passo", Passo.de(notificacao, aviso, agora));
+        Passo passo = Passo.de(notificacao, aviso, agora);
+        model.addAttribute("passo", passo);
         model.addAttribute("passos", Passo.values());
         if (notificacao.getDataLimite() != null) {
             LocalDate hoje = LocalDate.now(relogio);
             model.addAttribute("prazoPorExtenso", NotificacaoNaLista.prazo(notificacao.getDataLimite(), hoje));
-            model.addAttribute("prazoNivel", NotificacaoNaLista.prazoApertado(notificacao.getDataLimite(), hoje) ? "atencao"
-                    : NotificacaoNaLista.prazoPerto(notificacao.getDataLimite(), hoje) ? "perto" : "");
+            model.addAttribute("prazoNivel", NotificacaoNaLista.nivel(notificacao.getDataLimite(), hoje));
         }
-        //Da para avisar com o caso aberto e a data limite calculada. Depois que o cliente confirmou,
-        //só faz sentido um aviso novo se a data mudou
+        //Da para avisar com o caso aberto e a data limite calculada. Depois que o cliente confirmou, só faz sentido um
+        //aviso novo quando o passo voltou para "avisar" (a data mudou, ou ele marcou a data errada): assim o botão do
+        //próximo passo nunca leva a um cartão sem formulário
         model.addAttribute("podeAvisar", !notificacao.isResolvida() && notificacao.getDataLimite() != null
-                && (!confirmado || prazoMudou));
+                && (!confirmado || passo == Passo.AVISO));
     }
 
     //Marca a notificação como resolvida, com o desfecho e a observação de quem resolveu.
@@ -324,8 +325,8 @@ public class RecepcaoController {
                     + notificacao.getDesfecho().getNome() + ". Observação: " + notificacao.getObservacao());
             notificacao.reabrir();
         }
-        //#titulo-resolver: a página abre direto no formulario de fechar, que acabou de voltar
-        return "redirect:/notificacoes/" + id + "#titulo-resolver";
+        //fechar=1 abre o cartão "Fechar o caso" (recolhido, #214) e #fechar leva a página até ele: o formulário acabou de voltar
+        return "redirect:/notificacoes/" + id + "?fechar=1#fechar";
     }
 
     //Entrega o PDF para a tela mostrar ao lado do texto lido. Se o original trazia scripts, vai a copia sem eles:

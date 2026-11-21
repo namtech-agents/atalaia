@@ -49,6 +49,25 @@ class PassoTest {
     }
 
     @Test
+    void clienteQueMarcouADataErradaVoltaParaAvisar() {
+        Notificacao caso = caso();
+        caso.registrarPrazo(LocalDate.of(2026, 3, 3), dataLimite, List.of("Conta."), "pessoa@escritorio.test");
+        AvisoAoCliente aviso = new AvisoAoCliente(caso, "token", "Resumo.", null, "pessoa@escritorio.test", agora);
+        //Confirmou, mas marcou outra data: o escritório precisa falar com ele de novo
+        aviso.confirmar(dataLimite.plusDays(2), agora);
+        assertThat(Passo.de(caso, aviso, agora)).isEqualTo(Passo.AVISO);
+    }
+
+    @Test
+    void linkVencidoSemRespostaVoltaParaAvisar() {
+        Notificacao caso = caso();
+        caso.registrarPrazo(LocalDate.of(2026, 3, 3), dataLimite, List.of("Conta."), "pessoa@escritorio.test");
+        AvisoAoCliente aviso = new AvisoAoCliente(caso, "token", "Resumo.", null, "pessoa@escritorio.test", agora);
+        //Um ano depois, o link já venceu e o cliente nunca respondeu
+        assertThat(Passo.de(caso, aviso, agora.plusSeconds(365L * 24 * 3600))).isEqualTo(Passo.AVISO);
+    }
+
+    @Test
     void dataQueMudouDepoisDoAvisoVoltaParaAvisar() {
         Notificacao caso = caso();
         caso.registrarPrazo(LocalDate.of(2026, 3, 3), dataLimite, List.of("Conta."), "pessoa@escritorio.test");
